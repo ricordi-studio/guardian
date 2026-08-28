@@ -538,6 +538,7 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
         if (en.isDirectory()) { 歩く(full); continue; }
         if (!/\.(md|mjs|js|json|yml)$/.test(en.name)) continue;
         const s = fs.readFileSync(full, "utf8");
+        if (en.name === "guardian.config.json") continue;   // 見張る語を並べる所は、見張らない
         for (const w of 語) if (s.includes(w)) 見つかった.push(en.name + ": " + w);
       }
     };

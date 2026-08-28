@@ -1,0 +1,92 @@
+{
+  "_": "Guardian 自身の現場。ここが正本 ── ここで直し、ここから配る。",
+  "_ここは特別": "ふつうの現場では guardian/ はリポジトリの中の1フォルダだが、ここではリポジトリそのものが塊。だから map も watch も、塊自身を指す。",
+  "map": "docs/CODEMAP.md",
+  "watch": [
+    "hooks",
+    "templates",
+    "githooks"
+  ],
+  "auditHours": 3,
+  "_sources": "記号の実在照合の対象 ── 塊のエンジンそのもの",
+  "sources": [
+    "check.mjs",
+    "selfcheck.mjs",
+    "neighbors.mjs",
+    "verdict.mjs",
+    "install.mjs",
+    "pull.mjs",
+    "index.mjs",
+    "hooks/clock.js",
+    "hooks/codemap.js",
+    "hooks/lib-root.js",
+    "hooks/no-fixed-names.js",
+    "hooks/no-reflex.js",
+    "hooks/stop.js"
+  ],
+  "skipSymbols": [],
+  "_checks": "この現場の不変条件。塊自身については selfcheck が見張るので、ここは空でよい",
+  "checks": [],
+  "selectors": [],
+  "okMarker": "guardian:ok|lint-deps:ok",
+  "_private": "塊へ混ぜてはいけない個人情報。事故を書くときに人名が入るので、ここでも見張る",
+  "private": [
+    "依頼主",
+    "人1",
+    "人2",
+    "人3",
+    "yosuke",
+    "現場Aのrepo",
+    "現場A"
+  ],
+  "_neighbors": "修正の2つ外側に答えたか",
+  "neighbors": {
+    "rings": 2,
+    "code": [
+      ".",
+      "hooks"
+    ],
+    "notes": [],
+    "ext": [
+      "mjs",
+      "js"
+    ],
+    "answer": ".guardian/neighbors.answer.json",
+    "need": ".guardian/neighbors.need.json",
+    "max_callers": 40,
+    "skip_touched": [
+      "\\.selftest\\.",
+      "\\.e2e\\.",
+      "\\.test\\."
+    ],
+    "ignore_symbols": [],
+    "entry_symbols": []
+  },
+  "_evidence": "合否が回す証拠。★塊自身の検査が、そのまま証拠になる",
+  "evidence": [
+    {
+      "name": "塊の自己検査(わざと壊して赤くなるか)",
+      "run": "node selfcheck.mjs",
+      "fast": true,
+      "timeoutSec": 180
+    },
+    {
+      "name": "WHY の索引が最新か",
+      "run": "node index.mjs --check",
+      "fast": true,
+      "timeoutSec": 60
+    },
+    {
+      "name": "地図・正本",
+      "run": "node check.mjs",
+      "fast": true,
+      "timeoutSec": 120
+    },
+    {
+      "name": "近傍照合(修正の2つ外側に答えたか)",
+      "run": "node neighbors.mjs --gate",
+      "fast": true,
+      "timeoutSec": 120
+    }
+  ]
+}

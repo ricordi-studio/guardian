@@ -83,7 +83,7 @@ if (!map) {
     const mapBody = map.replace(/```[\s\S]*?```/g, '');
     for (const m of mapBody.matchAll(/`([^`\n]+)`/g)) {
       const raw = m[1].trim();
-      // `foo` / `foo()` / `foo:'bar'` のような書き方から名前だけを取り出す
+      // `foo` / `foo()` / `foo:'bar'` のような書き方から名前だけを取り出す   guardian:ok 説明のための例え(実在する記号ではない)
       const name = raw.replace(/\(\)$/, '').split(/[\s:(\[]/)[0];
       if (!name || seen.has(name)) continue;
       const ok = (IDENT.test(name) && !SKIP.has(name)) || ROUTE.test(name);
