@@ -25,6 +25,23 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+
+/** この現場の宣言(guardian.config.json)を読む唯一の口(2026-08-28)。
+ *
+ * ★以前は2箇所で別々に読んでおり、片方が【2つ上】を見たままだった
+ *   (9.0 で tools/guardian/ → guardian/ へ引っ越したときの取りこぼし)。
+ *   しかも読めなければ黙って空を返す作りなので、**見張っていないことに気づけない** ──
+ *   個人情報の見張りが、混ざっているのに「していません」と言い続けた(実測)。
+ * ★根を探して読む: この塊はルート直下にも tools/ の下にも置かれうるので、位置を決め打ちしない。 */
+function 宣言を読む() {
+  const 候補 = [path.join(HERE, "..", "guardian.config.json"),
+                path.join(HERE, "..", "..", "guardian.config.json"),
+                path.join(process.cwd(), "guardian.config.json")];
+  for (const f of 候補) {
+    try { return { 在り処: f, 宣言: JSON.parse(fs.readFileSync(f, "utf8")) }; } catch (_) {}
+  }
+  return { 在り処: "", 宣言: null };
+}
 const NL2 = String.fromCharCode(10);
 const ok = [];
 const ng = [];
@@ -448,6 +465,16 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
   const 押す = () => {
     const 中身 = [kit("KIT_VERSION").trim(), ...対象.map((f) => f + " " + いま[f])].join("\n") + "\n";
     fs.writeFileSync(台帳, 中身);
+    /* ★事故の見出しも一緒に記録する(2026-08-28)。
+     *   塊の本体は WHY.md の事故そのもの。**本体を育てる道**が要る ──
+     *   配布先で足した事故を正本へ還すには、「配られたとき何があったか」を知っている必要がある。
+     * ★指紋(ENGINE_FP)とは別のファイルにする: あちらは短い指紋、こちらは見出しの一覧で、
+     *   照合の対象が違う(エンジン vs 記録)。 */
+    try {
+      const w = fs.readFileSync(path.join(HERE, "WHY.md"), "utf8");
+      const 見出し = (w.match(/^## \[.*$/gm) || []);
+      fs.writeFileSync(path.join(HERE, "WHY_SEEN"), 見出し.join("\n") + "\n");
+    } catch (_) {}
   };
   const 違う = 対象.filter((f) => 記録[f] !== いま[f]);
 
@@ -496,8 +523,8 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
 {
   const 語 = (() => {
     try {
-      const c = JSON.parse(fs.readFileSync(path.join(HERE, "..", "..", "guardian.config.json"), "utf8"));
-      return Array.isArray(c.private) ? c.private.filter(Boolean) : [];
+      const { 宣言 } = 宣言を読む();
+      return Array.isArray(宣言?.private) ? 宣言.private.filter(Boolean) : [];
     } catch (_) { return []; }
   })();
   if (!語.length) {
@@ -566,6 +593,72 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
       ? "SPEC.md に【満たさないこと】の節がある(中身は機械には測れない ── 監査で人が読み直す)"
       : "★SPEC.md に【満たさないこと】が無い");
     if (!/満たさないこと/.test(SPEC)) ng.push("★SPEC.md に【満たさないこと】の節がありません(境界を書かないと、期待されて裏切ります)");
+  }
+}
+
+/* B1e. 【その現場で足した事故を、正本へ還す】(2026-08-28 依頼主の指摘)。
+ *
+ * ★依頼主「事故レポートが集まるほど性能が上がるので、インストールしたプロジェクトには
+ *   レポート提出の協力をお願いしたい」── そのとおりで、**塊の本体は WHY.md の事故**。
+ *   それまで還せたのは【塊のコードの直り】だけで、**本体を育てる道が無かった**。
+ * ★他の現場の事故は、こちらでは踏めない石である
+ *   (フォルダ名の空白で壊れるバグは、配布先で初めて出た)。だから集める価値がある。
+ * ★**個人情報の見張りを必ず通す。**事故は具体的であるほど価値があり、
+ *   具体的であるほど人名が入る ── 送る前に止めるのが唯一の守り。
+ * ★送信は自動にしない。1枚を作り、**送るコマンドを見せる**までが機械の仕事
+ *   (--send を明示したときだけ、その場で送る = 人の承認)。 */
+if (process.argv.includes("--why")) {
+  const 読WHY = (() => { try { return fs.readFileSync(path.join(HERE, "WHY.md"), "utf8"); } catch (_) { return ""; } })();
+  const 既知 = (() => {
+    try { return new Set(fs.readFileSync(path.join(HERE, "WHY_SEEN"), "utf8").split(/\r?\n/).filter(Boolean)); }
+    catch (_) { return null; }
+  })();
+  if (!読WHY) ng.push("WHY.md が読めません");
+  else if (!既知) ng.push("WHY_SEEN がありません(配られたときに何の事故があったかの記録)。`--stamp` で作れます");
+  else {
+    /* 見出しで節に切り、記録に無いものだけを取る */
+    const 節 = 読WHY.split(/^(?=## \[)/m).filter((s) => s.startsWith("## ["));
+    const 足された = 節.filter((s) => !既知.has(s.split(/\r?\n/)[0].trim()));
+    if (!足された.length) {
+      ok.push("この現場で足した事故はありません(還すものなし)");
+    } else {
+      /* ★個人情報の見張りを通す ── 通らなければ**書かない**(作ってから気をつけろ、では遅い) */
+      const 語 = (() => {
+        try {
+          const { 宣言 } = 宣言を読む();
+          return Array.isArray(宣言?.private) ? 宣言.private.filter(Boolean) : [];
+        } catch (_) { return []; }
+      })();
+      const 本文 = 足された.join("");
+      const 混入 = 語.filter((w) => 本文.includes(w));
+      if (混入.length) {
+        ng.push("★足した事故に、この現場の個人情報が混ざっています: " + 混入.join(" / ")
+          + "。**送る1枚は作りませんでした** ── WHY.md 側を伏せてから、もう一度 --why してください");
+      } else {
+        const 出 = ["# 事故レポート(Guardian へ)", "",
+          "この現場で新しく記録した事故を、正本へ還します。**塊の本体は事故の記録**なので、",
+          "これが集まるほど検査と規律が増えます。", "",
+          "- 塊の版: " + kit("KIT_VERSION").trim(),
+          "- 足した事故: " + 足された.length + "件",
+          "- 個人情報の見張り: " + (語.length ? 語.length + "語を通しました" : "**宣言が空のため見張っていません**(guardian.config.json の private)"),
+          "", "---", "", ...足された];
+        const 先 = path.join(process.cwd(), "guardian-why-report.md");
+        fs.writeFileSync(先, 出.join("\n"));
+        const 送る = "gh issue create --repo ricordi-studio/guardian"
+          + " --title " + JSON.stringify("事故レポート: " + 足された.length + "件")
+          + " --body-file " + JSON.stringify(先);
+        if (process.argv.includes("--send")) {
+          const r = spawnSync(送る, { shell: true, encoding: "utf8" });
+          if (r.status === 0) ok.push("事故レポートを送りました: " + String(r.stdout || "").trim());
+          else ng.push("送れませんでした(gh が要ります / gh auth login で認証): "
+            + String(r.stderr || "").slice(0, 200) + " ── 1枚は " + 先 + " に在ります");
+        } else {
+          ok.push("事故レポートを書きました: " + 先 + "(" + 足された.length + "件)");
+          ok.push("中身を読んで**承認**したら、これで送れます:\n     " + 送る
+            + "\n   (`--why --send` でその場で送ることもできます)");
+        }
+      }
+    }
   }
 }
 
