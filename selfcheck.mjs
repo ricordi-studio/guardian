@@ -735,6 +735,37 @@ if (process.argv.includes("--why")) {
       }
     });
   };
+  /* ★【裸の実数】も捕まえる(2026-08-29 外部の評価で指摘された)。
+   *
+   *   上の照合は「RULES 全N条」「WHY 全N件」の形しか見ていなかった。
+   *   だから「事故181件」「自己検査 50件」のような書き方は**素通り**し、
+   *   **README の中で「181件」と「177件」が食い違う**ところまで行った。
+   *   RULES 299条に「数を書いた文書は、書いた瞬間から腐る」と自分で書いてあるのに、である。
+   * ★網を広げる: 塊の実数(事故・条・自己検査・層)に近い言葉のそばに数字があれば、
+   *   実数と突き合わせる。**書きたいなら正しく書け、書きたくないなら数を出すな**。
+   * ★逃げ道は行末の guardian:ok(誤検出は検査ごと外されるので、必ず残す)。 */
+  const 裸 = (label, text) => {
+    if (!text) return;
+    text.split('\n').forEach((line, i2) => {
+      if (/guardian:ok/.test(line)) return;
+      const 対 = [
+        [/事故\s*(\d+)\s*件/g, real.WHY, '事故の件数'],
+        [/作法\s*(\d+)\s*条/g, real.RULES, '作法の条数'],
+        [/規律\s*(\d+)\s*条/g, real.RULES, '規律の条数'],
+        [/自己検査\s*(\d+)\s*件/g, null, '自己検査の件数'],
+      ];
+      for (const [re, 実, 名] of 対) {
+        for (const m of line.matchAll(re)) {
+          /* 自己検査の件数は、この検査自身の実行中には確定していない ── 書くこと自体を禁じる */
+          if (実 === null) { bad.push(label + ":L" + (i2 + 1) + " 「" + m[0] + "」← " + 名
+            + "は書かない(実行のたびに変わる。`selfcheck` の出力を見ること)"); continue; }
+          if (Number(m[1]) !== 実) bad.push(label + ":L" + (i2 + 1) + " 「" + m[0] + "」← 実際は " + 実);
+        }
+      }
+    });
+  };
+  for (const d of DOCS) 裸(d, kit(d));
+
   for (const d of DOCS) look(d, kit(d));
   for (const d of OUT) { try { look(d, fs.readFileSync(path.join(HERE, '..', '..', d), 'utf8')); } catch (_) { /* 無ければ見ない */ } }
   if (bad.length) ng.push('文書が書いている件数が実数と合っていません:\n      ' + bad.join('\n      '));
