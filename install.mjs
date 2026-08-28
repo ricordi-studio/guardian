@@ -213,6 +213,11 @@ else {
     + String.fromCharCode(10) + '     ' + KIT + '/audit.md を読ませて定期監査(4観点)');
   todo.push('お使いの道具にフック相当の仕掛け(コミット前・応答前に何か走らせる機能)があれば、'
     + KIT + '/hooks/*.js を呼ぶよう設定すれば、鳴る部分も同じように働きます');
+  todo.push('★**git のフックで代替できます**(3本ぶん)。この1行で有効になります:'
+    + String.fromCharCode(10) + '     git config core.hooksPath ' + KIT + '/githooks'
+    + String.fromCharCode(10) + '   コミットの手前で合否が回り、**差戻なら止まります**(不明・注意は止めない)。'
+    + String.fromCharCode(10) + '   ★代替できないもの: 編集の直前に地図を差し込む / 応答の直前に監査を催促する'
+    + String.fromCharCode(10) + '     ── その瞬間が git に無いので、この2つは失われます(承知のうえで使うこと)');
 }
 
 /* ---------- 6. AIが最初に読む文書へ追記 ---------- */

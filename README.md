@@ -157,6 +157,7 @@ node guardian/pull.mjs --check   # 取らずに、正本と何が違うかだけ
 
 ```bash
 node guardian/selfcheck.mjs           # 配られたときの中身のままか(ファイルごとに照合)
+git config core.hooksPath guardian/githooks   # Claude Code でない道具で、コミット前に合否を回す
 node guardian/selfcheck.mjs --report  # 直した分を【元の塊へ渡す1枚】にまとめる(配布先)
 node guardian/selfcheck.mjs --stamp   # 意図した変更として指紋を押し直す(元の塊)
 ```

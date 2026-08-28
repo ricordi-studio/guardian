@@ -1,0 +1,60 @@
+#!/bin/sh
+# Guardian ── コミットの手前で止まる(2026-08-29)
+#
+# ★何のために在るか
+#   Claude Code には「AIが『できました』と言い終える手前」で走るフック(hooks/stop.js)がある。
+#   だが Codex・Antigravity など、そのライフサイクルを公開していない道具では入らない。
+#   **git は、どの道具でも共通で在る。**だからコミットの手前で同じことをする。
+#
+# ★同じではない(正直に)
+#   Claude Code のフックは【AIが完了を名乗る手前】── 人が見る前に止まる。
+#   これは【人がコミットする手前】── AIは既に「できました」と言い終えている。
+#   **一段遅い**。だが「確定させる手前で止まる」ことは同じで、
+#   リポジトリに入るものが検査を通っていない、という状態は防げる。
+#
+# ★代替できないもの: 編集の直前に地図を差し込む(codemap.js)と、
+#   応答の直前に時刻を入れて監査を催促する(clock.js)。
+#   その瞬間が git に存在しないので、**この2つは失われる**。
+#   ── 失われることを承知で使う(SPEC 3節の境界)。
+#
+# 入れ方(リポジトリの中に置いたまま有効にする):
+#   git config core.hooksPath guardian/githooks
+#
+# 外すとき:
+#   git config --unset core.hooksPath
+
+set -e
+
+# 塊の位置を探す(guardian/ がルート直下 / tools/ の下、どちらでも)
+if [ -f "guardian/verdict.mjs" ]; then KIT="guardian"
+elif [ -f "tools/guardian/verdict.mjs" ]; then KIT="tools/guardian"
+else
+  echo "Guardian が見つかりません(guardian/verdict.mjs)。フックは何もしません。"
+  exit 0
+fi
+
+# node が無ければ黙って通す ── フックが原因で開発が止まるのが最悪
+command -v node >/dev/null 2>&1 || exit 0
+
+echo "── Guardian: コミットの手前で確かめます ──"
+
+# 合否。出口は 通過=0 / 差戻=1 / 不明=2
+# ★差戻のときだけ止める。不明と注意は止めないが、必ず本人に返す
+#   (不明は「測れなかった」であって「失敗」ではない ── だが見えるようにはする)
+node "$KIT/verdict.mjs" --fast
+code=$?
+
+if [ $code -eq 1 ]; then
+  echo ""
+  echo "★差戻です。直してからコミットしてください。"
+  echo "  どうしても今すぐ入れたいときは git commit --no-verify で越えられますが、"
+  echo "  **越えたことは誰にも残りません** ── 越えるなら、なぜ越えたかをコミットに書いてください。"
+  exit 1
+fi
+
+if [ $code -eq 2 ]; then
+  echo ""
+  echo "※【不明】があります。測れなかったものが在る、という意味です(止めません)。"
+fi
+
+exit 0
