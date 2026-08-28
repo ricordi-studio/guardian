@@ -47,6 +47,12 @@ const ok = [];
 const ng = [];
 let whyLoose = null;      // 守りが下限より増えている(--tighten で上げる)
 
+/* ★エンジン(配布物)の一覧は1箇所だけに持つ。指紋照合(B2)と、
+ *   配布境界との食い違い照合(B6)の両方がここを読む ── 2箇所に同じ値を書かない。 */
+const ENGINE_FILES = ['check.mjs', 'selfcheck.mjs', 'neighbors.mjs', 'verdict.mjs', 'install.mjs', 'pull.mjs',
+              'hooks/clock.js', 'hooks/codemap.js', 'hooks/lib-root.js',
+              'hooks/no-fixed-names.js', 'hooks/no-reflex.js', 'hooks/stop.js'];
+
 /* ==========================================================================
  * A. 見本のリポジトリ ── 「全部そろって正しい」状態を1つ作る
  *
@@ -436,9 +442,7 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
  *   selfcheck --report     … 直した分を【元の塊へ渡す1枚】にまとめる(配布先で回す)
  *   selfcheck --stamp      … 意図した変更として指紋を押し直す(元の塊で回す) */
 {
-  const 対象 = ['check.mjs', 'selfcheck.mjs', 'neighbors.mjs', 'verdict.mjs', 'install.mjs', 'pull.mjs',
-                'hooks/clock.js', 'hooks/codemap.js', 'hooks/lib-root.js',
-                'hooks/no-fixed-names.js', 'hooks/no-reflex.js', 'hooks/stop.js'];
+  const 対象 = ENGINE_FILES;
   const 指紋 = (s) => {
     let h = 2166136261;
     for (let k = 0; k < s.length; k++) { h ^= s.charCodeAt(k); h = Math.imul(h, 16777619); }
@@ -835,6 +839,30 @@ if (process.argv.includes("--why")) {
   }
   if (bad.length) ng.push('エンジンが特定の宛先を直に持っています(宣言へ移すこと):\n      ' + bad.join('\n      '));
   else ok.push('エンジンは特定の宛先を1つも持っていない(どの現場へ持って行っても同じ中身)');
+}
+
+/* B6. エンジン(配布物)が、pull.mjs の【配らないもの】に紛れ込んでいないか(2026-08-29, AI Council EXP-001)
+ *   ★事故: 正本を分けた直後、配布物と現場固有物の区別が無いまま `pull.mjs` が全ファイルを配ろうとした。
+ *     直した後も、**分類が正しいこと自体は誰も検査していない**(FIND-001「Explicit Contract Can Be
+ *     Consistently Wrong」)。例えば新しいエンジンファイルを誤って `.guardian/` の下に置いても、
+ *     「未分類」にはならない(既に site-only 側として分類済みだから)ので、既存の検査は気づけない。
+ *   ★この検査が閉じるのは全体ではなく一部分だけ: **既に ENGINE_FILES として宣言されているものが、
+ *     誤って現場のもの側に分類されていないか**、という既知の情報どうしの食い違いに限る。
+ *     「まだ ENGINE_FILES に載っていない新しいエンジンファイル」の誤分類までは救えない(Council FIND-001参照)。 */
+{
+  const 現場のものの宣言 = kit('pull.mjs').match(/現場のもの\s*=\s*new Set\(\[([^\]]*)\]\)/);
+  if (!現場のものの宣言) {
+    ng.push('pull.mjs の【配らないもの】(現場のもの)が見つかりません。書き方が変わったならこの検査も直すこと');
+  } else {
+    const 現場のもの = new Set([...現場のものの宣言[1].matchAll(/'([^']*)'/g)].map((m) => m[1]));
+    const 紛れ込み = ENGINE_FILES.filter((f) => 現場のもの.has(f.split('/')[0]));
+    if (紛れ込み.length) {
+      ng.push('エンジンのファイルが pull.mjs の【配らないもの】に分類されています(配布されません): '
+        + 紛れ込み.join(', '));
+    } else {
+      ok.push('エンジン(' + ENGINE_FILES.length + '件)は pull.mjs の【配らないもの】と重なっていない');
+    }
+  }
 }
 
 /* ---------- 守りの下限を上げる(--tighten) ----------
