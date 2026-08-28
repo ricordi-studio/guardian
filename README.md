@@ -34,7 +34,7 @@
 正本(GitHub)から取る ── PowerShell に貼る1行:
 
 ```powershell
-gh repo clone ricordi-studio/guardian <相手のプロジェクトのフォルダ>\guardian; Remove-Item -Recurse -Force <相手のプロジェクトのフォルダ>\guardian\.git
+npx degit ricordi-studio/guardian guardian
 ```
 
 手元の別プロジェクトからコピーしても構いませんが、**そのコピーが最新とは限りません** ──

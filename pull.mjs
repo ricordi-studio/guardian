@@ -49,7 +49,7 @@ try { fs.rmSync(仮, { recursive: true, force: true }); } catch (_) {}
 const c = 走る('git', ['clone', '--depth', '1', '-q', 正本, JSON.stringify(仮)]);
 if (c.status !== 0) {
   console.error('✗ 正本を取れませんでした: ' + String(c.stderr || '').slice(0, 300));
-  console.error('  非公開なら `gh auth login` で認証してください。');
+  console.error('  正本は公開なので認証は要りません。ネットに繋がっているか、git が入っているかを確かめてください。');
   process.exit(1);
 }
 try { fs.rmSync(path.join(仮, '.git'), { recursive: true, force: true }); } catch (_) {}
