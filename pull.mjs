@@ -65,7 +65,8 @@ const 読む = (p) => { try { return fs.readFileSync(p, 'utf8').replace(/\r\n/g,
  *   これらを配布先へコピーすると、**配布先の宣言と地図を上書きして壊す**。
  *   実際、正本を分けた直後の最初の取り直しで混入した(気づいたのは git status を見たから)。
  * ★塊は「自分が配るもの」を知っていなければならない ── 知らなければ、自分の現場ごと配ってしまう。 */
-const 現場のもの = new Set(['guardian.config.json', 'docs', '.guardian', '.git', '.github', 'node_modules', 'research']);
+const 現場のもの = new Set(['guardian.config.json', 'docs', '.guardian', '.claude', 'CLAUDE.md',
+                           '.git', '.github', 'node_modules', 'research']);
 
 const 一覧 = (dir, 元 = dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
   if (現場のもの.has(e.name)) return [];              // 配らない
