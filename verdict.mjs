@@ -139,5 +139,28 @@ for (const r of results) {
 console.log('');
 console.log(`合否: ${overall}(通過 ${n('通過')} / 注意 ${n('注意')} / **不明 ${n('不明')}** / 差戻 ${n('差戻')})${FAST ? ' ※速いものだけ' : ''}`);
 if (n('不明')) console.log('  ※【不明】は合格ではありません。測れなかったものが在るという意味です。');
+/* ★【どれだけ測れたか】を割合で出す(2026-08-29 外部評価の指摘)。
+ *
+ *   「証拠10個で不明1個」と「証拠10個で不明8個」は、どちらも【不明あり】で同じ言葉になっていた。
+ *   だが意味は全く違う ── 後者は**契約(宣言)が実装に追いついていない**という信号である。
+ * ★不明は「測れなかった」であって「失敗」ではない。だから止めない。
+ *   だが**測れた割合が下がり続けているなら、それは別の問題**で、数字にしないと見えない。
+ * ★推移も出す: 前回の割合を .guardian/coverage に置き、下がったら言う。
+ *   上がったときは黙る ── 良くなったことを毎回褒める計器は、悪くなったとき読み飛ばされる。 */
+{
+  const 測れた = n('通過') + n('注意') + n('差戻');
+  const 全部 = 測れた + n('不明');
+  if (全部) {
+    const 率 = Math.round((測れた / 全部) * 100);
+    const 台帳 = path.join(ROOT, '.guardian', 'coverage');
+    let 前 = null;
+    try { 前 = Number(String(fs.readFileSync(台帳, 'utf8')).trim()); } catch (_) {}
+    let 一言 = '';
+    if (Number.isFinite(前) && 率 < 前)
+      一言 = '  ← 前回 ' + 前 + '% から下がりました。**宣言(evidence)が実装に追いついていない合図**です';
+    console.log('  測れた割合: ' + 率 + '%(' + 測れた + '/' + 全部 + ')' + 一言);
+    try { fs.mkdirSync(path.dirname(台帳), { recursive: true }); fs.writeFileSync(台帳, String(率) + '\n'); } catch (_) {}
+  }
+}
 if (skipped.length) console.log('  ※この回で測っていないもの: ' + skipped.join(' / ') + '(--fast のため)');
 process.exit(code);

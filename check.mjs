@@ -578,9 +578,71 @@ if (argv.includes('--tighten')) {
 }
 
 /* ---------- 結果 ---------- */
+  console.log('');
+/* ★【逃げ道の乱用に歯止めを置く】(2026-08-29 外部評価の指摘)。
+ *
+ *   誤検出を黙らせる逃げ道(guardian:ok)は**必ず要る** ── 逃げ道の無い検査は、
+ *   1件の誤検出で検査ごと外されるから。だが逃げ道は、**AIがエラーを消す最短経路**でもある。
+ *   「直す」より「黙らせる」ほうが速いので、放っておけば増える一方になる。
+ * ★実測(2026-08-29): この現場で49件。**全部に理由が書かれていた**ので乱用ではなかった。
+ *   問題は数ではなく、**歯止めが1つも無かった**こと ── 増えても誰も気づかない。
+ * ★2つ置く:
+ *   ① 理由の無い逃げ道は**落とす**(黙らせるなら、なぜ黙らせるかを書かせる)
+ *   ② 数を宣言の okMax と突き合わせ、**増えたら落とす**(--tighten で下げる。ラチェット)
+ *   ★上限を決め打ちしない ── いまの数を下限にして、**そこから増えないこと**だけを守る。 */
+{
+  const 逃げ道 = [];
+  const 理由なし = [];
+  const 見る = (dir) => {
+    let es = [];
+    try { es = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return; }
+    for (const e of es) {
+      if (e.name.startsWith('.') || e.name === 'node_modules') continue;
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) { 見る(full); continue; }
+      if (!/\.(ts|tsx|js|mjs|cjs|jsx|html|gs|py|go|rb)$/.test(e.name)) continue;
+      let s = "";
+      try { s = fs.readFileSync(full, "utf8"); } catch (_) { continue; }
+      s.split(/\r?\n/).forEach((line, n) => {
+        const m = line.match(/guardian:ok(.*)$/);
+        if (!m) return;
+        逃げ道.push(path.relative(ROOT, full).split(path.sep).join("/") + ":L" + (n + 1));
+        /* 理由 = 印のあとに続く文。閉じ記号だけなら理由なし */
+        const 後 = String(m[1]).replace(/[*/>"'` ]+$/, "").trim();
+        if (後.length < 4) 理由なし.push(path.relative(ROOT, full).split(path.sep).join("/") + ":L" + (n + 1));
+      });
+    }
+  };
+  for (const w of (cfg.watch || [])) 見る(path.join(ROOT, w));
+
+  if (理由なし.length) {
+    problems.push("★逃げ道(guardian:ok)に理由が書かれていません(" + 理由なし.length + "件): "
+      + 理由なし.slice(0, 5).join(" / ")
+      + "。**黙らせるなら、なぜ黙らせるかを書くこと** ── 理由の無い逃げ道は、次の人が外せません");
+  }
+  const 上限 = Number(cfg.okMax);
+  if (!Number.isFinite(上限)) {
+    notes.push("逃げ道は " + 逃げ道.length + "件(宣言に okMax が無いので見張っていません"
+      + " ── `check.mjs --tighten` で今の数を上限として置けます)");
+  } else if (逃げ道.length > 上限) {
+    problems.push("★逃げ道(guardian:ok)が増えました: " + 逃げ道.length + "件(上限 " + 上限 + ")。"
+      + "**黙らせる前に、直せないかを見ること** ── 増やすなら宣言の okMax を人が上げる");
+  } else {
+    notes.push("逃げ道は " + 逃げ道.length + "件(上限 " + 上限 + " を超えていない)"
+      + (逃げ道.length < 上限 ? " ── `--tighten` で下げられます" : ""));
+  }
+  /* --tighten: 減っていれば上限を実数まで下げる(一方通行) */
+  if (argv.includes('--tighten') && (!Number.isFinite(上限) || 逃げ道.length < 上限)) {
+    const c2 = JSON.parse(fs.readFileSync(path.join(ROOT, cfgPath), "utf8"));
+    c2.okMax = 逃げ道.length;
+    c2._okMax = "逃げ道(guardian:ok)の上限。増やすときは人が上げる ── 黙らせるのは直すより速いので、放っておくと増える一方になる";
+    fs.writeFileSync(path.join(ROOT, cfgPath), JSON.stringify(c2, null, 2) + "\n");
+    notes.push("逃げ道の上限を " + 逃げ道.length + " に下げました(一方通行)");
+  }
+}
 for (const n of notes) console.log('  ✓ ' + n);
 if (problems.length) {
-  console.log('');
+
   for (const p of problems) console.log('  ✗ ' + p);
   console.log(`\n地図・正本の検査: ${problems.length}件のずれ`);
   process.exit(1);
