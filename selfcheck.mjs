@@ -596,6 +596,28 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
   }
 }
 
+/* B1d2. 【文書が増えたのに、入口(README)が案内していない】(2026-08-29 依頼主の指摘)。
+ *
+ * ★依頼主「コードが格納されているフォルダの中には、Readme なり何なり、
+ *   それが何なのか? 何から始めたらいいか? を説明しているものがあるのが普通ですよね?」
+ *   ── あった。だが **SPEC.md を作った翌日、README がそれを案内していなかった**。
+ *   文書を足すたび入口が遅れる ── SPEC が実装から遅れるのと同じ形(46条)。
+ * ★公開したので、README は**初見の人とAIが最初に見るもの**。ここが古いと、
+ *   新しい層は「無い」のと同じになる。
+ * ★中身の良し悪しは測れない。**名指しされているか**だけを数える。 */
+{
+  const R = (() => { try { return fs.readFileSync(path.join(HERE, "README.md"), "utf8"); } catch (_) { return ""; } })();
+  if (!R) ng.push("README.md がありません(この塊の入口。公開時に最初に見られる)");
+  else {
+    const 文書 = fs.readdirSync(HERE).filter((f) => f.endsWith(".md") && f !== "README.md");
+    const 案内なし = 文書.filter((f) => !R.includes(f)).sort();
+    if (案内なし.length)
+      ng.push("★README が案内していない文書があります: " + 案内なし.join(" ")
+        + "(入口に載らない文書は、無いのと同じです)");
+    else ok.push("README が塊の文書を全部案内している(" + 文書.length + "枚)");
+  }
+}
+
 /* B1e. 【その現場で足した事故を、正本へ還す】(2026-08-28 依頼主の指摘)。
  *
  * ★依頼主「事故レポートが集まるほど性能が上がるので、インストールしたプロジェクトには
