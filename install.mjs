@@ -26,7 +26,11 @@ const DRY = process.argv.includes('--dry');
  *   こちらのパスに空白が無いので一生出なかった ── 配布先(空白入り)で初めて出た。 */
 import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const KIT = path.relative(process.cwd(), HERE).split(path.sep).join('/') || 'guardian';
+/* ★塊がリポジトリそのものである現場(=Guardian 自身を開発する場所)では、
+ *   ここが空文字になる。以前は空なら "guardian" に落としていたが、それは**存在しないパス**で、
+ *   案内が `node guardian/check.mjs` になり、貼っても動かなかった(2026-08-29 実地で発覚)。
+ *   空なら "." ── その場所そのものが塊である、と正しく言う。 */
+const KIT = path.relative(process.cwd(), HERE).split(path.sep).join('/') || '.';
 
 /* 塊がどこに置かれていても、プロジェクトの根を自分で探す */
 function findRoot(start) {
@@ -137,8 +141,15 @@ if (!fs.existsSync(cfgPath)) {
  *   だから他の道具の現場で `.claude/` を勝手に作らない。**作らずに、手で回す手順を出す。**
  * ★判定は「既に .claude/ か CLAUDE.md があるか」。--hooks / --no-hooks で上書きできる。
  *   どちらにしたかは**必ず言う**(黙って片方を選ぶと、なぜ鳴らないのか分からなくなる)。 */
+/* ★この現場に Claude Code の仕掛けがあるか(2026-08-28)。
+ *   本体は Node だけで動き、Claude Code に依存するのは自動で鳴る部分だけ。
+ *   だから他の道具の現場で .claude/ を勝手に作らない。**作らずに、手で回す手順を出す。**
+ * ★塊自身を開発する現場(KIT === ".")では、CLAUDE.md は塊の配布物なので判定材料にならない。
+ *   そこは「Claude Code で開発している前提」で入れる ── 要らなければ --no-hooks で外せる
+ *   (2026-08-29 実地: CLAUDE.md はあるのに .claude が無く、フックが入らなかった)。 */
 const CC = process.argv.includes('--hooks') ? true
   : process.argv.includes('--no-hooks') ? false
+  : KIT === '.' ? true
   : (fs.existsSync(path.join(ROOT, '.claude')) || fs.existsSync(path.join(ROOT, 'CLAUDE.md')));
 
 /* ---------- 3. フックの登録(既存を壊さない) ---------- */

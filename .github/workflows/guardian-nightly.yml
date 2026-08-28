@@ -1,0 +1,81 @@
+# 夜間の見張り(guardian が置いていく雛形)
+#
+# GitHubのクラウドで動くので、**開発PCの電源にも、AIのセッションにも依存しません**。
+# 赤くなったらIssueを立て、緑に戻ったら閉じます ── 見に行かなくても気づける形。
+#
+# ここで見るのは【機械にできる分だけ】です。
+# 観点を選んで調べる監査(重複・死にコード・メタ化余地)は、人とAIの仕事です。
+name: 夜間の見張り(地図と正本のずれ)
+
+on:
+  schedule:
+    - cron: '0 16 * * *'      # 毎日 01:00(日本時間)。cronはUTCなので16:00
+  push:
+    branches: [main, master]  # 押した時点でも見る(朝まで気づかないのを避ける)
+  workflow_dispatch:          # 手で回したいとき用
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 検査(地図のずれ・不変条件・参照の実在)
+        id: check
+        run: |
+          set +e
+          # ★証拠の一覧は【宣言(guardian.config.json の evidence)】に1つだけ持つ(RULES.md 39条)。
+          # ここに並べ直すと、CIと手元で「何を証拠と見なすか」が2枚に割れて、片方だけ古くなる。
+          # --fast = 【自足する証拠だけ】。相手を起こさないと測れないもの(端から端まで等)は
+          # ここでは回さず、出力に**名前を出して**「この回は測っていない」と正直に書く。
+          # (毎晩「不明」で赤くすると、通知に慣れて本当の赤まで読み飛ばされる)
+          node guardian/verdict.mjs --fast > verdict.txt 2>&1; V=$?
+          {
+            echo '毎晩の機械検査です。**判断が要るものは含まれません**(観点を選んだ監査は別途)。'
+            echo ''
+            echo '## 合否(guardian/verdict.mjs)'
+            echo '```'; cat verdict.txt; echo '```'
+            echo ''
+            echo '**不明は合格ではありません** ── 測れなかったものが在るという意味です。'
+            echo '直し方の目安: 地図の記号が見つからない=`docs/CODEMAP.md` を実装に合わせる /'
+            echo '値が一致しない=どちらが正本かを決めて揃える /'
+            echo '**検査が何も読めていない**=宣言(`guardian.config.json`)の正規表現が実装とずれている。'
+          } > report.md
+          cat verdict.txt
+          # 差戻(1)は赤。不明(2)も赤にする ── 測れていないものを緑に混ぜない
+          if [ $V -ne 0 ]; then echo "failed=true" >> "$GITHUB_OUTPUT"; else echo "failed=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: 赤ければ知らせる(既に開いている報告があれば追記)
+        if: steps.check.outputs.failed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 空の結果は「無い」として扱う。`.[0].number` だけだと jq が文字列 "null" を返し、
+          # `gh issue comment null` になって作成側へ進めない(この経路が壊れていると、
+          # 赤いのに報告が立たない = 沈黙が曖昧になる)。
+          TITLE="機械検査が赤です"
+          NUM=$(gh issue list --state open --search "in:title $TITLE" --json number --jq '.[0].number // empty' || true)
+          if [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --body-file report.md
+          else
+            gh issue create --title "$TITLE" --body-file report.md
+          fi
+
+      - name: 全部緑になったら報告を閉じる
+        if: steps.check.outputs.failed == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="機械検査が赤です"
+          NUM=$(gh issue list --state open --search "in:title $TITLE" --json number --jq '.[0].number // empty' || true)
+          if [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --body '全部緑になったので閉じます。'
+            gh issue close "$NUM"
+          fi
