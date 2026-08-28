@@ -56,9 +56,23 @@ try { fs.rmSync(path.join(仮, '.git'), { recursive: true, force: true }); } cat
 
 /* ── ③ 何が変わるかを数える(黙って上書きしない) ── */
 const 読む = (p) => { try { return fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n'); } catch (_) { return null; } };
-const 一覧 = (dir, 元 = dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
-  e.isDirectory() ? 一覧(path.join(dir, e.name), 元)
-                  : [path.relative(元, path.join(dir, e.name)).split(path.sep).join('/')]);
+/* ★【配布物】と【その現場のもの】を分ける(2026-08-29 実地で見つかった)。
+ *
+ *   正本のリポジトリには、**Guardian 自身がその現場で使うもの**も入っている:
+ *     guardian.config.json … Guardian 自身の現場の宣言
+ *     docs/CODEMAP.md      … Guardian 自身の地図
+ *     .guardian/           … Guardian 自身の作業記録(回答・監査時刻・割合)
+ *   これらを配布先へコピーすると、**配布先の宣言と地図を上書きして壊す**。
+ *   実際、正本を分けた直後の最初の取り直しで混入した(気づいたのは git status を見たから)。
+ * ★塊は「自分が配るもの」を知っていなければならない ── 知らなければ、自分の現場ごと配ってしまう。 */
+const 現場のもの = new Set(['guardian.config.json', 'docs', '.guardian', '.git', '.github', 'node_modules']);
+
+const 一覧 = (dir, 元 = dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+  if (現場のもの.has(e.name)) return [];              // 配らない
+  const full = path.join(dir, e.name);
+  return e.isDirectory() ? 一覧(full, 元)
+                         : [path.relative(元, full).split(path.sep).join('/')];
+});
 const 新しい = 一覧(仮);
 const 変わる = [], 増える = [];
 for (const f of 新しい) {
