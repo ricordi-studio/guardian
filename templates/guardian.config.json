@@ -1,0 +1,80 @@
+{
+  "_": "このプロジェクト固有の不変条件。エンジン(guardian/check.mjs)はどのプロジェクトでも同じ中身。違いは全部このファイルに集めるので、塊はコピペで配れる。",
+  "_why": "各検査の why は『どの事故を防ぐか』。理由の無い検査は必ず外される(WHY.md 参照)。",
+  "map": "docs/CODEMAP.md",
+  "_watch": "地図が指している実装の場所。フックはここを触ったときだけ鳴り、監査の催促もここの変更で駆動する",
+  "watch": [
+    "src",
+    "app",
+    "lib",
+    "server",
+    "web"
+  ],
+  "auditHours": 3,
+  "_sources": "記号の実在照合の対象。地図に書いた実名がここに無ければ落ちる",
+  "sources": [
+    "src/index.ts"
+  ],
+  "skipSymbols": [],
+  "checks": [
+    {
+      "_": "同じ意味の値が複数箇所にある(ずれると事故)",
+      "kind": "same",
+      "name": "(例)為替レート",
+      "why": "2箇所に別名で置いてある。ずれると金額が食い違う",
+      "picks": [
+        {
+          "label": "server",
+          "file": "src/index.ts",
+          "re": "RATE\\s*=\\s*(\\d+)"
+        },
+        {
+          "label": "web",
+          "file": "web/app.html",
+          "re": "const RATE\\s*=\\s*(\\d+)"
+        }
+      ]
+    },
+    {
+      "_": "他所が正規表現で読んでいる『書き方』",
+      "kind": "shape",
+      "name": "(例)版番号の書き方",
+      "why": "配信スクリプトがこの形を前提に読んでいる",
+      "file": "src/version.js",
+      "re": "var VERSION = '[^']+'"
+    },
+    {
+      "_": "性質表の外に判定が散らばっていないか",
+      "kind": "noInline",
+      "name": "(例)提供各社の判定",
+      "why": "社名を並べた分岐を書くと、層ごとにリストが割れて片方だけ直す事故になる",
+      "names": [
+        "providerA",
+        "providerB"
+      ],
+      "files": [
+        "web/app.html"
+      ],
+      "allow": "CAPS\\s*=",
+      "min": 2
+    },
+    {
+      "_": "既定に任せてはいけない引数を、呼ぶ側が必ず書いているか",
+      "kind": "callArgs",
+      "name": "(例)積み上げか置き換えかを必ず書く",
+      "why": "省略すると既定(置き換え)で静かに動く。例外も型エラーも出ないので、気づけるのは結果がおかしくなった後だけ",
+      "call": "saveList",
+      "when": "['\"]measured['\"]",
+      "minArgs": 4,
+      "say": "積み上げか置き換えか",
+      "probe": "saveList(x, 'measured', items, true)",
+      "files": [
+        "src/index.ts"
+      ]
+    }
+  ],
+  "_selectors": "HTMLのJSが掴もうとしている id/class が実在するか。無くてよい参照は行末に guardian:ok",
+  "selectors": [],
+  "okMarker": "guardian:ok|lint-deps:ok",
+  "_kinds": "same / sameMap / sameSet / shape / onlyIn / noInline / callArgs。種類を足したら guardian/selfcheck.mjs の見本にも足すこと(試されていない種類があると自己検査が落ちる)"
+}
