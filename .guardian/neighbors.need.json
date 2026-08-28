@@ -2,18 +2,11 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "hooks/codemap.js::main",
-   "記号": "main",
-   "場所": "hooks/codemap.js",
+   "key": "hooks/lib-root.js::loadConfig",
+   "記号": "loadConfig",
+   "場所": "hooks/lib-root.js",
    "環": 1,
-   "きっかけ": "「touched」を呼んでいる"
-  },
-  {
-   "key": "hooks/codemap.js::raw",
-   "記号": "raw",
-   "場所": "hooks/codemap.js",
-   "環": 2,
-   "きっかけ": "「main」を呼んでいる"
+   "きっかけ": "「findRoot」を呼んでいる"
   }
  ]
 }

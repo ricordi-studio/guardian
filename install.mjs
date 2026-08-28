@@ -36,8 +36,15 @@ const KIT = path.relative(process.cwd(), HERE).split(path.sep).join('/') || '.';
 function findRoot(start) {
   let d = start;
   for (let i = 0; i < 8; i++) {
-    if (fs.existsSync(path.join(d, '.git')) || fs.existsSync(path.join(d, 'package.json'))
-        || fs.existsSync(path.join(d, 'CLAUDE.md'))) return d;
+    const has = (p) => fs.existsSync(path.join(d, p));
+    /* ★【塊のフォルダ自身を根と見なさない】(2026-08-29 実地で見つかった)。
+     *   古い pull.mjs は CLAUDE.md を【配らないもの】に持っていないので、取り直すと
+     *   **guardian/CLAUDE.md** が出来る。CLAUDE.md を根の目印にしていたこの判定は、
+     *   そこで止まって **guardian/ を根だ**と言った ── フックを guardian/.claude/ へ書き、
+     *   「足しました」と報告する。**配布先の本当の設定は一度も更新されない**(見えない失敗)。
+     * ★塊がリポジトリそのものである現場(正本)では、同じ場所に .git が在るので下の判定が勝つ。 */
+    const 塊そのもの = has('check.mjs') && has('selfcheck.mjs') && !has('.git');
+    if (!塊そのもの && (has('.git') || has('package.json') || has('CLAUDE.md'))) return d;
     const up = path.dirname(d);
     if (up === d) break;
     d = up;

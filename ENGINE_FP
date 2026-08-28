@@ -1,13 +1,13 @@
-9.12
+9.13
 check.mjs 16wqv80-27539
-selfcheck.mjs yvbmwr-37908
+selfcheck.mjs 1awimo8-39635
 neighbors.mjs 195p3q7-23486
 verdict.mjs lyvnra-6691
-install.mjs 10msx53-13674
+install.mjs 5au2-14092
 pull.mjs eax52v-4109
 hooks/clock.js 68yad4-2755
 hooks/codemap.js blx6g9-7290
-hooks/lib-root.js wcrezx-831
+hooks/lib-root.js zlyc3l-1226
 hooks/no-fixed-names.js lm54ue-2920
 hooks/no-reflex.js nkm27-4799
 hooks/stop.js 1eai9zm-4265

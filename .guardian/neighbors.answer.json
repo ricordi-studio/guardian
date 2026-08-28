@@ -1,13 +1,9 @@
 {
  "range": "HEAD",
  "answers": {
-  "hooks/codemap.js::main": {
+  "hooks/lib-root.js::loadConfig": {
    "判定": "影響なし",
-   "理由": "touched(触った実名)を使って地図の該当項を差し込む所。今回この現場で変えたのは、説明のためのコメント3行に逃げ道(guardian:ok)を付けただけで、ロジックは1文字も変えていない。塊が自分自身を検査すると、説明の例え(foo / keyed など)が実在照合に掛かるための対処"
-  },
-  "hooks/codemap.js::raw": {
-   "判定": "影響なし",
-   "理由": "環2。main の呼び手で、標準入力を読んで渡す所。今回はコメント3行に逃げ道を付けただけで、入出力の扱いは変えていない"
+   "理由": "findRoot が返した根を受け取って guardian.config.json を読む所。今回変えたのは findRoot が【どこを根と答えるか】だけで、loadConfig 自身の読み方(根からの相対で2箇所を試す)は1文字も変えていない。むしろ今回の直しは loadConfig を正しくする側で、混入した guardian/guardian.config.json を読んでしまう経路が塞がった ── 実測で確かめた(見本を建て、混入した目印があっても根が1つ上を指すことを selfcheck B8 が毎回確認する)"
   }
  }
 }

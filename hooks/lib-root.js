@@ -8,7 +8,13 @@ function findRoot(start) {
   let d = start;
   for (let i = 0; i < 8; i++) {
     const has = (p) => { try { return fs.existsSync(path.join(d, p)); } catch (_) { return false; } };
-    if (has('guardian.config.json') || has(path.join('docs', 'CODEMAP.md')) || has('.git')) return d;
+    /* ★【塊のフォルダ自身を根と見なさない】(2026-08-29 実地で見つかった)。
+     *   古い pull.mjs は guardian.config.json / docs も【配らないもの】に持っていた時期があるが、
+     *   CLAUDE.md と .claude は持っていなかった。取り直すと塊の中に正本の現場ファイルが出来る ──
+     *   それを目印にすると **guardian/ を根だ**と言い、フックが【配布先ではない宣言】を読む。
+     * ★塊がリポジトリそのものである現場(正本)では、同じ場所に .git が在るので下の判定が勝つ。 */
+    const 塊そのもの = has('check.mjs') && has('selfcheck.mjs') && !has('.git');
+    if (!塊そのもの && (has('guardian.config.json') || has(path.join('docs', 'CODEMAP.md')) || has('.git'))) return d;
     const up = path.dirname(d);
     if (up === d) break;
     d = up;

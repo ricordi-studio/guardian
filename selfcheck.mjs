@@ -893,6 +893,45 @@ if (process.argv.includes("--why")) {
   }
 }
 
+/* B8. 塊のフォルダを【プロジェクトの根】と取り違えないか(2026-08-29、実地で見つかった)
+ *   ★事故: 古い pull.mjs は CLAUDE.md を【配らないもの】に持っていないので、取り直すと
+ *     guardian/CLAUDE.md が出来る。根を探す判定は CLAUDE.md を目印にしていたため、
+ *     **guardian/ で止まった** ── install.mjs はフックを guardian/.claude/ へ書き、
+ *     「.claude/settings.json にフックを 4 本足しました」と**報告した**。
+ *     配布先の本当の設定は一度も更新されない。**見えない失敗**そのものである。
+ *   ★実際に見本を建てて確かめる(理屈ではなく実測) ── 塊らしいフォルダの中に目印を置き、
+ *     根がその1つ上を指すことを確認する。 */
+{
+  const 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-root-'));
+  try {
+    const 塊 = path.join(仮, 'guardian');
+    fs.mkdirSync(塊, { recursive: true });
+    /* 塊らしく見せる(中身は要らない ── 判定はファイルの在る無しだけを見る) */
+    for (const f of ['check.mjs', 'selfcheck.mjs']) fs.writeFileSync(path.join(塊, f), '');
+    /* 古い取り直しが持ち込む【目印】を、塊の中に置く */
+    fs.writeFileSync(path.join(塊, 'CLAUDE.md'), '');
+    fs.writeFileSync(path.join(塊, 'guardian.config.json'), '{}');
+    fs.mkdirSync(path.join(塊, 'docs'), { recursive: true });
+    fs.writeFileSync(path.join(塊, 'docs', 'CODEMAP.md'), '');
+    /* 本当の根の目印 */
+    fs.writeFileSync(path.join(仮, 'CLAUDE.md'), '');
+    fs.writeFileSync(path.join(仮, 'guardian.config.json'), '{}');
+
+    const 出た = spawnSync(process.execPath, ['-e',
+      'const {findRoot}=require(' + JSON.stringify(path.join(HERE, 'hooks', 'lib-root.js')) + ');'
+      + 'process.stdout.write(findRoot(' + JSON.stringify(塊) + '));'], { encoding: 'utf8' });
+    const 根 = String(出た.stdout || '').trim();
+    if (根 === fs.realpathSync(仮) || 根 === 仮) {
+      ok.push('塊のフォルダを根と取り違えない(混入した目印があっても1つ上を指す)');
+    } else {
+      ng.push('根の判定が塊のフォルダで止まりました(' + 根 + ')。'
+        + 'フックと導入が【配布先ではない場所】を見ます ── 報告は成功と出るので気づけません');
+    }
+  } finally {
+    fs.rmSync(仮, { recursive: true, force: true });
+  }
+}
+
 /* ---------- 守りの下限を上げる(--tighten) ----------
  * check.mjs の max と同じラチェット。向きだけ逆(あちらは下げる、こちらは上げる)。
  * 文章で止まっていた事故を検査に変えたら、その進みを**後戻りできない形**で残す。 */
