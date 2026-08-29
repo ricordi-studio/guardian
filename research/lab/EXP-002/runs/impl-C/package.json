@@ -1,0 +1,11 @@
+{
+  "name": "impl-c",
+  "version": "1.0.0",
+  "private": true,
+  "description": "注文計算・レシート出力(rung1-spec.md の実装)",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "demo": "node demo.js"
+  }
+}

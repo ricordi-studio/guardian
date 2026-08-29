@@ -1,0 +1,57 @@
+[
+  {
+    "name": "基本(4種すべて・送料無料にならない)",
+    "lines": [
+      { "kind": "goods", "title": "ノート", "price": 500, "qty": 2 },
+      { "kind": "food", "title": "コーヒー豆", "price": 1200, "qty": 1 },
+      { "kind": "shipping", "title": "配送料", "price": 800, "qty": 1 },
+      { "kind": "coupon", "title": "クーポン", "price": -300, "qty": 1 }
+    ]
+  },
+  {
+    "name": "送料無料の境目ちょうど(5000)",
+    "lines": [
+      { "kind": "goods", "title": "商品", "price": 5000, "qty": 1 },
+      { "kind": "shipping", "title": "配送料", "price": 800, "qty": 1 }
+    ]
+  },
+  {
+    "name": "境目の1円手前(4999)",
+    "lines": [
+      { "kind": "goods", "title": "商品", "price": 4999, "qty": 1 },
+      { "kind": "shipping", "title": "配送料", "price": 800, "qty": 1 }
+    ]
+  },
+  {
+    "name": "割引だけ",
+    "lines": [
+      { "kind": "coupon", "title": "クーポン", "price": -1000, "qty": 1 }
+    ]
+  },
+  {
+    "name": "空の注文",
+    "lines": []
+  },
+  {
+    "name": "丸めが効く端数(税が小数になる)",
+    "lines": [
+      { "kind": "goods", "title": "端数A", "price": 333, "qty": 1 },
+      { "kind": "food", "title": "端数B", "price": 111, "qty": 1 },
+      { "kind": "coupon", "title": "端数割引", "price": -305, "qty": 1 }
+    ]
+  },
+  {
+    "name": "食料品だけで送料無料に届く",
+    "lines": [
+      { "kind": "food", "title": "米", "price": 2500, "qty": 2 },
+      { "kind": "shipping", "title": "配送料", "price": 500, "qty": 1 }
+    ]
+  },
+  {
+    "name": "数量が複数で端数が出る",
+    "lines": [
+      { "kind": "goods", "title": "小物", "price": 97, "qty": 7 },
+      { "kind": "food", "title": "菓子", "price": 138, "qty": 3 }
+    ]
+  }
+]
