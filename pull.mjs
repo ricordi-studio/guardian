@@ -56,22 +56,67 @@ try { fs.rmSync(path.join(仮, '.git'), { recursive: true, force: true }); } cat
 
 /* ── ③ 何が変わるかを数える(黙って上書きしない) ── */
 const 読む = (p) => { try { return fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n'); } catch (_) { return null; } };
-/* ★【配布物】と【その現場のもの】を分ける(2026-08-29 実地で見つかった)。
+/* ★【配るもの】と【配らないもの】を**両方**宣言する(2026-08-29 依頼主の判断)。
  *
- *   正本のリポジトリには、**Guardian 自身がその現場で使うもの**も入っている:
- *     guardian.config.json … Guardian 自身の現場の宣言
- *     docs/CODEMAP.md      … Guardian 自身の地図
- *     .guardian/           … Guardian 自身の作業記録(回答・監査時刻・割合)
- *   これらを配布先へコピーすると、**配布先の宣言と地図を上書きして壊す**。
- *   実際、正本を分けた直後の最初の取り直しで混入した(気づいたのは git status を見たから)。
- * ★塊は「自分が配るもの」を知っていなければならない ── 知らなければ、自分の現場ごと配ってしまう。 */
-const 現場のもの = new Set(['guardian.config.json', 'docs', '.guardian', '.claude', 'CLAUDE.md',
-                           '.git', '.github', 'node_modules', 'research']);
+ *   正本のリポジトリには「他所へ配るもの」と「Guardian 自身がこの現場で使うもの」が同居する。
+ *   最初は【配らないもの】だけを並べていた(ブラックリスト)。だがそれは
+ *   **新しく作ったものが既定で配られる**という向きなので、書き忘れると混入する ──
+ *   実際、1日で3回漏れた(research / .claude / CLAUDE.md)。
+ *
+ *   反転(ホワイトリストだけ)にすると、今度は**書き忘れたものが黙って配られない**。
+ *   エラーも出ないので誰も気づけない(AI Council FIND-001 の Case G)。
+ *   **どちらも書き忘れで壊れる。壊れ方が逆になるだけである。**
+ *
+ * ★だから両方持つ: どちらにも載っていないものが1つでもあれば、selfcheck が【赤】にする。
+ *   新しいファイルを足した人は、**どちらかに書くまで先へ進めない**。
+ *   配布と導入は毎日やる作業ではないので、ここは厳重にしてよい(依頼主の判断)。
+ *
+ * ★門(この道具)と検査(selfcheck)は**同じ2つの宣言を読む** ── RULES 44条(門には双子を置く)。
+ *   門は黙って死ねるので、同じ宣言を読む検査が要る。 */
+const 配るもの = new Set([
+  /* エンジン */
+  'check.mjs', 'selfcheck.mjs', 'neighbors.mjs', 'verdict.mjs', 'install.mjs', 'pull.mjs', 'index.mjs',
+  'hooks', 'githooks', 'templates',
+  /* 文書 */
+  'README.md', 'SPEC.md', 'METHOD.md', 'RULES.md', 'WHY.md', 'WHY_INDEX.md', 'WHY_SEEN',
+  'CHANGELOG.md', 'KIT_VERSION', 'ENGINE_FP', 'audit.md', 'install.md',
+]);
+const 現場のもの = new Set([
+  'guardian.config.json',   // Guardian 自身の現場の宣言
+  'docs',                   // Guardian 自身の地図
+  '.guardian',              // Guardian 自身の作業記録
+  '.claude', 'CLAUDE.md',   // Guardian 自身のフック登録と開発規範
+  'research',               // AI Council(研究の記録。配布物ではない)
+  '.git', '.github', 'node_modules',
+]);
 
-const 一覧 = (dir, 元 = dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-  if (現場のもの.has(e.name)) return [];              // 配らない
+/* ★取る前に、正本の直下が**全部どちらかに分類されているか**を見る(門)。
+ *   分類されていないものが1つでもあれば、**取らずに止まる** ──
+ *   混入(配ってはいけないものを配る)と欠落(配るべきものを配らない)の、
+ *   どちらが起きるか分からない状態でコピーを始めないため。 */
+{
+  const 直下 = fs.readdirSync(仮).map((n) => n);
+  const 未分類 = 直下.filter((n) => !配るもの.has(n) && !現場のもの.has(n));
+  const 両方 = 直下.filter((n) => 配るもの.has(n) && 現場のもの.has(n));
+  if (未分類.length || 両方.length) {
+    fs.rmSync(仮, { recursive: true, force: true });
+    if (未分類.length) {
+      console.error('✗ 正本に【配るものとも現場のものとも決まっていない】ものがあります: ' + 未分類.join(', '));
+      console.error('  正本の pull.mjs で、配るもの / 現場のもの のどちらかに書いてください。');
+      console.error('  ★決めないまま配ると、混入するか、黙って欠落するかのどちらかが起きます。');
+    }
+    if (両方.length) {
+      console.error('✗ 両方に書かれているものがあります(どちらか一方にしてください): ' + 両方.join(', '));
+    }
+    process.exit(1);
+  }
+}
+
+const 一覧 = (dir, 元 = dir, 深さ = 0) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+  if (現場のもの.has(e.name)) return [];                      // どの深さでも配らない
+  if (深さ === 0 && !配るもの.has(e.name)) return [];          // 直下は【配ると決めたもの】だけ
   const full = path.join(dir, e.name);
-  return e.isDirectory() ? 一覧(full, 元)
+  return e.isDirectory() ? 一覧(full, 元, 深さ + 1)
                          : [path.relative(元, full).split(path.sep).join('/')];
 });
 const 新しい = 一覧(仮);

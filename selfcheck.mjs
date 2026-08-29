@@ -841,54 +841,73 @@ if (process.argv.includes("--why")) {
   else ok.push('エンジンは特定の宛先を1つも持っていない(どの現場へ持って行っても同じ中身)');
 }
 
-/* B6. エンジン(配布物)が、pull.mjs の【配らないもの】に紛れ込んでいないか(2026-08-29, AI Council EXP-001)
- *   ★事故: 正本を分けた直後、配布物と現場固有物の区別が無いまま `pull.mjs` が全ファイルを配ろうとした。
- *     直した後も、**分類が正しいこと自体は誰も検査していない**(FIND-001「Explicit Contract Can Be
- *     Consistently Wrong」)。例えば新しいエンジンファイルを誤って `.guardian/` の下に置いても、
- *     「未分類」にはならない(既に site-only 側として分類済みだから)ので、既存の検査は気づけない。
- *   ★この検査が閉じるのは全体ではなく一部分だけ: **既に ENGINE_FILES として宣言されているものが、
- *     誤って現場のもの側に分類されていないか**、という既知の情報どうしの食い違いに限る。
- *     「まだ ENGINE_FILES に載っていない新しいエンジンファイル」の誤分類までは救えない(Council FIND-001参照)。 */
+/* B6〜B7. 配布境界の照合 ── pull.mjs の【門】に対する双子(RULES 44条)
+ *   (2026-08-29, AI Council EXP-001 → 依頼主の判断でホワイト＋ブラックの両立てに)
+ *
+ * ★門(pull.mjs)は取る側でしか働かない。**配る側で先に気づく**ための検査がここ。
+ *   門と同じ2つの宣言を読む ── 表を2枚にしない。
+ *
+ * ★見るのは3方向:
+ *   B6a 直下の全項目が、配るもの / 現場のもの の**どちらかちょうど1つ**に入っているか
+ *   B6b エンジンが【配るもの】に入っているか(欠落の向き ── 配り忘れは黙って起きる)
+ *   B7  install.mjs が配布先に作るものが【現場のもの】に入っているか(混入の向き)
+ *       ── **独立した第二根拠**。据え付ける道具は、配る道具と同じ境界を逆側から知っている */
 {
-  const 現場のものの宣言 = kit('pull.mjs').match(/現場のもの\s*=\s*new Set\(\[([^\]]*)\]\)/);
-  if (!現場のものの宣言) {
-    ng.push('pull.mjs の【配らないもの】(現場のもの)が見つかりません。書き方が変わったならこの検査も直すこと');
-  } else {
-    const 現場のもの = new Set([...現場のものの宣言[1].matchAll(/'([^']*)'/g)].map((m) => m[1]));
-    const 紛れ込み = ENGINE_FILES.filter((f) => 現場のもの.has(f.split('/')[0]));
-    if (紛れ込み.length) {
-      ng.push('エンジンのファイルが pull.mjs の【配らないもの】に分類されています(配布されません): '
-        + 紛れ込み.join(', '));
-    } else {
-      ok.push('エンジン(' + ENGINE_FILES.length + '件)は pull.mjs の【配らないもの】と重なっていない');
-    }
-  }
-}
+  /* 宣言を pull.mjs から読む(門と検査が同じ1つを読むため)。
+   * ★正規表現を組み立てず、素直に切り出す ── 書き方が変われば下の「読めません」で止まる。 */
+  const 取る = (名) => {
+    const src = kit('pull.mjs');
+    const 頭 = src.indexOf(名 + ' = new Set([');
+    if (頭 < 0) return null;
+    const 尾 = src.indexOf(']);', 頭);
+    if (尾 < 0) return null;
+    const 中 = src.slice(頭, 尾);
+    return new Set([...中.matchAll(/'([^']*)'/g)].map((x) => x[1]));
+  };
+  const 配るもの = 取る('配るもの');
+  const 現場のもの = 取る('現場のもの');
 
-/* B7. install.mjs が配布先に【作る】ものが、pull.mjs の【配らないもの】に入っているか
- *   (2026-08-29、配布先からの報告で見つかった)
- *   ★事故: 9.11 の時点で `.claude/` と `CLAUDE.md` が【配らないもの】に入っておらず、
- *     配布先の guardian/ に Guardian 自身の CLAUDE.md とフック登録が流れ込んだ。
- *     research を足したのと同じ「思いつくままの列挙」で、**網羅の根拠が無かった**。
- *   ★閉じ方: 列挙を増やすのではなく、**独立した第二の根拠と突き合わせる**。
- *     install.mjs が配布先の ROOT に作るものは、定義上すべて【その現場のもの】である
- *     ── 配布物であるはずがない(配ったら、配布先で作ったものを上書きすることになる)。
- *     つまり pull.mjs の【配らないもの】は、install.mjs が作るものを必ず含んでいなければならない。
- *   ★これは全体解ではない: install が作らない現場固有物(.guardian / research 等)は
- *     この照合では守れない(AI Council FIND-001「宣言そのものの正しさは別の根拠が要る」)。 */
-{
-  const 作る = new Set([...kit('install.mjs').matchAll(/path\.join\(ROOT,\s*'([^']+)'/g)].map((m) => m[1]));
-  const 宣言 = kit('pull.mjs').match(/現場のもの\s*=\s*new Set\(\[([\s\S]*?)\]\)/);
-  if (!宣言) {
-    ng.push('pull.mjs の【配らないもの】(現場のもの)が見つかりません。書き方が変わったならこの検査も直すこと');
+  if (!配るもの || !現場のもの) {
+    ng.push('pull.mjs の【配るもの】【現場のもの】が読めません。書き方を変えたならこの検査も直すこと');
   } else {
-    const 配らない = new Set([...宣言[1].matchAll(/'([^']*)'/g)].map((m) => m[1]));
-    const 漏れ = [...作る].filter((p) => !配らない.has(p));
+    /* B6a: 分類の網羅(この現場が正本であるときだけ意味がある ── 塊がリポジトリそのもの) */
+    const 正本か = fs.existsSync(path.join(HERE, '..', '.git')) || fs.existsSync(path.join(HERE, '.git'));
+    if (!正本か) {
+      ok.push('配布境界の網羅は見ていません(ここは正本ではないので、直下に現場のものが同居しません)');
+    } else {
+      const 直下 = fs.readdirSync(HERE);
+      const 未分類 = 直下.filter((n) => !配るもの.has(n) && !現場のもの.has(n));
+      const 両方 = 直下.filter((n) => 配るもの.has(n) && 現場のもの.has(n));
+      if (未分類.length) {
+        ng.push('【配るものとも現場のものとも決まっていない】ものがあります: ' + 未分類.join(', ')
+          + ' ── pull.mjs のどちらかに書くこと。決めないと、混入か欠落のどちらかが黙って起きます');
+      } else if (両方.length) {
+        ng.push('配るものと現場のものの両方に書かれています(どちらか一方に): ' + 両方.join(', '));
+      } else {
+        ok.push('直下 ' + 直下.length + ' 項目は全て分類済み(配る ' + 配るもの.size
+          + ' / 現場 ' + 現場のもの.size + ')');
+      }
+    }
+
+    /* B6b: 配るべきエンジンが、配るものに入っているか(欠落の向き) */
+    const 抜け = ENGINE_FILES.filter((f) => !配るもの.has(f.split('/')[0]));
+    const 紛れ = ENGINE_FILES.filter((f) => 現場のもの.has(f.split('/')[0]));
+    if (抜け.length) {
+      ng.push('エンジンが【配るもの】に入っていません(配布先へ届きません。エラーも出ません): ' + 抜け.join(', '));
+    } else if (紛れ.length) {
+      ng.push('エンジンが【現場のもの】に分類されています(配布されません): ' + 紛れ.join(', '));
+    } else {
+      ok.push('エンジン(' + ENGINE_FILES.length + '件)は【配るもの】に入り、【現場のもの】と重ならない');
+    }
+
+    /* B7: install が配布先に作るものは、定義上すべて現場固有物である */
+    const 作る = new Set([...kit('install.mjs').matchAll(/path\.join\(ROOT,\s*'([^']+)'/g)].map((m) => m[1]));
+    const 漏れ = [...作る].filter((p) => !現場のもの.has(p));
     if (漏れ.length) {
-      ng.push('install.mjs が配布先に作るものが、pull.mjs の【配らないもの】に入っていません(配ると配布先のものを壊します): '
+      ng.push('install.mjs が配布先に作るものが【現場のもの】に入っていません(配ると配布先のものを壊します): '
         + 漏れ.join(', '));
     } else {
-      ok.push('install が配布先に作るもの(' + 作る.size + '件)は、全て pull の【配らないもの】に入っている');
+      ok.push('install が配布先に作るもの(' + 作る.size + '件)は、全て【現場のもの】に入っている');
     }
   }
 }

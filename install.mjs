@@ -33,7 +33,12 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const KIT = path.relative(process.cwd(), HERE).split(path.sep).join('/') || '.';
 
 /* 塊がどこに置かれていても、プロジェクトの根を自分で探す */
-function findRoot(start) {
+/* ★hooks/lib-root.js の findRoot とは【別の仕事】である(2026-08-29 監査で名前を分けた)。
+ *   あちらは【導入後】に走るので guardian.config.json / docs/CODEMAP.md を目印にできる。
+ *   こちらは【導入する前】に走るので、それらはまだ存在しない ── .git / package.json / CLAUDE.md しか手がかりが無い。
+ *   同じ名前だったので「写経(重複)」に見えていたが、目印が違う以上ひとつにはできない。
+ *   ★名前を分けたのは、次に直す人が【もう一方も直すべきか】を毎回考えずに済むようにするため。 */
+function findInstallRoot(start) {
   let d = start;
   for (let i = 0; i < 8; i++) {
     const has = (p) => fs.existsSync(path.join(d, p));
@@ -51,7 +56,7 @@ function findRoot(start) {
   }
   return process.cwd();
 }
-const ROOT = findRoot(HERE);
+const ROOT = findInstallRoot(HERE);
 const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
 const did = [];
 const skipped = [];
