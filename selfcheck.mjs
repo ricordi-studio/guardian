@@ -83,6 +83,28 @@ const NL2 = String.fromCharCode(10);
 const ok = [];
 const 未測 = [];
 const ng = [];
+/* ★個人情報の見張りの【結果】を、見張った所の外へ出す(2026-08-30、違和感の掘り出しで見つかった)。
+ *
+ *   直す前、B1c(見張り)の結果はその塊の中の局所変数で、B1e(事故レポートを送る)からは
+ *   見えなかった。だから **`--why --send` は、見張っていない現場でも、
+ *   見張って【見つかった】現場でも、そのまま公開リポジトリへ投げられた。**
+ *   しかも報告書の冒頭には「**宣言が空のため見張っていません**」と自分で書いたうえで送る。
+ * ★外向き・不可逆(公開の issue)なので、ここは黙って通してはいけない。 */
+const 個人情報の見張り = { 状態: "見張っていない", 見つかった: [], 語数: 0 };
+/* ★正本のアドレスは【1箇所】から読む(2026-08-30、違和感の掘り出しで見つかった)。
+ *
+ *   直す前は `pull.mjs` の 正本(取り直し先)と、ここの `gh issue create --repo …`(報告先)に
+ *   **同じ宛先が2つ**書かれていた ── 39条(同じことを2か所で決めない)そのもの。
+ *   正本を引っ越したら、取り直しは新しい方へ行き、**報告だけが古い方へ飛び続ける**。
+ * ★配布物の一覧(ENGINE_FILES)と同じやり方で、pull.mjs を正本として読む。
+ *   読めなければ**送り先が分からない**と正直に言う(推測で外へ出さない)。 */
+const 正本の名前 = () => {
+  try {
+    const src = fs.readFileSync(path.join(HERE, 'pull.mjs'), 'utf8');
+    const m = src.match(/正本\s*=\s*'https:\/\/github\.com\/([^'\/]+\/[^'\/]+?)(?:\.git)?'/);
+    return m ? m[1] : '';
+  } catch (_) { return ''; }
+};
 let whyLoose = null;      // 守りが下限より増えている(--tighten で上げる)
 
 /* ★指紋を取る対象は【配るもの】から導く(2026-08-30、違和感の掘り出しで見つかった)。
@@ -95,9 +117,16 @@ let whyLoose = null;      // 守りが下限より増えている(--tighten で�
  *
  * ★根は「配布物の集合が2箇所にあり、片方が短い」── 39条(同じことを2か所で決めない)。
  *   だから【配るもの】1つを正本にし、ここはそれを読んで実ファイルへ展開する。
- * ★文書(WHY.md / RULES.md)は配布先で事故が増えて当然なので、指紋の対象から外す
- *   ── その一覧も1箇所(FP_SKIP)に置く。 */
-const FP_SKIP = new Set(['WHY.md', 'WHY_INDEX.md', 'WHY_SEEN', 'RULES.md', 'CHANGELOG.md', 'KIT_VERSION', 'ENGINE_FP']);
+ * ★指紋の対象から外すのは【配布先で中身が育って当然のもの】だけ ── その一覧も1箇所(FP_SKIP)に置く。
+ *   ・WHY.md / WHY_INDEX.md / WHY_SEEN … その現場で踏んだ事故が増える(それが本体)
+ *   ・CHANGELOG.md / KIT_VERSION / ENGINE_FP … 版と指紋そのもの(自分で自分を測れない)
+ * ★`RULES.md` を外していたのを戻した(2026-08-30、違和感の掘り出しで見つかった)。
+ *   除外の理由は「配布先で事故が増えて当然」だったが、それは **WHY.md の話**である。
+ *   RULES.md は**修繕の作法**で、配布先で勝手に育つものではない ──
+ *   外したままだと、配布先が作法を書き換えても `selfcheck` は緑を返し、
+ *   `--report` にも載らず、**その現場の改善が正本へ還る道が無い**。
+ *   ★理由が1つの仲間にしか当てはまらないのに、同じ袋へ入っていた。 */
+const FP_SKIP = new Set(['WHY.md', 'WHY_INDEX.md', 'WHY_SEEN', 'CHANGELOG.md', 'KIT_VERSION', 'ENGINE_FP']);
 const ENGINE_FILES = (() => {
   const src = (() => { try { return fs.readFileSync(path.join(HERE, 'pull.mjs'), 'utf8'); } catch (_) { return ''; } })();
   const h = src.indexOf('配るもの = new Set([');
@@ -641,6 +670,8 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
     未測.push("個人情報の見張りは**していません**(guardian.config.json の private が空)"
       + " ── 配るなら、伏せたい語をそこに並べてください");
   } else {
+    個人情報の見張り.状態 = "見張った";
+    個人情報の見張り.語数 = 語.length;
     const 見つかった = [];
     const 歩く = (dir) => {
       for (const en of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -653,6 +684,7 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
       }
     };
     歩く(HERE);
+    個人情報の見張り.見つかった = 見つかった;
     if (見つかった.length)
       ng.push("★塊にこの現場の個人情報が混ざっています: " + 見つかった.slice(0, 8).join(" / ")
         + "(配る前に伏せること)");
@@ -785,10 +817,48 @@ if (process.argv.includes("--why")) {
         try { fs.mkdirSync(出先, { recursive: true }); } catch (_) {}
         const 先 = path.join(出先, "guardian-why-report.md");
         fs.writeFileSync(先, 出.join("\n"));
-        const 送る = "gh issue create --repo ricordi-studio/guardian"
-          + " --title " + JSON.stringify("事故レポート: " + 足された.length + "件")
+        const 送り先 = 正本の名前();
+        const 題 = "事故レポート: " + 足された.length + "件";
+        const 送る = "gh issue create --repo " + 送り先
+          + " --title " + JSON.stringify(題)
           + " --body-file " + JSON.stringify(先);
-        if (process.argv.includes("--send")) {
+        /* ★見張っていない中身を、外へ出さない(2026-08-30、違和感の掘り出しで見つかった)。
+         *
+         *   直す前の `--send` は、**見張っていない現場でも、見張って見つかった現場でも**、
+         *   そのまま公開リポジトリへ issue を立てた。しかも報告書の冒頭には
+         *   「宣言が空のため見張っていません」と**自分で書いたうえで**送っていた。
+         *   事故の記録は「実機で起きたことを具体的に書く」ものなので、**人名が入り込む所**である
+         *   (B1c がそのために在る)。外向き・不可逆(公開の issue)なので、ここは通さない。
+         * ★止めるだけで終わらせない ── 1枚は書けているので、**送る道を必ず案内する**。 */
+        const 出せない = !送り先
+          ? "**送り先が分かりません**(pull.mjs から正本のアドレスが読めません)"
+          : 個人情報の見張り.状態 !== "見張った"
+            ? "この現場は**個人情報を見張っていません**(guardian.config.json の private が空)"
+            : 個人情報の見張り.見つかった.length
+              ? "**見張りが引っかかっています**(" + 個人情報の見張り.見つかった.slice(0, 3).join(" / ") + ")"
+              : "";
+        /* ★【送らずに、送る内容を見る】口を作る(2026-08-30、この道具で実際に事故を起こした)。
+         *
+         *   起きたこと: 開発中、`--send` の**表示だけ**を確かめるつもりで `--why --send` を回した。
+         *   その機械には gh が入っていて認証も通っていたので、**本物の issue が公開リポジトリに立った**
+         *   (ricordi-studio/guardian#2。試験用の作り話だったが、公開されたことに変わりはない)。
+         * ★根は「**見るには、やるしかなかった**」こと ── `--stamp` とまったく同じ形である。
+         *   外向きで不可逆な口には、**必ず下見の口を対で置く**(install.mjs の --dry と同じ)。 */
+        const 下見 = process.argv.includes("--dry");
+        const 見せる = () => console.log("  送り先: " + 送り先 + " / 題: " + 題
+          + " / 中身: " + fs.statSync(先).size + "バイト・事故 " + 足された.length + "件"
+          + " / 見張り: " + 個人情報の見張り.語数 + "語を通しました");
+        if (process.argv.includes("--send") && 出せない) {
+          ng.push("★送りませんでした: " + 出せない + "。**公開リポジトリへ出す前に伏せてください**。"
+            + "1枚は " + 先 + " に在ります(private を書いてもう一度 `--why --send`、"
+            + "または中身を読んでから手で `" + 送る + "`)");
+        } else if (process.argv.includes("--send") && 下見) {
+          見せる();
+          ok.push("【下見】送りませんでした。この命令が走ります:\n     " + 送る
+            + "\n   (本当に送るときは --dry を外してください)");
+        } else if (process.argv.includes("--send")) {
+          /* 何を・どこへ出すのかを必ず先に出す(黙って外へ出す道具を作らない) */
+          見せる();
           const r = spawnSync(送る, { shell: true, encoding: "utf8" });
           if (r.status === 0) ok.push("事故レポートを送りました: " + String(r.stdout || "").trim());
           else ng.push("送れませんでした(gh が要ります / gh auth login で認証): "
@@ -796,7 +866,9 @@ if (process.argv.includes("--why")) {
         } else {
           ok.push("事故レポートを書きました: " + 先 + "(" + 足された.length + "件)");
           ok.push("中身を読んで**承認**したら、これで送れます:\n     " + 送る
-            + "\n   (`--why --send` でその場で送ることもできます)");
+            + (出せない ? "\n   ★ただし " + 出せない + " ── `--send` は止めます" : "")
+            + "\n   (`--why --send --dry` で**送らずに**中身と宛先を見られます。"
+            + "外すとその場で公開リポジトリへ出ます)");
         }
       }
     }

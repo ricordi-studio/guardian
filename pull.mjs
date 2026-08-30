@@ -28,12 +28,18 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const 正本 = 'https://github.com/ricordi-studio/guardian.git';
 const 見るだけ = process.argv.includes('--check');
 
+/* ★シェルを通さない(2026-08-30、違和感の掘り出しで見つかった)。
+ *   直す前は `shell: true` + 引数の配列だった。この形は Node が **DEP0190 で非推奨**にしている
+ *   ── 引数は逃がされず、ただ連結されるだけなので、**呼ぶ側が自分で括る**必要がある。
+ *   実際そうしていて(JSON.stringify で括る)、Windows では二重の逆斜線がたまたま通っていた。
+ * ★引数の配列をそのまま渡せば、括る作法ごと要らなくなる ── 括り忘れる場所を消す。
+ *   neighbors.mjs で同じ形の実害(空白入りの経路で git が落ち、嘘の理由が出た)を踏んでいる。 */
 const 走る = (cmd, args, opts = {}) =>
-  spawnSync(cmd, args, { encoding: 'utf8', shell: true, ...opts });
+  spawnSync(cmd, args, { encoding: 'utf8', windowsHide: true, ...opts });
 
 /* ── ① この現場で塊を直していないか(直っていたら上書きしない) ── */
 {
-  const r = 走る('node', [JSON.stringify(path.join(HERE, 'selfcheck.mjs'))]);
+  const r = 走る(process.execPath, [path.join(HERE, 'selfcheck.mjs')]);
   const 出 = String(r.stdout || '') + String(r.stderr || '');
   if (出.includes('配られたときの中身と違います')) {
     console.error('✗ この現場で塊を直しています。取り直すと、その直りが消えます。');
@@ -52,7 +58,7 @@ const 走る = (cmd, args, opts = {}) =>
  *   この道具の冒頭には「guardian/ しか触らない」と書いてあった ── 宣言と実装が食い違っていた。 */
 const 仮 = path.join(HERE, '.guardian-pull-tmp');
 try { fs.rmSync(仮, { recursive: true, force: true }); } catch (_) {}
-const c = 走る('git', ['clone', '--depth', '1', '-q', 正本, JSON.stringify(仮)]);
+const c = 走る('git', ['clone', '--depth', '1', '-q', 正本, 仮]);
 if (c.status !== 0) {
   console.error('✗ 正本を取れませんでした: ' + String(c.stderr || '').slice(0, 300));
   console.error('  正本は公開なので認証は要りません。ネットに繋がっているか、git が入っているかを確かめてください。');

@@ -1,6 +1,7 @@
-9.20
+9.21
 METHOD.md 1r6lk6m-3589
 README.md 1hdlq2t-7903
+RULES.md 1vn3us-9855
 SPEC.md 5qh40o-6596
 audit.md 78qkl6-2162
 check.mjs 16wqv80-27539
@@ -15,9 +16,9 @@ hunch.md ukokyc-2956
 index.mjs 1xub8p4-4245
 install.md 2i6pro-4191
 install.mjs 1b0oddk-17169
-neighbors.mjs 19j5n0o-37296
-pull.mjs suawll-8706
-selfcheck.mjs yk04oj-53020
+neighbors.mjs 1p80nn7-38237
+pull.mjs 5heyu9-9021
+selfcheck.mjs 1rjm92y-56441
 templates/CLAUDE-snippet.md 1y7ghqv-1478
 templates/CODEMAP.md 1iwybyg-827
 templates/guardian-audit-command.md hyfuh-175
