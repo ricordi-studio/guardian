@@ -1711,6 +1711,54 @@ if (process.argv.includes("--why")) {
     fs.rmSync(仮の親, { recursive: true, force: true });
   }
 }
+/* B8g. 【約束の宣言(PROTOCOL.json)が、実際の振る舞いと合っているか】
+ *   (2026-08-31、配布先(CodeX)の指摘・現場A の実測)。
+ *
+ * ★`pull --at` は、相手の `PROTOCOL.json` を読んで「同じ約束を持つか」を決める。
+ *   **宣言には嘘が書ける** ── 書き換え忘れ、能力を消したのに宣言だけ残った、など。
+ *   だからここで、宣言と**いまの pull.mjs が実際にする振る舞い**を突き合わせる(44条の双子)。
+ * ★測り方は【綴りを読まない】── それが今回の事故そのものだった。
+ *   実際に走らせて、**出口と言い分**で能力を判定する。
+ * ★安全に走らせられる理由: どちらの口も**クローンより前**で止まる(ネットに出ない・何も書き換えない)。
+ *   ★この前提が崩れたら、ここは嘘の緑になる ── だから「取り直しが始まっていないこと」も見る。 */
+{
+  const 走らせて = (args) => {
+    const r = spawnSync(process.execPath, [path.join(HERE, "pull.mjs"), ...args],
+      { encoding: "utf8", windowsHide: true, cwd: HERE });
+    return { code: r.status, 出: String(r.stdout || "") + String(r.stderr || "") };
+  };
+  let 宣言 = null;
+  try { 宣言 = JSON.parse(fs.readFileSync(path.join(HERE, "PROTOCOL.json"), "utf8")); } catch (_) {}
+  if (!宣言) {
+    未測.push("約束の宣言(PROTOCOL.json)が読めません ── `pull --at` は"
+      + "**相手がこれを持っているか**で配るかを決めるので、無い塊は配布先から拒否されます");
+  } else {
+    const 宣言した = Array.isArray(宣言.capabilities) ? 宣言.capabilities : [];
+    const 実際 = [];
+    /* ① 知らない口を拒むか */
+    const a = 走らせて(["--この口は無い"]);
+    if (a.code === 1 && /その口を知りません/.test(a.出)) 実際.push("reject-unknown-options");
+    /* ② --at を口として持つか(SHA でない値で、SHA を求めて止まること) */
+    const b = 走らせて(["--at", "これはSHAではない"]);
+    if (b.code === 1 && /--at には SHA を渡してください/.test(b.出)) 実際.push("at-sha");
+    /* ★どちらの回も、取り直しが始まっていないこと(始まっていたら測り方が危ない) */
+    const 始まった = /正本を取れませんでした|取り直しました|変わるもの:/.test(a.出 + b.出);
+    if (始まった) {
+      ng.push("★約束を測るはずの空回しが、**取り直しを始めています** ── "
+        + "この検査はネットに出ない前提で書かれています(口の門がクローンより後ろへ動いた疑い)");
+    }
+    const 宣言だけ = 宣言した.filter((c) => !実際.includes(c));
+    const 実際だけ = 実際.filter((c) => !宣言した.includes(c));
+    if (宣言だけ.length)
+      ng.push("★宣言しているのに、実際にはできません: " + 宣言だけ.join(", ")
+        + " ── 配布先はこの宣言を見て `--at` を許します。**嘘の宣言は、嘘の受領証と同じ**です");
+    if (実際だけ.length)
+      ng.push("★できるのに宣言していません: " + 実際だけ.join(", ")
+        + " ── 配布先はこの塊を『約束を持たない』として拒否します(PROTOCOL.json に足してください)");
+    if (!宣言だけ.length && !実際だけ.length && !始まった)
+      ok.push("約束の宣言が実際の振る舞いと合っている(" + 実際.join(" / ") + " ── 綴りではなく出口で測った)");
+  }
+}
 /* B0. 【この塊は、どの中身から来たか】(2026-08-31、配布先(CodeX)の提案)。
  *
  * ★版は**人が上げる番号**なので、同じ版のまま中身が変わることも、

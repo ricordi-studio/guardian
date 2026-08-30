@@ -99,6 +99,10 @@ const 配るもの = new Set([
   /* 文書 */
   'README.md', 'SPEC.md', 'METHOD.md', 'RULES.md', 'WHY.md', 'WHY_INDEX.md', 'WHY_SEEN',
   'CHANGELOG.md', 'KIT_VERSION', 'ENGINE_FP', 'audit.md', 'install.md', 'hunch.md',
+  /* ★機械が読む【約束の宣言】(2026-08-31、配布先(CodeX)の指摘)。
+   *   綴りで能力を測ると、コメントや死にコードで偽陽性・書き換えで偽陰性になる。
+   *   ★嘘は書けるので、selfcheck B8g が実際の振る舞いと突き合わせる(44条の双子)。 */
+  'PROTOCOL.json',
 ]);
 const 現場のもの = new Set([
   'guardian.config.json',   // Guardian 自身の現場の宣言
@@ -233,12 +237,27 @@ if (依頼SHA) {
    *   過去版を測るなら、この現場を書き換えずに**外の git で使い捨ての写しを作る**
    *   (配布先はそれで 9.22 → 9.30 の実測をしている ── --at は一度も要らなかった)。
    * ★見るのは版の番号ではなく**実装が在るか**である ── 版は人が上げる表示名なので。 */
-  let 相手 = '';
-  try { 相手 = fs.readFileSync(path.join(仮, 'pull.mjs'), 'utf8'); } catch (_) {}
-  if (!相手.includes("process.argv.indexOf('--at')")) {
+  /* ★【綴りではなく、宣言で測る】(2026-08-31、配布先(CodeX)の指摘)。
+   *
+   * ★直す前はソースの文字列 `process.argv.indexOf('--at')` を探していた。
+   *   配布先が4通り食わせて、両方向とも壊れることを実証した:
+   *     コメントに残っているだけ        → **通る**(偽陽性)
+   *     if (false) の死にコード          → **通る**(偽陽性)
+   *     parseArgs へ書き換えた正しい実装 → **拒否**(偽陰性)
+   *   ★**綴りに縛られた検査は、正しく直した人を罰する。**これは検査が外される典型の形である。
+   * ★だから相手の `PROTOCOL.json` を JSON として読む。無ければ「約束を持たない」。
+   * ★相手を**起動しない** ── 9.42 以前は未知の口を黙って無視して**本物の取り直しを始める**ので、
+   *   問い合わせのつもりが取り直しになる(配布先の実測)。静的に読むだけにする。
+   * ★宣言には嘘が書ける。だから selfcheck の B8g が、この現場の宣言と
+   *   **いまの pull.mjs が実際にする振る舞い**を突き合わせる(44条の双子)。 */
+  let 約束 = null;
+  try { 約束 = JSON.parse(fs.readFileSync(path.join(仮, 'PROTOCOL.json'), 'utf8')); } catch (_) {}
+  const 持っている = Array.isArray(約束?.capabilities) ? 約束.capabilities : [];
+  if (!(Number(約束?.pullProtocol) >= 1) || !持っている.includes('at-sha')) {
     let 相手の版 = '?';
     try { 相手の版 = fs.readFileSync(path.join(仮, 'KIT_VERSION'), 'utf8').trim(); } catch (_) {}
-    console.error('✗ その中身(版 ' + 相手の版 + ')は --at を持っていません: ' + 依頼SHA);
+    console.error('✗ その中身(版 ' + 相手の版 + ')は --at の約束を持っていません: ' + 依頼SHA);
+    console.error('  (PROTOCOL.json が' + (約束 ? ' at-sha を宣言していません' : ' 在りません') + ')');
     console.error('  配ると、**次に同じ --at を打っても黙って無視され、main を取ります**');
     console.error('  ── 「その SHA を測った」という記録だけが残り、中身は main になります。');
     console.error('  過去の中身を測るなら、この現場を書き換えずに外の git で使い捨ての写しを作ってください:');
