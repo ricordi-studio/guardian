@@ -287,7 +287,8 @@ function walk(dir, out) {
 const corpusFiles = [...new Set(CODE_DIRS.flatMap((d) => {
   const abs = path.join(ROOT, d);
   try { return fs.statSync(abs).isDirectory() ? walk(d, []) : (EXT.test(d) ? [d] : []); } catch (_) { return []; }
-}).map((f) => f.replace(/^\.\//, '')))];
+}).map((f) => f.replace(/^\.\//, '')))];
+
 /* ★コーパスが0ファイルなら【不明】(2026-08-30)。宣言の code / ext を間違えると起きる。
  *   実測: code:["app"](場所違い)でも ext:["ts"](拡張子違い)でも、直す前は【通過】した ──
  *   **宣言を間違えた現場では、門が最初から最後まで緑**になっていた。 */

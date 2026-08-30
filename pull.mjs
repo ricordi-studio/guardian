@@ -94,6 +94,10 @@ const 現場のもの = new Set([
   '.claude', 'CLAUDE.md',   // Guardian 自身のフック登録と開発規範
   'research',               // AI Council(研究の記録。配布物ではない)
   '.guardian-pull-tmp',    // 取り直しの作業場(塊の中に作る。下の 仮 と同じ名前)
+  /* ★改行の流儀は【この正本のリポジトリの話】なので配らない(2026-08-30)。
+   *   指紋(selfcheck)は改行を正規化して照合するので、配布先には要らない。
+   *   むしろ配ると、他人のリポジトリの guardian/ 以下の扱いを黙って変えてしまう。 */
+  '.gitattributes',
   '.git', '.github', 'node_modules',
 ]);
 

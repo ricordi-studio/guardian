@@ -2,84 +2,12 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "neighbors.mjs::corpus",
-   "記号": "corpus",
-   "場所": "neighbors.mjs",
+   "key": "pull.mjs::表を読む",
+   "記号": "表を読む",
+   "場所": "pull.mjs",
    "環": 1,
-   "根": "defsOfText",
-   "きっかけ": "「defsOfText」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::isExported",
-   "記号": "isExported",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "defsOfText",
-   "きっかけ": "「defsOfText」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::WORDCHAR",
-   "記号": "WORDCHAR",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "IDENT",
-   "きっかけ": "「IDENT」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::callersOf",
-   "記号": "callersOf",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "IDENT",
-   "きっかけ": "「WORDCHAR」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::enclosing",
-   "記号": "enclosing",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "defsOfText",
-   "きっかけ": "「corpus」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::frontier",
-   "記号": "frontier",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "defsOfText",
-   "きっかけ": "「isExported」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::lineOfIndex",
-   "記号": "lineOfIndex",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "IDENT",
-   "きっかけ": "「WORDCHAR」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::多重定義",
-   "記号": "多重定義",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "defsOfText",
-   "きっかけ": "「corpus」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::本体",
-   "記号": "本体",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "defsOfText",
-   "きっかけ": "「corpus」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::欄名",
-   "記号": "欄名",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "IDENT",
-   "きっかけ": "「WORDCHAR」を呼んでいる"
+   "根": "現場のもの",
+   "きっかけ": "「現場のもの」を呼んでいる"
   }
  ]
 }
