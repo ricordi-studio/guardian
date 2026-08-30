@@ -68,10 +68,12 @@ import { spawnSync } from 'node:child_process';
 const 知っている口 = ['--口一覧', '--list', '--gate', '--sweep', '--root', '--base', '--escaped'];
 const 値を取る口 = { '--root': 1, '--base': 1, '--escaped': 2 };
 const 残りを全部取る口 = [];
-if (process.argv.includes('--口一覧')) {
-  process.stdout.write(知っている口.join(String.fromCharCode(10)) + String.fromCharCode(10));
-  process.exit(0);
-}
+/* ★順番: **未知の口の走査が先、`--口一覧` は後**(2026-08-31、配布先の実測)。
+ *   検査は `--口一覧 --zzz` の形で叩く ── 門が生きていれば **出口1**、
+ *   門が壊れていれば `--zzz` が無視されて **口一覧が出て出口0**。
+ *   ★逆順だと、門が壊れていても口一覧が先に出て**緑に見える**。
+ *   ★そして「壊れている側で、その道具が本当に走り出す」ことも避けられる ──
+ *     素の `--zzz` で叩くと、門が壊れた `verdict` は**本物の合否を回し始める**(検査が検査を呼ぶ)。 */
 {
   const 渡された = process.argv.slice(2);
   const 知らない = [];
@@ -88,6 +90,10 @@ if (process.argv.includes('--口一覧')) {
     console.error('  ★黙って無視すると、打ったつもりと違う動きをしたまま報告することになります');
     process.exit(1);
   }
+}
+if (process.argv.includes('--口一覧')) {
+  process.stdout.write(知っている口.join(String.fromCharCode(10)) + String.fromCharCode(10));
+  process.exit(0);
 }
 
 const argv = process.argv.slice(2);

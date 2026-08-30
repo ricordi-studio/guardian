@@ -44,10 +44,6 @@ const 正本 = 'https://github.com/ricordi-studio/guardian.git';
 {
   const 知っている口 = ['--口一覧', '--check', '--force', '--distributed', '--at'];
   const 値を取る口 = ['--at'];
-  if (process.argv.includes('--口一覧')) {
-    process.stdout.write(知っている口.join(String.fromCharCode(10)) + String.fromCharCode(10));
-    process.exit(0);
-  }
   const 渡されたもの = process.argv.slice(2);
   const 知らない = [];
   for (let i = 0; i < 渡されたもの.length; i++) {
@@ -64,6 +60,10 @@ const 正本 = 'https://github.com/ricordi-studio/guardian.git';
     console.error('  ★黙って無視すると、**打ったつもりと違う動きをしたまま報告することになります**');
     console.error('  (`--at` は 9.41 以降です。古い中身へ戻したあとは、まずその口が在るかを確かめてください)');
     process.exit(1);
+  }
+  if (process.argv.includes('--口一覧')) {
+    process.stdout.write(知っている口.join(String.fromCharCode(10)) + String.fromCharCode(10));
+    process.exit(0);
   }
 }
 const 見るだけ = process.argv.includes('--check');

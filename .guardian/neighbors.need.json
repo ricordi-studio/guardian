@@ -2,84 +2,52 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "neighbors.mjs::corpus",
-   "記号": "corpus",
-   "場所": "neighbors.mjs",
+   "key": "pull.mjs::依頼SHA",
+   "記号": "依頼SHA",
+   "場所": "pull.mjs",
    "環": 1,
-   "根": "defsOfText",
-   "きっかけ": "「defsOfText」を呼んでいる"
+   "根": "正本",
+   "きっかけ": "「正本」を呼んでいる"
   },
   {
-   "key": "neighbors.mjs::isExported",
-   "記号": "isExported",
-   "場所": "neighbors.mjs",
+   "key": "pull.mjs::一覧",
+   "記号": "一覧",
+   "場所": "pull.mjs",
    "環": 1,
-   "根": "defsOfText",
-   "きっかけ": "「defsOfText」を呼んでいる"
+   "根": "正本",
+   "きっかけ": "「正本」を呼んでいる"
   },
   {
-   "key": "neighbors.mjs::callersOf",
-   "記号": "callersOf",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "defsOfText",
-   "きっかけ": "「corpus」を呼んでいる"
+   "key": "pull.mjs::受領証を書く",
+   "記号": "受領証を書く",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "正本",
+   "きっかけ": "「正本」を呼んでいる"
   },
   {
-   "key": "neighbors.mjs::enclosing",
-   "記号": "enclosing",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "defsOfText",
-   "きっかけ": "「corpus」を呼んでいる"
+   "key": "pull.mjs::全消える",
+   "記号": "全消える",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "正本",
+   "きっかけ": "「正本」を呼んでいる"
   },
   {
-   "key": "neighbors.mjs::frontier",
-   "記号": "frontier",
-   "場所": "neighbors.mjs",
+   "key": "pull.mjs::取得SHA",
+   "記号": "取得SHA",
+   "場所": "pull.mjs",
    "環": 2,
-   "根": "defsOfText",
-   "きっかけ": "「isExported」を呼んでいる"
+   "根": "正本",
+   "きっかけ": "「依頼SHA」を呼んでいる"
   },
   {
-   "key": "neighbors.mjs::lineOfIndex",
-   "記号": "lineOfIndex",
-   "場所": "neighbors.mjs",
+   "key": "pull.mjs::新しい",
+   "記号": "新しい",
+   "場所": "pull.mjs",
    "環": 2,
-   "根": "defsOfText",
-   "きっかけ": "「corpus」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::外した件を言う",
-   "記号": "外した件を言う",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "defsOfText",
-   "きっかけ": "「corpus」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::多重定義",
-   "記号": "多重定義",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "defsOfText",
-   "きっかけ": "「corpus」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::本体",
-   "記号": "本体",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "defsOfText",
-   "きっかけ": "「corpus」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::欄名",
-   "記号": "欄名",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "defsOfText",
-   "きっかけ": "「corpus」を呼んでいる"
+   "根": "正本",
+   "きっかけ": "「一覧」を呼んでいる"
   }
  ]
 }

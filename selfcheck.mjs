@@ -38,10 +38,12 @@ import { fileURLToPath } from 'node:url';
 const 知っている口 = ['--口一覧', '--changed', '--dry', '--receipt', '--report', '--send', '--sha', '--stamp', '--tighten', '--why'];
 const 値を取る口 = {};
 const 残りを全部取る口 = [];
-if (process.argv.includes('--口一覧')) {
-  process.stdout.write(知っている口.join(String.fromCharCode(10)) + String.fromCharCode(10));
-  process.exit(0);
-}
+/* ★順番: **未知の口の走査が先、`--口一覧` は後**(2026-08-31、配布先の実測)。
+ *   検査は `--口一覧 --zzz` の形で叩く ── 門が生きていれば **出口1**、
+ *   門が壊れていれば `--zzz` が無視されて **口一覧が出て出口0**。
+ *   ★逆順だと、門が壊れていても口一覧が先に出て**緑に見える**。
+ *   ★そして「壊れている側で、その道具が本当に走り出す」ことも避けられる ──
+ *     素の `--zzz` で叩くと、門が壊れた `verdict` は**本物の合否を回し始める**(検査が検査を呼ぶ)。 */
 {
   const 渡された = process.argv.slice(2);
   const 知らない = [];
@@ -58,6 +60,10 @@ if (process.argv.includes('--口一覧')) {
     console.error('  ★黙って無視すると、打ったつもりと違う動きをしたまま報告することになります');
     process.exit(1);
   }
+}
+if (process.argv.includes('--口一覧')) {
+  process.stdout.write(知っている口.join(String.fromCharCode(10)) + String.fromCharCode(10));
+  process.exit(0);
 }
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -1892,6 +1898,17 @@ if (process.argv.includes("--why")) {
       const r = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧"],
         { encoding: "utf8", windowsHide: true, cwd: HERE });
       if (r.status !== 0) { ずれ.push(t + "(--口一覧 が答えません)"); continue; }
+      /* ★【名前だけでなく、拒むかも測る】(2026-08-31、配布先の実測)。
+       *   直す前の B11 は `--口一覧` の**答え**しか見ていなかった。配布先が門の拒否だけを壊すと、
+       *   口一覧は無傷なので **B11 は一言も言わなかった**(気づいたのは指紋だけ)。
+       *   ★そして**指紋は正本では守りにならない** ── `--stamp` を押せるからである。
+       *     つまり「正本で1本だけ直し忘れる」は、どの検査にも掛からなかった。
+       * ★叩き方は `--口一覧 --zzz` の形にする ── 素の `--zzz` で叩くと、
+       *   **門が壊れている道具は本物の仕事を始める**(壊れた verdict は合否を回し始め、検査が検査を呼ぶ)。
+       *   この形なら、門が壊れていても**口一覧が出て終わる**だけで済む。 */
+      const z = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧", "--この口は無い"],
+        { encoding: "utf8", windowsHide: true, cwd: HERE });
+      if (z.status !== 1) ずれ.push(t + ": 知らない口を拒みません(出口 " + z.status + ")");
       const 実際 = new Set(String(r.stdout || "").split(NL2).map((x) => x.trim()).filter(Boolean));
       const 書いてある = 宣言[t] || new Set();
       const 案内だけ = [...書いてある].filter((x) => !実際.has(x));
@@ -1905,7 +1922,7 @@ if (process.argv.includes("--why")) {
         + " ── **案内された口が存在しないのは、黙る事故より質が悪い**"
         + "(案内どおり打った人が、打ったつもりのまま別の動きを受け取ります)");
     } else {
-      ok.push("案内されている口は、全部その道具が口として答える(" + 測れた.join(" / ")
+      ok.push("案内されている口は、全部その道具が口として答え、知らない口を拒む(" + 測れた.join(" / ")
         + " ── 綴りではなく --口一覧 に答えさせて突き合わせた)");
     }
   }
