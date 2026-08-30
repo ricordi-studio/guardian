@@ -2,12 +2,36 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "neighbors.mjs::frontier",
-   "記号": "frontier",
-   "場所": "neighbors.mjs",
+   "key": "install.mjs::CC",
+   "記号": "CC",
+   "場所": "install.mjs",
    "環": 1,
-   "根": "isExported",
-   "きっかけ": "「isExported」を呼んでいる"
+   "根": "claude",
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::cfgPath",
+   "記号": "cfgPath",
+   "場所": "install.mjs",
+   "環": 1,
+   "根": "claude",
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::findInstallRoot",
+   "記号": "findInstallRoot",
+   "場所": "install.mjs",
+   "環": 1,
+   "根": "claude",
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::setPath",
+   "記号": "setPath",
+   "場所": "install.mjs",
+   "環": 1,
+   "根": "claude",
+   "きっかけ": "「claude」を呼んでいる"
   },
   {
    "key": "pull.mjs::現場のもの",
@@ -46,8 +70,8 @@
    "記号": "全消える",
    "場所": "pull.mjs",
    "環": 1,
-   "根": "見るだけ",
-   "きっかけ": "「見るだけ」を呼んでいる"
+   "根": "仮",
+   "きっかけ": "「仮」を呼んでいる"
   },
   {
    "key": "pull.mjs::中の消える",
@@ -74,36 +98,28 @@
    "きっかけ": "「仮」を呼んでいる"
   },
   {
-   "key": "selfcheck.mjs::CASES",
-   "記号": "CASES",
-   "場所": "selfcheck.mjs",
-   "環": 1,
-   "根": "ng",
-   "きっかけ": "「ng」を呼んでいる"
+   "key": "install.mjs::ROOT",
+   "記号": "ROOT",
+   "場所": "install.mjs",
+   "環": 2,
+   "根": "claude",
+   "きっかけ": "「findInstallRoot」を呼んでいる"
   },
   {
-   "key": "selfcheck.mjs::ENGINE_FILES",
-   "記号": "ENGINE_FILES",
-   "場所": "selfcheck.mjs",
-   "環": 1,
-   "根": "FP_SKIP",
-   "きっかけ": "「FP_SKIP」を呼んでいる"
+   "key": "install.mjs::settings",
+   "記号": "settings",
+   "場所": "install.mjs",
+   "環": 2,
+   "根": "claude",
+   "きっかけ": "「setPath」を呼んでいる"
   },
   {
-   "key": "selfcheck.mjs::NL2",
-   "記号": "NL2",
-   "場所": "selfcheck.mjs",
-   "環": 1,
-   "根": "ng",
-   "きっかけ": "「ng」を呼んでいる"
-  },
-  {
-   "key": "selfcheck.mjs::拾えたか",
-   "記号": "拾えたか",
-   "場所": "selfcheck.mjs",
-   "環": 1,
-   "根": "ng",
-   "きっかけ": "「ng」を呼んでいる"
+   "key": "install.mjs::snippet",
+   "記号": "snippet",
+   "場所": "install.mjs",
+   "環": 2,
+   "根": "claude",
+   "きっかけ": "「CC」を呼んでいる"
   },
   {
    "key": "pull.mjs::一覧",
@@ -112,22 +128,6 @@
    "環": 2,
    "根": "仮",
    "きっかけ": "「現場のもの」を呼んでいる"
-  },
-  {
-   "key": "selfcheck.mjs::DECISIONS_MD",
-   "記号": "DECISIONS_MD",
-   "場所": "selfcheck.mjs",
-   "環": 2,
-   "根": "ng",
-   "きっかけ": "「NL2」を呼んでいる"
-  },
-  {
-   "key": "selfcheck.mjs::RULES_MD",
-   "記号": "RULES_MD",
-   "場所": "selfcheck.mjs",
-   "環": 2,
-   "根": "ng",
-   "きっかけ": "「NL2」を呼んでいる"
   }
  ]
 }

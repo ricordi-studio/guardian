@@ -233,14 +233,38 @@ if (added) {
  * ファイル名だけで見ていたので、手直しした workflow が在る所へ**2本目**を置いてしまい、
  * 毎晩2回検査して、片方だけ古いまま残る状態を作れた ── 冪等の判定を名前でやると、こうなる。 */
 {
+  /* ★冪等の判定を【1本の綴り】に頼らない(2026-08-30、配布先からの報告②)。
+   *
+   *   直す前は `${KIT}/check.mjs` という**その1本の文字列**を探していた。
+   *   配布先の報告: 8月から在った workflow と**別名で2本目**が置かれ、同じ時刻に同じ検査が2回走った。
+   *   ★測ったら、名前ではなく**何を指しているか**が軸だった(5つの現実的な形のうち3つで二重置き):
+   *     guardian/check.mjs          … 気づく
+   *     tools/guardian/check.mjs    … 気づく(綴りが部分一致するので、たまたま)
+   *     tools/codemap/check.mjs     … **二重置き**(9.0 の改名より前)
+   *     guardian/verdict.mjs        … **二重置き**(その現場が --fast だけ回すよう手直しした)
+   *     npm run guardian:check      … **二重置き**(npm script でくるんだ)
+   *   ★報告者の案(古い名前の一覧に nightly-check.yml を足す)は名前の軸なので、
+   *     手直しされた版・くるんだ版には届かない。**中身の軸を広げる**ほうが当たる。
+   * ★それでも当たらない形(npm script)は残る ── そこは**黙らずに言う**。
+   *   置いたうえで「既に N本ある」と名指しし、二重に走っていないか人に確かめてもらう。 */
   const dir = path.join(ROOT, '.github', 'workflows');
+  const 塊の道具 = /(check|verdict|selfcheck|neighbors|index)\.mjs/;
   let already = '';
+  const ほかの仕掛け = [];
   try {
-    for (const f of fs.readdirSync(dir))
-      if (fs.readFileSync(path.join(dir, f), 'utf8').includes(`${KIT}/check.mjs`)) { already = f; break; }
+    for (const f of fs.readdirSync(dir)) {
+      const t = fs.readFileSync(path.join(dir, f), 'utf8');
+      if (塊の道具.test(t) || t.includes(KIT + '/')) { if (!already) already = f; continue; }
+      ほかの仕掛け.push(f);
+    }
   } catch (_) { /* .github が無ければ置く */ }
-  if (already) skipped.push(`.github/workflows/${already} が既に検査を回しているので触っていません`);
-  else write(path.join(dir, 'guardian-nightly.yml'),
+  if (already) skipped.push(`.github/workflows/${already} が既に塊の検査を回しているので触っていません`);
+  else if (ほかの仕掛け.length) {
+    todo.push('★`.github/workflows/` に既に ' + ほかの仕掛け.length + '本あります('
+      + ほかの仕掛け.join(', ') + ')。塊の道具を名指ししていないので**別物と見なして置きました**が、'
+      + '**夜間の検査が二重に走らないか確かめてください**(npm script などでくるんでいると、こちらからは見えません)');
+  }
+  if (!already) write(path.join(dir, 'guardian-nightly.yml'),
     fs.readFileSync(path.join(HERE, 'templates', 'nightly-check.yml'), 'utf8').replace(/tools\/guardian/g, KIT),
     '毎晩01:00に検査し、赤ければIssueを立てる。緑に戻れば閉じる');
 }
@@ -326,7 +350,28 @@ if (i >= 0 && j > i) {
 }
 if (!DRY && body !== claude) fs.writeFileSync(claudePath, body);
 
-todo.push('docs/CODEMAP.md がまだ空です。**触った機能から**項を足していってください(全部いっぺんに書かなくてよい)');
+/* ★地図が空かどうかを【実際に見て】言う(2026-08-30、配布先からの報告②)。
+ *
+ *   直す前は条件が1つも無く、無条件で「まだ空です」と出していた。
+ *   配布先の報告: **1239行の地図がある現場でも毎回そう言われる**。
+ *   ★これは計器が嘘をついている形である。新規の現場では正しい案内だが、
+ *     育っている現場では嘘になり、読む人は「この道具は中身を見ていない」と学ぶ。
+ *     **一度そう学ばれると、本当に空のときの案内も読み飛ばされる**(7条の別の顔)。
+ * ★数え方は【雛形に無い見出し】。行数や総見出し数だと、雛形そのものを「項がある」と数えてしまう。
+ * ★在るときは在ると言う ── 無音を「見ていない」と読ませないため(報告者の提案どおり)。 */
+{
+  const 見出しを取る = (t) => (String(t).match(/^##\s+.*$/gm) || []).map((s) => s.trim());
+  const 雛形 = new Set(見出しを取る(fs.readFileSync(path.join(HERE, 'templates', 'CODEMAP.md'), 'utf8')));
+  let 地図 = '';
+  try { 地図 = fs.readFileSync(mapPath, 'utf8'); } catch (_) {}
+  const 項 = 見出しを取る(地図).filter((h) => !雛形.has(h));
+  if (!項.length) {
+    todo.push('docs/CODEMAP.md がまだ空です(雛形のほかに項がありません)。'
+      + '**触った機能から**項を足していってください(全部いっぺんに書かなくてよい)');
+  } else {
+    skipped.push('docs/CODEMAP.md を見ました: ' + 項.length + '項あるので、「空です」の案内は出しません');
+  }
+}
 todo.push(`検査を回す: node ${KIT}/check.mjs`);
 
 /* ---------- 7. 塊そのものが生きていることを、その場で確かめる ----------

@@ -37,17 +37,29 @@ const 見るだけ = process.argv.includes('--check');
 const 走る = (cmd, args, opts = {}) =>
   spawnSync(cmd, args, { encoding: 'utf8', windowsHide: true, ...opts });
 
-/* ── ① この現場で塊を直していないか(直っていたら上書きしない) ── */
-{
-  const r = 走る(process.execPath, [path.join(HERE, 'selfcheck.mjs')]);
-  const 出 = String(r.stdout || '') + String(r.stderr || '');
-  if (出.includes('配られたときの中身と違います')) {
-    console.error('✗ この現場で塊を直しています。取り直すと、その直りが消えます。');
-    console.error('  先に `node guardian/selfcheck.mjs --report` で1枚を作り、');
-    console.error('  正本へ渡してから取り直してください(README の「改善の還流」)。');
-    process.exit(1);
-  }
-}
+/* ── ① この現場で塊を直していないか ──
+ *
+ * ★「こちらで直した」と「正本が進んだ(こちらは古いだけ)」を区別する(2026-08-30、配布先からの報告②)。
+ *
+ *   直す前は、指紋が食い違えば**どちらも同じ扱い**で止めていた。配布先の報告:
+ *     1. pull.mjs だけ手で新しくした
+ *     2. → 守りが「この現場で塊を直しています」と言って取り直しを止めた
+ *     3. → 指紋も手で入れた → 今度は別の3ファイルが「違う」と言われる
+ *     4. → git で丸ごと戻してから取り直して解決
+ *   **堂々巡り**である。守りとしては正しく働いているのに、**出口が無い**。
+ *
+ * ★区別する材料は、この道具の手元にある ── **正本を一時領域に取っているのだから、
+ *   食い違ったファイルの中身を正本と突き合わせればよい**(報告者の指摘どおり)。
+ *     手元 == 正本 … この現場の直りではない(誰かが先に手で写しただけ)→ 止めない
+ *     手元 != 正本 … 本当にこの現場の直り → 止める
+ * ★どのファイルが食い違ったかは `selfcheck --changed` から受け取る。
+ *   直す前は赤い文の**文言**を includes で見ていたが、文言は変わる(実際 9.21 で変えた)。
+ * ★だから判定は【クローンの後】に移した。ネットが要る代わりに、区別できる。 */
+const 食い違い = (() => {
+  const r = 走る(process.execPath, [path.join(HERE, 'selfcheck.mjs'), '--changed']);
+  if (r.status !== 0) return null;                     // 測れなかった(下で正直に言う)
+  return String(r.stdout || '').split('\n').map((s) => s.trim()).filter(Boolean);
+})();
 
 /* ── ② 正本を一時領域に取る ── */
 /* ★一時フォルダは【塊の中】に作る(2026-08-30、違和感の掘り出しで見つかった)。
@@ -65,6 +77,40 @@ if (c.status !== 0) {
   process.exit(1);
 }
 try { fs.rmSync(path.join(仮, '.git'), { recursive: true, force: true }); } catch (_) {}
+
+/* ── ①' 食い違いを、正本と突き合わせて仕分ける(クローンが済んでから) ── */
+{
+  const 読む素 = (p) => { try { return fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n'); } catch (_) { return null; } };
+  if (食い違い === null) {
+    /* ★測れなかったことを黙らない。ただし止めもしない ── 測れないのは「直りが在る」証拠ではない。
+     *   代わりに、上書きされ得るものを人に見せる(この塊の「無音を安全と読ませない」)。 */
+    console.log('※この現場の直りを確かめられませんでした(selfcheck が答えません)。'
+      + '直したものが在るなら、先に `node guardian/selfcheck.mjs --report` で1枚を作ってください。');
+  } else if (食い違い.length) {
+    const この現場の直り = [];
+    const 正本と同じ = [];
+    for (const f of 食い違い) {
+      const 手元 = 読む素(path.join(HERE, f));
+      const 上流 = 読む素(path.join(仮, f));
+      /* 上流に無いもの(この現場が足したもの)は、正本と比べようがない ── 直り側に置く */
+      if (手元 !== null && 上流 !== null && 手元 === 上流) 正本と同じ.push(f);
+      else この現場の直り.push(f);
+    }
+    if (正本と同じ.length) {
+      console.log('(指紋は古いが、正本と同じ中身でした: ' + 正本と同じ.join(', ')
+        + ' ── この現場の直りではないので、そのまま進めます)');
+    }
+    if (この現場の直り.length) {
+      fs.rmSync(仮, { recursive: true, force: true });
+      console.error('✗ この現場で塊を直しています: ' + この現場の直り.join(', '));
+      console.error('  取り直すと、その直りが消えます。');
+      console.error('  ① 還すなら: `node guardian/selfcheck.mjs --report` で1枚を作り、正本へ渡す');
+      console.error('  ② 要らないなら: git で塊を配られた状態に戻してから、もう一度取り直す');
+      console.error('     (中途半端に手で新しくすると、ここで堂々巡りになります)');
+      process.exit(1);
+    }
+  }
+}
 
 /* ── ③ 何が変わるかを数える(黙って上書きしない) ── */
 const 読む = (p) => { try { return fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n'); } catch (_) { return null; } };
