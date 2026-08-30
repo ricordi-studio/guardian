@@ -95,7 +95,7 @@ const ng = [];
 const OUT = ['CLAUDE.md', 'STATUS.md', 'docs/CODEMAP.md'];
 /* いまの中身の指紋(受領証が使う。B1b が埋める) */
 const 現在の指紋 = {};
-const 個人情報の見張り = { 状態: "見張っていない", 見つかった: [], 語数: 0 };
+const 個人情報の見張り = { 状態: "見張っていない", 見つかった: [], 現場の文書: [], 語数: 0 };
 /* ★正本のアドレスは【1箇所】から読む(2026-08-30、違和感の掘り出しで見つかった)。
  *
  *   直す前は `pull.mjs` の 正本(取り直し先)と、ここの `gh issue create --repo …`(報告先)に
@@ -751,7 +751,8 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
   } else {
     個人情報の見張り.状態 = "見張った";
     個人情報の見張り.語数 = 語.length;
-    const 見つかった = [];
+    const 見つかった = [];      /* 塊の中 ── 配る物に混ざっている(赤) */
+    const 現場の文書 = [];    /* この現場の索引 ── 在って正常(赤にしない) */
     const 歩く = (dir) => {
       for (const en of fs.readdirSync(dir, { withFileTypes: true })) {
         const full = path.join(dir, en.name);
@@ -778,13 +779,31 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
       if (/guardian\.config\.json$/.test(d)) continue;
       let t = '';
       try { t = fs.readFileSync(path.join(ROOT_DIR, d), 'utf8'); } catch (_) { continue; }
-      for (const w of 語) if (t.includes(w)) 見つかった.push(d + ': ' + w);
+      for (const w of 語) if (t.includes(w)) 現場の文書.push(d + ': ' + w);
     }
     個人情報の見張り.見つかった = 見つかった;
+    個人情報の見張り.現場の文書 = 現場の文書;
     if (見つかった.length)
       ng.push("★塊にこの現場の個人情報が混ざっています: " + 見つかった.slice(0, 8).join(" / ")
         + "(配る前に伏せること)");
     else ok.push("塊にこの現場の個人情報が混ざっていない(" + 語.length + "語を見張り)");
+    /* ★【現場の文書に乗っているのは、正常である】(2026-08-31、配布先の実測で判明)。
+     *
+     *   9.37 で見る範囲をこの現場の索引まで広げた ── そこは正しかった。
+     *   壊れたのは**判定**の方で、配布先の CLAUDE.md の「開発規範に書かれた人名」と
+     *   STATUS.md の家族の名前を捕まえ、**伏せれば規範と記録が壊れる**ので直せない。
+     *   つまり**その現場では永久に赤**になった(46条の逆 ── 直せない赤は、無視される赤である)。
+     * ★区別はこう:
+     *     塊の中(配る物)に乗っている  … 配る前に伏せる ── **赤**
+     *     この現場の文書に乗っている    … 持っている分には正常 ── **赤にしない**
+     *   ただし黙らない。**外へ写しを出すなら何箇所が一緒に出るか**を、毎回数えて出す。
+     * ★これが「隔離した写しを CI へ置いてよいか」に機械が答える形である(配布先の提案)。 */
+    if (現場の文書.length)
+      ok.push("この現場の文書には " + 現場の文書.length + " 箇所あります(**持っている分には正常**): "
+        + 現場の文書.slice(0, 8).join(" / ")
+        + (現場の文書.length > 8 ? " ほか" + (現場の文書.length - 8) + "件" : "")
+        + " ── ★**外へ写しを出すなら、これが一緒に出ます**");
+    else if (語.length) ok.push("この現場の文書にも乗っていない(写しを外へ出しても人名は出ません)");
   }
 }
 
@@ -930,6 +949,9 @@ if (process.argv.includes("--why")) {
           ? "**送り先が分かりません**(pull.mjs から正本のアドレスが読めません)"
           : 個人情報の見張り.状態 !== "見張った"
             ? "この現場は**個人情報を見張っていません**(guardian.config.json の private が空)"
+            /* ★ここが見るのは【塊の中】だけ(2026-08-31)。現場の文書に人名が在るのは正常で、
+             *   それで外向きの口を塞ぐと、配布先は事故を一生報告できない。
+             *   送る中身そのものは、下の「足した事故に混ざっていないか」が別に見ている(44条の分担)。 */
             : 個人情報の見張り.見つかった.length
               ? "**見張りが引っかかっています**(" + 個人情報の見張り.見つかった.slice(0, 3).join(" / ") + ")"
               : "";
@@ -1537,6 +1559,92 @@ if (process.argv.includes("--why")) {
   }
 }
 
+/* B8e. 【記号名の長さと言語で、地図への到達が変わらないか】
+ *   (2026-08-31、配布先(現場A / CodeX)の提案)。
+ *
+ * ★これは症状ごとの回帰例ではなく【不変条件】である ── 症状を知らなくても言える。
+ *   「同じ形の項が、記号名の長さと言語だけで結果を変えてはいけない」。
+ *   今夜の3件(語境界が ASCII 前提 / 実名の長さ閾値が3 / 括弧付きを拾えない)は、
+ *   どれもこの1つの条件で先に赤にできた ── **書けなかったのではなく、書いていなかった**。
+ * ★あわせて2つ目の不変条件も同じ見本で測る:
+ *   **裸名(`名札`)と呼び出し形(`顔(user, slot)`)は、同じ実名を指す。**
+ * ★最小例より寿命が長い ── 次に閾値・文字クラス・括弧の扱いを触った人が、
+ *   何の症状も知らないまま赤を受け取れる(提案者の言葉)。
+ * ★測れない場合は【未測】── 見本を建てられなかったことを緑に混ぜない。 */
+{
+  const 見本 = [
+    { 名: "sbUser",   項: "英語6字の口",   書き: "`sbUser`" },
+    { 名: "顔",       項: "日本語1字の口", 書き: "`顔(user, slot)`" },   /* 呼び出し形でも同値のはず */
+    { 名: "名札",     項: "日本語2字の口", 書き: "`名札`" },
+    { 名: "出席者",   項: "日本語3字の口", 書き: "`出席者`" },
+  ];
+  const 仮 = fs.mkdtempSync(path.join(os.tmpdir(), "guardian-fuhen-"));
+  try {
+    fs.mkdirSync(path.join(仮, "guardian", "hooks"), { recursive: true });
+    for (const f of fs.readdirSync(path.join(HERE, "hooks")))
+      fs.copyFileSync(path.join(HERE, "hooks", f), path.join(仮, "guardian", "hooks", f));
+    try { fs.copyFileSync(path.join(HERE, "package.json"), path.join(仮, "guardian", "package.json")); } catch (_) {}
+    fs.writeFileSync(path.join(仮, "guardian.config.json"),
+      JSON.stringify({ watch: ["src"], map: "docs/CODEMAP.md" }, null, 2) + NL2);
+    fs.mkdirSync(path.join(仮, "docs"), { recursive: true });
+    fs.mkdirSync(path.join(仮, "src"), { recursive: true });
+    /* 同じ形の項を並べ、記号名の長さと言語だけを変える */
+    let 地図 = "# 地図" + NL2 + NL2;
+    for (const m of 見本) 地図 += "## " + m.項 + NL2 + NL2 + "- " + m.書き + " @`src/index.js`" + NL2 + NL2;
+    fs.writeFileSync(path.join(仮, "docs", "CODEMAP.md"), 地図);
+    fs.writeFileSync(path.join(仮, "src", "index.js"),
+      見本.map((m) => "function " + m.名 + "() {}").join(NL2) + NL2);
+    const 届かない = [];
+    for (const m of 見本) {
+      const 入力 = JSON.stringify({
+        tool_name: "Edit",
+        tool_input: { file_path: path.join(仮, "src", "index.js"), new_string: "function " + m.名 + "() { return 1; }" },
+      });
+      const r = spawnSync(process.execPath, [path.join(仮, "guardian", "hooks", "codemap.js")],
+        { input: 入力, encoding: "utf8", windowsHide: true });
+      const 出 = String(r.stdout || "");
+      if (/このフックは落ちました/.test(出)) { 届かない.push(m.名 + "(フックが落ちた)"); continue; }
+      /* ★【弱い返事を合格に数えない】(2026-08-31、この検査を書いている最中に自分で踏んだ)。
+       *   実名を拾えなかったとき、フックは「次の項に載っている」と**全部の見出しを並べる**。
+       *   最初はここで見出しの名前だけを探していたので、**閾値を壊しても緑のまま**だった。
+       *   B7b と同じ形 ── 失敗する側の出力にも入っている文字列を、合格の証拠にしていた。
+       * ★合格の条件は【強い一致】: 該当項の見出しであり、かつ**その実名を拾ったと言っている**こと。 */
+      const 強い = /CODEMAP 該当項/.test(出) && new RegExp("触れる実名: [^\n]*" + m.名).test(出) && 出.includes("## " + m.項);
+      if (!強い) 届かない.push(m.名 + "(" + m.書き + " → 該当項『" + m.項 + "』に強く届かない)");
+    }
+    /* ★不変条件は【両向き】である(2026-08-31、この検査の双子を測っていて分かった)。
+     *   上の4項は「届くべきものが届くか」しか見ておらず、語境界を ASCII に戻しても緑のままだった。
+     *   ASCII の境界だと日本語は境界が定義できず、touched は**部分一致に落ちる** ──
+     *   つまり壊れ方は「届かない」ではなく**「関係ない語で当たる」**方に出る。
+     *   誤ヒットは慣れを作り、慣れは本当に必要なときの読み飛ばしを作る(7条)。
+     * ★だから逆向きも測る: 実名を**含むだけの長い語**を書いても、強くは当たらないこと。 */
+    let 誤って当たる = "";
+    {
+      const 入力 = JSON.stringify({
+        tool_name: "Edit",
+        tool_input: { file_path: path.join(仮, "src", "index.js"), new_string: "const 記名札束 = 1;" },
+      });
+      const r = spawnSync(process.execPath, [path.join(仮, "guardian", "hooks", "codemap.js")],
+        { input: 入力, encoding: "utf8", windowsHide: true });
+      const 出 = String(r.stdout || "");
+      if (/CODEMAP 該当項/.test(出)) 誤って当たる = "記名札束 → 『名札』の項に当たった";
+    }
+    if (誤って当たる)
+      ng.push("★実名を含むだけの語で、地図の項に当たっています: " + 誤って当たる
+        + " ── 語境界が ASCII の文字クラスに戻っている疑い(日本語では境界が定義できず部分一致に落ちます)。"
+        + "**誤ヒットは慣れを作り、慣れは読み飛ばしを作ります**(7条)");
+    if (届かない.length)
+      ng.push("★記号名の長さ・言語で地図への到達が変わります: " + 届かない.join(" / ")
+        + " ── 同じ形の項が、名前の書き方だけで届かなくなっています"
+        + "(語境界の文字クラス / 実名の長さ閾値 / 括弧の前を拾うか、のどれかです)");
+    else if (!誤って当たる) ok.push("記号名の長さと言語で到達が変わらない ── 英6字・日1字・日2字・日3字の4項(うち1つは呼び出し形)は届き、実名を含むだけの語(記名札束)では当たらない【両向き】");
+  } catch (e) {
+    未測.push("長さと言語の不変条件は見ていません(見本を建てられませんでした: "
+      + String(e && e.message).slice(0, 120) + ")");
+  } finally {
+    fs.rmSync(仮, { recursive: true, force: true });
+  }
+}
 /* B0. 【この塊は、どの中身から来たか】(2026-08-31、配布先(CodeX)の提案)。
  *
  * ★版は**人が上げる番号**なので、同じ版のまま中身が変わることも、
