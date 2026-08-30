@@ -79,7 +79,7 @@ const 配るもの = new Set([
   'hooks', 'githooks', 'templates',
   /* 文書 */
   'README.md', 'SPEC.md', 'METHOD.md', 'RULES.md', 'WHY.md', 'WHY_INDEX.md', 'WHY_SEEN',
-  'CHANGELOG.md', 'KIT_VERSION', 'ENGINE_FP', 'audit.md', 'install.md',
+  'CHANGELOG.md', 'KIT_VERSION', 'ENGINE_FP', 'audit.md', 'install.md', 'hunch.md',
 ]);
 const 現場のもの = new Set([
   'guardian.config.json',   // Guardian 自身の現場の宣言
