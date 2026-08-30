@@ -303,6 +303,18 @@ const DEF_FN = new RegExp('^(?:export\\s+)?(?:default\\s+)?(?:async\\s+)?functio
   + IDENT + '+)');
 const DEF_CLASS = new RegExp('^(?:export\\s+)?(?:default\\s+)?class\\s+(' + IDENT + '+)');
 const DEF_CONST = new RegExp('^(?:export\\s+)?(?:const|let|var)\\s+(' + IDENT + '+)\\s*[=:]');
+/* ★TypeScript の【型】も定義として数える(2026-08-31、第2の議題)。
+ *
+ * ★実測(見本): `interface 名札の形` の中身を書き換えると、門は
+ *   **「器のコードに変更なし」**と言い、近傍を1件も出さなかった ── class のときと同じ形である。
+ *   ただし黙ってはいない(9.19 で入れた「持ち主の記号が引けなかった」が出る)。
+ *   **黙らないが、届かない。**
+ * ★TS の現場では、型は**接点そのもの**である ── 型を1つ変えると、
+ *   それを受ける全部の関数が影響を受ける。むしろ関数より波及が広い。
+ * ★`type` は右辺が別行に続くことがあるので `=` を要求しない(`type X =` も `type X<T> =` も拾う)。
+ * ★fn: true にはしない ── --sweep の「写経の疑い」は処理の重複を探すものなので、
+ *   同名の型が2箇所に在ることは、同名のクラスとは意味が違う(7条: 鳴りすぎさせない)。 */
+const DEF_TYPE = new RegExp('^(?:export\\s+)?(?:declare\\s+)?(?:abstract\\s+)?(?:interface|type|enum)\\s+(' + IDENT + '+)');
 const WORDCHAR = new RegExp(IDENT);
 /* ★長さの閾値は【ASCIIの物差し】である(2026-08-30、違和感の掘り出しで見つかった)。
  *
@@ -357,7 +369,7 @@ function defsOfText(text, html) {
      *   「同じ処理を複数ファイルに写した」を探すもので、同名のクラスが2箇所に在るのは
      *   const の同名(道具の作法)とは違い、本当に疑うべき形だから。 */
     const mf = L.match(DEF_FN) || L.match(DEF_CLASS);
-    const m = mf || L.match(DEF_CONST);
+    const m = mf || L.match(DEF_TYPE) || L.match(DEF_CONST);
     if (m && 語として十分(m[1])) defs.push({ name: m[1], line: i + 1, exp: /^export\s/.test(L), fn: !!mf });
   }
   return defs;

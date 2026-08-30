@@ -1910,6 +1910,56 @@ if (process.argv.includes("--why")) {
     }
   }
 }
+/* B8h. 【門が、型で書かれた現場でも鳴るか】(2026-08-31、第2の議題)。
+ *
+ * ★class のとき(B8c)とまったく同じ形が、TypeScript の **型**に残っていた。
+ *   実測(見本): `interface 名札の形` の中身を書き換えると、門は
+ *   **「器のコードに変更なし」**と言い、近傍を1件も出さなかった。
+ *   ★TS の現場では型は**接点そのもの**である ── 型を1つ変えると、
+ *     それを受ける全部の関数が影響を受ける。むしろ関数より波及が広い。
+ * ★この現場(正本)は .mjs しか無いので、**実測しないと一生出ない条件**である ── これで5件目。
+ * ★git が無い機械では測れない ── そのときは【未測】。 */
+{
+  const 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-type-'));
+  const g = (...a) => spawnSync('git', a, { cwd: 仮, encoding: 'utf8', windowsHide: true });
+  try {
+    fs.mkdirSync(path.join(仮, 'src'), { recursive: true });
+    const 書く = (q, t) => fs.writeFileSync(path.join(仮, q), t);
+    書く('src/model.ts', 'export interface 名札 { id: string; 色: string }' + NL2
+      + 'export type 呼び名 = string;' + NL2);
+    書く('src/use.ts', 'import { 名札 } from "./model";' + NL2
+      + 'export function 出す(x: 名札) { return x.色; }' + NL2);
+    書く('guardian.config.json', JSON.stringify({
+      neighbors: { rings: 2, code: ['src'], notes: [], ext: ['ts'],
+        answer: '.guardian/a.json', need: '.guardian/n.json' } }, null, 1) + NL2);
+    if (g('init', '-q', '.').status !== 0) throw new Error('git init が失敗');
+    g('config', 'user.email', 'selfcheck@example.invalid');
+    g('config', 'user.name', 'selfcheck');
+    g('add', '-A');
+    if (g('commit', '-q', '-m', 'seed').status !== 0) throw new Error('git commit が失敗');
+    /* 本物の破壊: 型から欄を1つ落とす(それを読む関数が壊れる) */
+    書く('src/model.ts', 'export interface 名札 { id: string }' + NL2 + 'export type 呼び名 = string;' + NL2);
+
+    const r = spawnSync(process.execPath, [path.join(HERE, 'neighbors.mjs'), '--list'],
+      { cwd: 仮, encoding: 'utf8', windowsHide: true });
+    const 出 = String(r.stdout || '') + String(r.stderr || '');
+    const 外れ = [];
+    if (!/触れた記号:[^\n]*名札/.test(出)) 外れ.push('interface を【触れた記号】と見なせていない');
+    if (!/出す/.test(出)) 外れ.push('その型を受け取る 出す が近傍に出ていない');
+    if (外れ.length) {
+      ng.push('門が型で書かれた現場で鳴りません: ' + 外れ.join(' / ')
+        + ' ── TS の現場では**型が接点そのもの**なので、そこが盲目だと波及がいちばん広い所を見落とします'
+        + '(出力: ' + 出.split(NL2).slice(0, 3).join(' / ').slice(0, 200) + ')');
+    } else {
+      ok.push('門は型で書かれた現場でも鳴る(interface の変更を捉え、それを受け取る側を近傍に出す)');
+    }
+  } catch (e) {
+    未測.push('門の型対応は見ていません(見本を建てられませんでした: '
+      + String(e && e.message).slice(0, 120) + ')── git が要ります');
+  } finally {
+    fs.rmSync(仮, { recursive: true, force: true });
+  }
+}
 /* B0. 【この塊は、どの中身から来たか】(2026-08-31、配布先(CodeX)の提案)。
  *
  * ★版は**人が上げる番号**なので、同じ版のまま中身が変わることも、
