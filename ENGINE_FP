@@ -1,8 +1,8 @@
-9.22
+9.23
 METHOD.md 1r6lk6m-3589
 README.md 1hdlq2t-7903
 RULES.md 1vn3us-9855
-SPEC.md 1d0a1hz-6703
+SPEC.md 1ewfjj8-6939
 audit.md 78qkl6-2162
 check.mjs 16wqv80-27539
 githooks/pre-commit zijic4-1499
@@ -17,8 +17,8 @@ index.mjs 1xub8p4-4245
 install.md 2i6pro-4191
 install.mjs r6hvh2-19147
 neighbors.mjs 1p80nn7-38237
-pull.mjs 1xnj9io-10858
-selfcheck.mjs 1rfifcp-57028
+pull.mjs u6wa3c-13114
+selfcheck.mjs 122j2l7-59376
 templates/CLAUDE-snippet.md 1y7ghqv-1478
 templates/CODEMAP.md 1iwybyg-827
 templates/guardian-audit-command.md hyfuh-175

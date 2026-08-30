@@ -127,11 +127,22 @@ let whyLoose = null;      // 守りが下限より増えている(--tighten で�
  *   `--report` にも載らず、**その現場の改善が正本へ還る道が無い**。
  *   ★理由が1つの仲間にしか当てはまらないのに、同じ袋へ入っていた。 */
 const FP_SKIP = new Set(['WHY.md', 'WHY_INDEX.md', 'WHY_SEEN', 'CHANGELOG.md', 'KIT_VERSION', 'ENGINE_FP']);
+/* ★pull.mjs の分類表を切り出す【1つの口】(2026-08-30)。
+ *   直す前は同じ切り出しが3箇所に写されていた(ENGINE_FILES / 配布境界の照合 / 配布の網羅)。
+ *   書き方が変わったときに1箇所だけ直す事故を呼ぶので、ここに集めた(39条)。
+ * ★正規表現を組み立てず、素直に切り出す ── 書き方が変われば呼ぶ側が「読めません」で止まる。 */
+const 分類表を取る = (名) => {
+  let src = ''; try { src = fs.readFileSync(path.join(HERE, 'pull.mjs'), 'utf8'); } catch (_) { return null; }
+  const 頭 = src.indexOf(名 + ' = new Set([');
+  if (頭 < 0) return null;
+  const 尾 = src.indexOf(']);', 頭);
+  if (尾 < 0) return null;
+  return new Set([...src.slice(頭, 尾).matchAll(/'([^']*)'/g)].map((x) => x[1]));
+};
 const ENGINE_FILES = (() => {
-  const src = (() => { try { return fs.readFileSync(path.join(HERE, 'pull.mjs'), 'utf8'); } catch (_) { return ''; } })();
-  const h = src.indexOf('配るもの = new Set([');
-  if (h < 0) return [];
-  const 名 = [...src.slice(h, src.indexOf(']);', h)).matchAll(/'([^']*)'/g)].map((m) => m[1]);
+  const 表 = 分類表を取る('配るもの');
+  if (!表) return [];
+  const 名 = [...表];
   const 展開 = (n) => {
     if (FP_SKIP.has(n)) return [];
     const abs = path.join(HERE, n);
@@ -570,6 +581,15 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
       fs.writeFileSync(path.join(HERE, "WHY_SEEN"), 見出し.join("\n") + "\n");
     } catch (_) {}
   };
+  /* ★【消えたファイル】は、いまの一覧からも消える(2026-08-30、配布先の実走で見つかった)。
+   *
+   *   対象(ENGINE_FILES)はディスクを readdir して作るので、**消したファイルは最初から居ない**。
+   *   だから指紋の照合にも掛からず、件数が静かに1つ減るだけだった。
+   *   実測(配布先): `hooks/stop.js`(完了を名乗る手前で止める層)を消しても
+   *     ✓ エンジンは配られたときの中身のまま(25件)
+   *   と**緑**を返す。**層が1枚消えているのに、消えたと言えない。**
+   * ★記録(ENGINE_FP)は「配られたとき何が在ったか」を知っている ── **両方向で見る**。 */
+  const 消えた = Object.keys(記録).filter((f) => !対象.includes(f));
   const 違う = 対象.filter((f) => 記録[f] !== いま[f]);
 
   /* ★食い違ったファイルの【名前だけ】を機械が読める形で出す(2026-08-30、配布先からの報告②)。
@@ -583,7 +603,8 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
    * ★文字列で判定させない ── 直す前の pull.mjs は赤い文の**文言**を includes で見ていた。
    *   文言は変わる(実際、9.21 で変えた)。機械が読む口を別に用意する。 */
   if (process.argv.includes("--changed")) {
-    for (const f of 違う) process.stdout.write(f + "\n");
+    /* ★消えたものも載せる ── pull はこれを「手元に無い」として取り込み直す */
+    for (const f of [...違う, ...消えた]) process.stdout.write(f + "\n");
     process.exit(0);
   }
 
@@ -622,6 +643,11 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
     }
   } else if (!Object.keys(記録).length) {
     ng.push("ENGINE_FP がありません。`node guardian/selfcheck.mjs --stamp` で押してください");
+  } else if (消えた.length) {
+    ng.push("★配られたはずのエンジンが【無くなっています】: " + 消えた.join(", ")
+      + " ── 層が1枚消えても、直す前は件数が静かに減るだけで気づけませんでした。"
+      + "意図して外したのなら**正本で外して配り直す**こと(この現場だけで消すと、次の取り直しで黙って戻ります)。"
+      + "戻すなら `node guardian/pull.mjs` で取り込み直せます");
   } else if (違う.length) {
     if (process.argv.includes("--report")) {
       /* ★【元の塊へ渡す1枚】を作る(配布先で回す)。
@@ -661,7 +687,7 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
             : "★ここは配布先なので `--stamp` は使えません(押すと、この直りが記録ごと消えるため)"));
     }
   } else {
-    ok.push("エンジンは配られたときの中身のまま(" + 対象.length + "件)");
+    ok.push("エンジンは配られたときの中身のまま(" + 対象.length + "件・記録と過不足なし)");
   }
 }
 
@@ -1056,17 +1082,8 @@ if (process.argv.includes("--why")) {
 {
   /* 宣言を pull.mjs から読む(門と検査が同じ1つを読むため)。
    * ★正規表現を組み立てず、素直に切り出す ── 書き方が変われば下の「読めません」で止まる。 */
-  const 取る = (名) => {
-    const src = kit('pull.mjs');
-    const 頭 = src.indexOf(名 + ' = new Set([');
-    if (頭 < 0) return null;
-    const 尾 = src.indexOf(']);', 頭);
-    if (尾 < 0) return null;
-    const 中 = src.slice(頭, 尾);
-    return new Set([...中.matchAll(/'([^']*)'/g)].map((x) => x[1]));
-  };
-  const 配るもの = 取る('配るもの');
-  const 現場のもの = 取る('現場のもの');
+  const 配るもの = 分類表を取る('配るもの');
+  const 現場のもの = 分類表を取る('現場のもの');
 
   /* 見本: この2つは必ず在る。拾えなければ pull.mjs の書き方が変わった合図(2026-08-30) */
   const 拾えた = 配るもの && 現場のもの
@@ -1158,6 +1175,43 @@ if (process.argv.includes("--why")) {
     }
   } finally {
     fs.rmSync(仮, { recursive: true, force: true });
+  }
+}
+
+/* B7b. 【配ると宣言したものが、本当に配られるか】(2026-08-30、配布先を 9.13 → 9.22 に上げて見つかった)。
+ *
+ * ★実際に起きた: `pull.mjs` の配布一覧は `現場のもの` を**名前で・どの深さでも**弾いていた。
+ *   `guardian.config.json` は現場のものなので、**`templates/guardian.config.json` まで弾かれる**。
+ *   ところが指紋の対象は【配るもの】から導くので templates/ の中は入っている ──
+ *   **配らないのに、配ったことにして指紋を照合していた。**
+ *   配布先は取り直した直後に「配られたときの中身と違います」と言われ、1文字も直していないのに
+ *   pull も stamp も拒否され、**出口が無くなった**。
+ * ★これは正本では一生出ない ── ここには全部のファイルが在るので、欠けようがない。
+ *   **配布の結果を、配る前にここで測る**しかない。
+ * ★44条(門には双子を置く)。門(pull.mjs)は黙って落ちるので、
+ *   同じ宣言を読む検査をこちらに置く。歩き方はわざと**別に書いてある**
+ *   ── 同じ実装を共有すると、同じ誤りを二度数えるだけになる。 */
+{
+  /* ★門(pull.mjs)自身に「何を配るか」を言わせ、指紋の対象と突き合わせる。
+   *   ここで歩き方を書き写すと、写した方は正しいままなので**門の退行を測れない**
+   *   ── 実際、最初はそう書いて、直す前の形に戻しても緑のままだった。
+   *   検査が当たらないまま緑を返すのは、この塊が生まれた事故そのものである。 */
+  const r = spawnSync(process.execPath, [path.join(HERE, 'pull.mjs'), '--distributed'],
+    { encoding: "utf8", windowsHide: true });
+  const 配られる = new Set(String(r.stdout || "").split(String.fromCharCode(10)).map((x) => x.trim()).filter(Boolean));
+  if (r.status !== 0 || !配られる.size) {
+    未測.push("配布の網羅は見ていません(pull.mjs --distributed が答えません)");
+  } else {
+    const 届かない = ENGINE_FILES.filter((f) => !配られる.has(f));
+    if (届かない.length) {
+      ng.push("★指紋の対象なのに【配られない】ものがあります: " + 届かない.join(", ")
+        + " ── 配布先は取り直した直後に「配られたときの中身と違います」と言われ、"
+        + "**1文字も直していないのに pull も stamp も拒否されます**(出口の無い部屋)。"
+        + "pull.mjs の配布一覧が、場所ではなく**名前**で弾いていないか見てください");
+    } else {
+      ok.push("配ると宣言したものは、本当に配られる(指紋の対象 " + ENGINE_FILES.length
+        + "件すべてが、pull.mjs 自身の配布一覧に在る)");
+    }
   }
 }
 

@@ -37,6 +37,82 @@ const 見るだけ = process.argv.includes('--check');
 const 走る = (cmd, args, opts = {}) =>
   spawnSync(cmd, args, { encoding: 'utf8', windowsHide: true, ...opts });
 
+/* ★【配るもの】と【配らないもの】を**両方**宣言する(2026-08-29 依頼主の判断)。
+ *
+ *   正本のリポジトリには「他所へ配るもの」と「Guardian 自身がこの現場で使うもの」が同居する。
+ *   最初は【配らないもの】だけを並べていた(ブラックリスト)。だがそれは
+ *   **新しく作ったものが既定で配られる**という向きなので、書き忘れると混入する ──
+ *   実際、1日で3回漏れた(research / .claude / CLAUDE.md)。
+ *
+ *   反転(ホワイトリストだけ)にすると、今度は**書き忘れたものが黙って配られない**。
+ *   エラーも出ないので誰も気づけない(AI Council FIND-001 の Case G)。
+ *   **どちらも書き忘れで壊れる。壊れ方が逆になるだけである。**
+ *
+ * ★だから両方持つ: どちらにも載っていないものが1つでもあれば、selfcheck が【赤】にする。
+ *   新しいファイルを足した人は、**どちらかに書くまで先へ進めない**。
+ *   配布と導入は毎日やる作業ではないので、ここは厳重にしてよい(依頼主の判断)。
+ *
+ * ★門(この道具)と検査(selfcheck)は**同じ2つの宣言を読む** ── RULES 44条(門には双子を置く)。
+ *   門は黙って死ねるので、同じ宣言を読む検査が要る。 */
+const 配るもの = new Set([
+  /* エンジン */
+  'check.mjs', 'selfcheck.mjs', 'neighbors.mjs', 'verdict.mjs', 'install.mjs', 'pull.mjs', 'index.mjs',
+  'hooks', 'githooks', 'templates',
+  /* 文書 */
+  'README.md', 'SPEC.md', 'METHOD.md', 'RULES.md', 'WHY.md', 'WHY_INDEX.md', 'WHY_SEEN',
+  'CHANGELOG.md', 'KIT_VERSION', 'ENGINE_FP', 'audit.md', 'install.md', 'hunch.md',
+]);
+const 現場のもの = new Set([
+  'guardian.config.json',   // Guardian 自身の現場の宣言
+  'docs',                   // Guardian 自身の地図
+  '.guardian',              // Guardian 自身の作業記録
+  '.claude', 'CLAUDE.md',   // Guardian 自身のフック登録と開発規範
+  'research',               // AI Council(研究の記録。配布物ではない)
+  '.guardian-pull-tmp',    // 取り直しの作業場(塊の中に作る。下の 仮 と同じ名前)
+  /* ★改行の流儀は【この正本のリポジトリの話】なので配らない(2026-08-30)。
+   *   指紋(selfcheck)は改行を正規化して照合するので、配布先には要らない。
+   *   むしろ配ると、他人のリポジトリの guardian/ 以下の扱いを黙って変えてしまう。 */
+  '.gitattributes',
+  '.git', '.github', 'node_modules',
+]);
+
+/* ★弾くのは【名前】ではなく【場所】である(2026-08-30、配布先を 9.13 → 9.22 に上げて見つけた)。
+ *
+ *   直す前は `現場のもの.has(e.name)` を**どの深さでも**当てていた。
+ *   `guardian.config.json` は現場のもの(その現場の宣言)なので、
+ *   **`templates/guardian.config.json` まで同じ名前で弾かれていた。**
+ *   ところが指紋の対象(ENGINE_FILES)は【配るもの】から導くので、templates/ の中は入っている ──
+ *   **配らないのに、配ったことにして指紋を照合していた。**
+ *
+ *   実測(9.13 の現場を建てて本物の正本から取り直した): 取り直した直後に
+ *     ✗ この塊は配られたときの中身と違います(templates/guardian.config.json)
+ *   が出る。その現場は**1文字も直していない**のに。
+ *   さらに 9.21 で入れた守りが噛み合って、**出口が無くなった**:
+ *     ・pull  … 「この現場で塊を直しています」で拒否
+ *     ・stamp … 「ここは配布先です」で拒否
+ *   ★自分が「出口の無い部屋を作るな」と書いた版(9.22)で、その部屋を作っていた。
+ *
+ * ★直下は【配ると決めたもの】だけを歩く。だから深い所で名前を見て弾く必要はない。
+ *   どこに在っても要らないもの(版管理と依存の置き場)だけを、深さに関係なく落とす。 */
+const どこでも要らない = new Set(['.git', 'node_modules', '.guardian', '.guardian-pull-tmp']);
+const 一覧 = (dir, 元 = dir, 深さ = 0) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+  if (どこでも要らない.has(e.name)) return [];
+  if (深さ === 0 && (現場のもの.has(e.name) || !配るもの.has(e.name))) return [];
+  const full = path.join(dir, e.name);
+  return e.isDirectory() ? 一覧(full, 元, 深さ + 1)
+                         : [path.relative(元, full).split(path.sep).join('/')];
+});
+
+/* ★【何を配るか】を、門自身に言わせる口(2026-08-30、配布先を 9.13 → 9.22 に上げて見つかった)。
+ *   selfcheck はこれを回して、指紋の対象(ENGINE_FILES)と突き合わせる ── 44条の双子。
+ * ★検査の側で歩き方を書き写すと、写した方は正しいままなので**門の退行を測れない**
+ *   (実際そう書いて、直す前の形に戻しても緑のままだった)。だから門に言わせる。
+ * ★クローンより手前に置く ── 一覧を見るだけならネットは要らない。 */
+if (process.argv.includes('--distributed')) {
+  for (const f of 一覧(HERE)) process.stdout.write(f + String.fromCharCode(10));
+  process.exit(0);
+}
+
 /* ── ① この現場で塊を直していないか ──
  *
  * ★「こちらで直した」と「正本が進んだ(こちらは古いだけ)」を区別する(2026-08-30、配布先からの報告②)。
@@ -89,69 +165,54 @@ try { fs.rmSync(path.join(仮, '.git'), { recursive: true, force: true }); } cat
   } else if (食い違い.length) {
     const この現場の直り = [];
     const 正本と同じ = [];
+    const 手元に無い = [];
     for (const f of 食い違い) {
       const 手元 = 読む素(path.join(HERE, f));
       const 上流 = 読む素(path.join(仮, f));
+      /* ★手元に無いものは【この現場の直り】ではない(2026-08-30)。
+       *   直りは「在って、違う」ものである。**無い**のは配り漏れであって、
+       *   上書きしても失うものが無い ── ここを直り側に置くと、
+       *   「消せば直る」という唯一の逃げ道まで塞いでしまう。 */
+      if (手元 === null) { if (上流 !== null) 手元に無い.push(f); continue; }
       /* 上流に無いもの(この現場が足したもの)は、正本と比べようがない ── 直り側に置く */
-      if (手元 !== null && 上流 !== null && 手元 === 上流) 正本と同じ.push(f);
+      if (上流 !== null && 手元 === 上流) 正本と同じ.push(f);
       else この現場の直り.push(f);
+    }
+    if (手元に無い.length) {
+      console.log('(手元に無いので取り込みます: ' + 手元に無い.join(', ')
+        + ' ── 以前の版が配り漏らしたものです)');
     }
     if (正本と同じ.length) {
       console.log('(指紋は古いが、正本と同じ中身でした: ' + 正本と同じ.join(', ')
         + ' ── この現場の直りではないので、そのまま進めます)');
     }
     if (この現場の直り.length) {
-      fs.rmSync(仮, { recursive: true, force: true });
-      console.error('✗ この現場で塊を直しています: ' + この現場の直り.join(', '));
-      console.error('  取り直すと、その直りが消えます。');
-      console.error('  ① 還すなら: `node guardian/selfcheck.mjs --report` で1枚を作り、正本へ渡す');
-      console.error('  ② 要らないなら: git で塊を配られた状態に戻してから、もう一度取り直す');
-      console.error('     (中途半端に手で新しくすると、ここで堂々巡りになります)');
-      process.exit(1);
+      /* ★出口を必ず示す(2026-08-30)。守りが正しく働いても、**出口が無ければ堂々巡り**になる。
+       *   ★とくに【前回の取り直しが途中で終わった】ときは、この現場は何も直していないのに
+       *     ここへ来る ── 自分自身を更新する道具は、**更新の1回目には古い自分で走る**からである。
+       *     実測: 9.13 の現場を 9.23 へ上げると、古い pull が templates/ の1本を配り漏らし、
+       *     次の pull がそれを「この現場の直り」と読んで拒否した。
+       *   ★だから --force を置く。外向きに不可逆(直りが消える)なので、
+       *     **何が消えるかを必ず先に出し**、下見の口(--check)を対で持つ。 */
+      if (process.argv.includes('--force')) {
+        console.log('★--force: 次のものを上書きします(この現場の直りは消えます): ' + この現場の直り.join(', '));
+      } else {
+        fs.rmSync(仮, { recursive: true, force: true });
+        console.error('✗ この現場で塊を直しています: ' + この現場の直り.join(', '));
+        console.error('  取り直すと、その直りが消えます。');
+        console.error('  ① 還すなら: `node guardian/selfcheck.mjs --report` で1枚を作り、正本へ渡す');
+        console.error('  ② 直した覚えが無いなら: **前回の取り直しが途中で終わっています**');
+        console.error('     (古い版の pull が配り漏らした形)。中身を見て構わなければ、');
+        console.error('     その1本を消してもう一度取り直すか、`node guardian/pull.mjs --force` で上書きしてください');
+        console.error('  ③ 何が起きるかだけ見る: `node guardian/pull.mjs --check`');
+        process.exit(1);
+      }
     }
   }
 }
 
 /* ── ③ 何が変わるかを数える(黙って上書きしない) ── */
 const 読む = (p) => { try { return fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n'); } catch (_) { return null; } };
-/* ★【配るもの】と【配らないもの】を**両方**宣言する(2026-08-29 依頼主の判断)。
- *
- *   正本のリポジトリには「他所へ配るもの」と「Guardian 自身がこの現場で使うもの」が同居する。
- *   最初は【配らないもの】だけを並べていた(ブラックリスト)。だがそれは
- *   **新しく作ったものが既定で配られる**という向きなので、書き忘れると混入する ──
- *   実際、1日で3回漏れた(research / .claude / CLAUDE.md)。
- *
- *   反転(ホワイトリストだけ)にすると、今度は**書き忘れたものが黙って配られない**。
- *   エラーも出ないので誰も気づけない(AI Council FIND-001 の Case G)。
- *   **どちらも書き忘れで壊れる。壊れ方が逆になるだけである。**
- *
- * ★だから両方持つ: どちらにも載っていないものが1つでもあれば、selfcheck が【赤】にする。
- *   新しいファイルを足した人は、**どちらかに書くまで先へ進めない**。
- *   配布と導入は毎日やる作業ではないので、ここは厳重にしてよい(依頼主の判断)。
- *
- * ★門(この道具)と検査(selfcheck)は**同じ2つの宣言を読む** ── RULES 44条(門には双子を置く)。
- *   門は黙って死ねるので、同じ宣言を読む検査が要る。 */
-const 配るもの = new Set([
-  /* エンジン */
-  'check.mjs', 'selfcheck.mjs', 'neighbors.mjs', 'verdict.mjs', 'install.mjs', 'pull.mjs', 'index.mjs',
-  'hooks', 'githooks', 'templates',
-  /* 文書 */
-  'README.md', 'SPEC.md', 'METHOD.md', 'RULES.md', 'WHY.md', 'WHY_INDEX.md', 'WHY_SEEN',
-  'CHANGELOG.md', 'KIT_VERSION', 'ENGINE_FP', 'audit.md', 'install.md', 'hunch.md',
-]);
-const 現場のもの = new Set([
-  'guardian.config.json',   // Guardian 自身の現場の宣言
-  'docs',                   // Guardian 自身の地図
-  '.guardian',              // Guardian 自身の作業記録
-  '.claude', 'CLAUDE.md',   // Guardian 自身のフック登録と開発規範
-  'research',               // AI Council(研究の記録。配布物ではない)
-  '.guardian-pull-tmp',    // 取り直しの作業場(塊の中に作る。下の 仮 と同じ名前)
-  /* ★改行の流儀は【この正本のリポジトリの話】なので配らない(2026-08-30)。
-   *   指紋(selfcheck)は改行を正規化して照合するので、配布先には要らない。
-   *   むしろ配ると、他人のリポジトリの guardian/ 以下の扱いを黙って変えてしまう。 */
-  '.gitattributes',
-  '.git', '.github', 'node_modules',
-]);
 
 /* ★分類表は【上流の版】で判定する(2026-08-30、違和感の掘り出しで見つかった)。
  *
@@ -200,13 +261,6 @@ const 表を読む = (src, 名) => {
   if (上流の表) { for (const x of 上流の表.配る) 配るもの.add(x); for (const x of 上流の表.現場) 現場のもの.add(x); }
 }
 
-const 一覧 = (dir, 元 = dir, 深さ = 0) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-  if (現場のもの.has(e.name)) return [];                      // どの深さでも配らない
-  if (深さ === 0 && !配るもの.has(e.name)) return [];          // 直下は【配ると決めたもの】だけ
-  const full = path.join(dir, e.name);
-  return e.isDirectory() ? 一覧(full, 元, 深さ + 1)
-                         : [path.relative(元, full).split(path.sep).join('/')];
-});
 const 新しい = 一覧(仮);
 const 変わる = [], 増える = [];
 for (const f of 新しい) {
