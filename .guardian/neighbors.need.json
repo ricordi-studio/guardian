@@ -26,44 +26,20 @@
    "きっかけ": "「map」を呼んでいる"
   },
   {
-   "key": "neighbors.mjs::callersOf",
-   "記号": "callersOf",
-   "場所": "neighbors.mjs",
+   "key": "hooks/codemap.js::main",
+   "記号": "main",
+   "場所": "hooks/codemap.js",
    "環": 1,
-   "根": "lineOfIndex",
-   "きっかけ": "「lineOfIndex」を呼んでいる"
+   "根": "clip",
+   "きっかけ": "「clip」を呼んでいる"
   },
   {
-   "key": "neighbors.mjs::残りを全部取る口",
-   "記号": "残りを全部取る口",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "知っている口",
-   "きっかけ": "「知っている口」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::欄名",
-   "記号": "欄名",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "lineOfIndex",
-   "きっかけ": "「lineOfIndex」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::frontier",
-   "記号": "frontier",
-   "場所": "neighbors.mjs",
+   "key": "hooks/codemap.js::raw",
+   "記号": "raw",
+   "場所": "hooks/codemap.js",
    "環": 2,
-   "根": "lineOfIndex",
-   "きっかけ": "「callersOf」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::isExported",
-   "記号": "isExported",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "lineOfIndex",
-   "きっかけ": "「callersOf」を呼んでいる"
+   "根": "clip",
+   "きっかけ": "「main」を呼んでいる"
   }
  ]
 }

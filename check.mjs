@@ -26,6 +26,9 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 /* ★この道具が置かれている場所(= 塊の中)。A5 が neighbors に答えさせるために要る */
 const KIT = path.dirname(fileURLToPath(import.meta.url));
+/* ★地図の【コード柵の中】を落とす ── ここが正本(4箇所に写していた。39条)。
+ *   柵の中は「例」であって接点ではない。`hooks/codemap.js` も同じ物差しで読む。 */
+const 柵を落とす = (t) => String(t || '').replace(/```[\s\S]*?```/g, '');
 
 /* ★【この道具が知っている口】── 宣言ではなく、ここが実装そのものである
  *   (2026-08-31、第2の議題。配布先(現場A)の実測が発端)。
@@ -149,7 +152,7 @@ if (!map) {
     /* ★囲みコード(```…```)の中は【例示】なので拾わない。
      * 地図の雛形に載せた書き方の見本まで「実装に無い記号」として落ちると、
      * 入れた初日に嘘の指摘が出る ── 最初の1件の誤検出で、この道具は信用を失う。 */
-    const mapBody = map.replace(/```[\s\S]*?```/g, '');
+    const mapBody = 柵を落とす(map);
     for (const m of mapBody.matchAll(/`([^`\n]+)`/g)) {
       const raw = m[1].trim();
       // `foo` / `foo()` / `foo:'bar'` のような書き方から名前だけを取り出す   guardian:ok 説明のための例え(実在する記号ではない)
@@ -176,7 +179,7 @@ if (!map) {
     const bases = ['', ...(cfg.pathBases || [])];
     const miss = [];
     const 生成物 = [];
-    const mapBody2 = map.replace(/```[\s\S]*?```/g, '');
+    const mapBody2 = 柵を落とす(map);
     /* 拡張子は白名簿。`chat.manner` のような【プロパティの道筋】をファイルと誤解しないため */
     const EXT = /\.(ts|tsx|js|mjs|cjs|html|htm|gs|json|jsonc|sql|md|css|webmanifest|yml|yaml|png|webp|jpg|svg|mp4)$/;
     for (const m of mapBody2.matchAll(/`([A-Za-z0-9_./-]+\/[A-Za-z0-9_.-]+|[A-Za-z0-9_-]+\.[a-z0-9]{2,12})`/g)) {
@@ -241,7 +244,7 @@ if (!map) {
    *   だから**片方だけ在る項**に絞る: ファイルは在るのに実名が無い / 実名は在るのにファイルが無い。
    *   ── 接点を書こうとして、**半分だけ機械に見えている**状態がこれである。 */
   {
-    const 本文 = map.replace(/```[\s\S]*?```/g, '');
+    const 本文 = 柵を落とす(map);
     const 片方だけ = [];
     const 塊 = 本文.split(/\n## /);
     for (let i = 1; i < 塊.length; i++) {
@@ -296,7 +299,7 @@ if (!map) {
         if (t.length >= 2 && t[1]) 名前.add(t[1]);
       }
       const 地図に在る = new Set();
-      for (const m of map.replace(/```[\s\S]*?```/g, "").matchAll(/`([^`\n]+)`/g)) {
+      for (const m of 柵を落とす(map).matchAll(/`([^`\n]+)`/g)) {
         const t = m[1].trim();
         if (名前.has(t)) 地図に在る.add(t);
         const 括弧の前 = t.split("(")[0].trim();
