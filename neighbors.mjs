@@ -65,10 +65,37 @@ const ESCAPED = escArg >= 0 ? [argv[escArg + 1], argv[escArg + 2]] : null;
 const SWEEP = argv.includes('--sweep');
 
 const read = (p) => { try { return fs.readFileSync(path.join(ROOT, p), 'utf8'); } catch (_) { return ''; } };
-const sh = (cmd) => {
+/* ★失敗を空文字と区別する(2026-08-30、違和感の掘り出しで見つかった)。
+ *   直す前は `r.status === 0 ? (r.stdout||'') : (r.stdout||'')` と**両辺が同じ**で、
+ *   git の失敗が「出力が空」と見分けられなかった。
+ *   実測: CI が既定でやる浅いクローン(--depth 1)では `HEAD~1..HEAD` が
+ *   fatal: unknown revision で落ちる → 差分が空 → 触れた記号ゼロ → 近傍ゼロ →
+ *   **門が出口0で「通過」**。いちばん効いてほしい CI で、門が最初から死んでいた。
+ * ★測れなかったことは黙らない ── 呼ぶ側が【不明】に落とせるよう、失敗を返り値で伝える。 */
+const shRaw = (cmd) => {
   const r = spawnSync(cmd, { cwd: ROOT, shell: true, encoding: 'utf8', windowsHide: true, maxBuffer: 128 * 1024 * 1024 });
-  return r.status === 0 ? (r.stdout || '') : (r.stdout || '');
+  return { ok: r.status === 0, out: r.stdout || '', err: String(r.stderr || '').trim(), code: r.status };
 };
+const 測れなかった = [];
+const sh = (cmd) => {
+  const r = shRaw(cmd);
+  if (!r.ok) 測れなかった.push(cmd.split(' ').slice(0, 3).join(' ') + ' … ' + (r.err.split('\n')[0] || ('出口' + r.code)));
+  return r.out;
+};
+
+/* ★【測れなかった】を通過にしない(2026-08-30)。
+ *   出口: 0=通過 / 1=差戻 / 2=不明。合否(verdict)は 2 を「不明」として扱い、緑に数えない。
+ *   直す前は、次のどれも出口0(通過)だった ── どれも「測っていない」であって「問題なし」ではない:
+ *     ・git が失敗した(浅いクローン・git 無し・非 git)
+ *     ・宣言に neighbors が無い
+ *     ・コーパスが0ファイル(code / ext の指定を外した)
+ *   実測: `code:["app"]`(場所を間違えた)でも `ext:["ts"]`(拡張子を間違えた)でも【通過】した。
+ *   **宣言を間違えた現場では、門が最初から最後まで緑**になる。 */
+function 不明で終わる(理由) {
+  console.log('近傍照合: **測れませんでした(不明)** ── ' + 理由);
+  console.log('  ★これは「問題なし」ではありません。測れていないので、通過に数えないでください。');
+  process.exit(2);
+}
 
 /* ---------- 宣言を読む(verdict / check と同じ2箇所) ---------- */
 let cfg = null;
@@ -79,8 +106,7 @@ for (const p of ['guardian.config.json', 'guardian/guardian.config.json']) {
 }
 const N = cfg && cfg.neighbors;
 if (!N || N.enabled === false) {
-  console.log('近傍照合: 宣言が無いので回しません(guardian.config.json に neighbors を書くと有効になります)');
-  process.exit(0);
+  不明で終わる('宣言に neighbors がありません(guardian.config.json に書くと測れるようになります)');
 }
 const RINGS = Number(N.rings) || 2;
 const CODE_DIRS = N.code || [];
@@ -103,6 +129,13 @@ const inSkipped = (p) => SKIP_DIRS.some((d) => p === d || p.startsWith(d + '/'))
 const dirty = sh('git status --porcelain').trim();
 const range = BASE_OVERRIDE || (dirty ? 'HEAD' : 'HEAD~1..HEAD');
 const diff = sh(`git diff -U0 ${range}`);
+/* ★git が答えなかったら【不明】。空の差分と区別する(2026-08-30)。
+ *   CI は既定で浅く取る(--depth 1)ので `HEAD~1..HEAD` が落ちる。
+ *   直す前はそれが「差分ゼロ=近傍ゼロ=通過」に化けていた。 */
+if (測れなかった.length) {
+  不明で終わる('git が答えませんでした ── ' + 測れなかった.join(' / ')
+    + '\n  (CI の浅いクローンなら fetch-depth を増やすか、--base で範囲を指定してください)');
+}
 
 /** 差分から【新しい側の行番号】を拾う。
  *
@@ -190,7 +223,14 @@ function walk(dir, out) {
 const corpusFiles = [...new Set(CODE_DIRS.flatMap((d) => {
   const abs = path.join(ROOT, d);
   try { return fs.statSync(abs).isDirectory() ? walk(d, []) : (EXT.test(d) ? [d] : []); } catch (_) { return []; }
-}).map((f) => f.replace(/^\.\//, '')))];
+}).map((f) => f.replace(/^\.\//, '')))];
+/* ★コーパスが0ファイルなら【不明】(2026-08-30)。宣言の code / ext を間違えると起きる。
+ *   実測: code:["app"](場所違い)でも ext:["ts"](拡張子違い)でも、直す前は【通過】した ──
+ *   **宣言を間違えた現場では、門が最初から最後まで緑**になっていた。 */
+if (!corpusFiles.length) {
+  不明で終わる('コードが1ファイルも見つかりません(宣言 neighbors.code=' + JSON.stringify(CODE_DIRS)
+    + ' / ext=' + JSON.stringify(N.ext || []) + ' を確かめてください)');
+}
 /* 定義の一覧をテキストから作る。逃し測定(--escaped)は【当時のコミットの中身】でも呼ぶので、
  * コーパス作りとは別の関数に切り出してある。 */
 function defsOfText(text, html) {

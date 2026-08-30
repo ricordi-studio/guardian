@@ -47,11 +47,34 @@ const ok = [];
 const ng = [];
 let whyLoose = null;      // 守りが下限より増えている(--tighten で上げる)
 
-/* ★エンジン(配布物)の一覧は1箇所だけに持つ。指紋照合(B2)と、
- *   配布境界との食い違い照合(B6)の両方がここを読む ── 2箇所に同じ値を書かない。 */
-const ENGINE_FILES = ['check.mjs', 'selfcheck.mjs', 'neighbors.mjs', 'verdict.mjs', 'install.mjs', 'pull.mjs',
-              'hooks/clock.js', 'hooks/codemap.js', 'hooks/lib-root.js',
-              'hooks/no-fixed-names.js', 'hooks/no-reflex.js', 'hooks/stop.js'];
+/* ★指紋を取る対象は【配るもの】から導く(2026-08-30、違和感の掘り出しで見つかった)。
+ *
+ *   直す前は、ここに12件を手で並べていた。だが `pull.mjs` が実際に配るのは23項目 ──
+ *   **index.mjs / githooks / templates / 文書一式(16項目)は、配られるのに指紋が無かった。**
+ *   実測: 配布先で index.mjs と templates/ を直しても selfcheck は「配られたときの中身のまま」と緑を返し、
+ *   pull.mjs の門(直りが在れば止まる)も鳴らず、**取り直しで上書きされて現場の直りが消えた**。
+ *   これは WHY 176(配布先の直りが消える)を防ぐ仕組みが、16項目では効いていなかったということ。
+ *
+ * ★根は「配布物の集合が2箇所にあり、片方が短い」── 39条(同じことを2か所で決めない)。
+ *   だから【配るもの】1つを正本にし、ここはそれを読んで実ファイルへ展開する。
+ * ★文書(WHY.md / RULES.md)は配布先で事故が増えて当然なので、指紋の対象から外す
+ *   ── その一覧も1箇所(FP_SKIP)に置く。 */
+const FP_SKIP = new Set(['WHY.md', 'WHY_INDEX.md', 'WHY_SEEN', 'RULES.md', 'CHANGELOG.md', 'KIT_VERSION', 'ENGINE_FP']);
+const ENGINE_FILES = (() => {
+  const src = (() => { try { return fs.readFileSync(path.join(HERE, 'pull.mjs'), 'utf8'); } catch (_) { return ''; } })();
+  const h = src.indexOf('配るもの = new Set([');
+  if (h < 0) return [];
+  const 名 = [...src.slice(h, src.indexOf(']);', h)).matchAll(/'([^']*)'/g)].map((m) => m[1]);
+  const 展開 = (n) => {
+    if (FP_SKIP.has(n)) return [];
+    const abs = path.join(HERE, n);
+    try {
+      if (!fs.statSync(abs).isDirectory()) return [n];
+      return fs.readdirSync(abs).filter((f) => !FP_SKIP.has(n + '/' + f)).map((f) => n + '/' + f);
+    } catch (_) { return []; }
+  };
+  return 名.flatMap(展開).sort();
+})();
 
 /* ==========================================================================
  * A. 見本のリポジトリ ── 「全部そろって正しい」状態を1つ作る

@@ -129,13 +129,46 @@ for (const f of 新しい) {
 const 旧版 = (読む(path.join(HERE, 'KIT_VERSION')) || '?').trim();
 const 新版 = (読む(path.join(仮, 'KIT_VERSION')) || '?').trim();
 
+/* ★上流で消えたものを、配布先からも消す(2026-08-30、違和感の掘り出しで見つかった)。
+ *   直す前は「上流にあるものを写す」だけで、**上流から消えたファイルを消す経路がどこにも無かった**。
+ *   実測: 上流で hooks/no-reflex.js を廃止して配ったら、配布先には残り続け、
+ *   しかも上流の ENGINE_FP からその行も消えているので selfcheck は緑を返した ──
+ *   **廃止したはずのフックが、誰にも見えないまま生き続ける。**
+ * ★勝手に消さない: 何を消すかを先に出し、--check なら消さない(この塊の掟)。
+ *   配布先が自分で足したものは消さない ── **上流に「かつて在って、いま無い」ものだけ**が対象で、
+ *   それは【配るもの】の中にしか居ない。 */
+const 消える = [];
+for (const 名 of 配るもの) {
+  const 手元 = path.join(HERE, 名);
+  const 上流 = path.join(仮, 名);
+  if (!fs.existsSync(手元) || fs.existsSync(上流)) continue;
+  消える.push(名);
+}
+const 中の消える = [];
+{
+  const 走る2 = (rel) => {
+    const 手元 = path.join(HERE, rel), 上流 = path.join(仮, rel);
+    let ents = []; try { ents = fs.readdirSync(手元, { withFileTypes: true }); } catch (_) { return; }
+    for (const e of ents) {
+      const r = rel + '/' + e.name;
+      if (!fs.existsSync(path.join(仮, r))) { 中の消える.push(r); continue; }
+      if (e.isDirectory()) 走る2(r);
+    }
+  };
+  for (const 名 of 配るもの) {
+    try { if (fs.statSync(path.join(HERE, 名)).isDirectory() && fs.existsSync(path.join(仮, 名))) 走る2(名); } catch (_) {}
+  }
+}
+const 全消える = [...消える, ...中の消える];
+if (全消える.length) console.log('消えるもの: ' + 全消える.join(', ') + '(上流から撤去されました)');
+
 console.log('正本: ' + 正本);
 console.log('版: ' + 旧版 + ' → ' + 新版);
 console.log('変わるもの: ' + (変わる.length ? 変わる.join(', ') : 'なし')
   + (増える.length ? ' / 増えるもの: ' + 増える.join(', ') : ''));
 
 if (見るだけ) { fs.rmSync(仮, { recursive: true, force: true }); process.exit(0); }
-if (!変わる.length && !増える.length) {
+if (!変わる.length && !増える.length && !全消える.length) {
   fs.rmSync(仮, { recursive: true, force: true });
   console.log('✓ すでに正本と同じです(取り直す必要はありません)');
   process.exit(0);
@@ -147,6 +180,9 @@ for (const f of 新しい) {
   fs.mkdirSync(path.dirname(先), { recursive: true });
   fs.copyFileSync(path.join(仮, f), 先);
 }
+for (const 名 of 全消える) {
+  try { fs.rmSync(path.join(HERE, 名), { recursive: true, force: true }); } catch (_) {}
+}
 fs.rmSync(仮, { recursive: true, force: true });
-console.log('✓ 取り直しました(' + 新しい.length + 'ファイル)');
+console.log('✓ 取り直しました(' + 新しい.length + 'ファイル' + (全消える.length ? ' / 撤去 ' + 全消える.length + '件' : '') + ')');
 console.log('  次にやること: node guardian/install.mjs   ← 冪等。宣言とフックを新しい形に揃えます');
