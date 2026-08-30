@@ -82,6 +82,20 @@ const NL2 = String.fromCharCode(10);
  *   だが**緑には混ぜない**。数を分け、最後の1行でも分けて言う。 */
 const ok = [];
 const 未測 = [];
+/* ★第4の語彙【ここでは測れない】(2026-08-31、配布先の実測で分かれた)。
+ *
+ * ★配布先が見つけた食い違い: 画面には「未測1件」と出ているのに、合否は「不明0」と言う。
+ *   `selfcheck` が未測でも出口0を返すので、`verdict` が**通過に数えていた** ──
+ *   この塊がいちばん大事にしてきた【不明を緑に数えない】が、**機械が集める所で消えていた**。
+ * ★では全部の未測を出口2にすればよいか ── **それが罠だった。**
+ *   「配布先には正本の git 履歴が無い」のような**構造的に測れない**ものを不明に数えると、
+ *   **すべての配布先の合否が永久に不明**になる。不明が日常になれば読み飛ばされる ──
+ *   今夜の「直せない赤は、無視される赤である」とまったく同じ形。
+ * ★だから2つに分ける(配布先が出した線引きそのまま):
+ *     未測     … **宣言すれば測れる / 回せば測れる** → 出口2(不明)。放っておくべきでない
+ *     測れない … **その場所では構造的に測れない**   → 出口0。ただし**必ず名前を出す**
+ *   ★どちらも「通った」とは言わない。緑に混ぜないのは変わらない。 */
+const 測れない = [];
 const ng = [];
 /* ★個人情報の見張りの【結果】を、見張った所の外へ出す(2026-08-30、違和感の掘り出しで見つかった)。
  *
@@ -1177,7 +1191,7 @@ if (process.argv.includes("--why")) {
       + '(その下は数を見ません。理由を書き足しても効きます)。逃げ道を1行ずつ撒くのは、門を儀式にするので勧めません');
   }
   if (読めなかった.length) {
-    未測.push('この現場の文書のうち ' + 読めなかった.join(' / ') + ' は**在りません**(数の照合をしていません)');
+    測れない.push('この現場の文書のうち ' + 読めなかった.join(' / ') + ' は**在りません**(数の照合をしていません)');
   }
 
   if (bad.length) ng.push('文書が書いている件数が実数と合っていません:\n      ' + bad.join('\n      '));
@@ -1276,7 +1290,7 @@ if (process.argv.includes("--why")) {
     /* B6a: 分類の網羅(この現場が正本であるときだけ意味がある ── 塊がリポジトリそのもの) */
     const 正本か = fs.existsSync(path.join(HERE, '..', '.git')) || fs.existsSync(path.join(HERE, '.git'));
     if (!正本か) {
-      未測.push('配布境界の網羅は見ていません(ここは正本ではないので、直下に現場のものが同居しません)');
+      測れない.push('配布境界の網羅は見ていません(ここは正本ではないので、直下に現場のものが同居しません)');
     } else {
       const 直下 = fs.readdirSync(HERE);
       const 未分類 = 直下.filter((n) => !配るもの.has(n) && !現場のもの.has(n));
@@ -1773,7 +1787,7 @@ if (process.argv.includes("--why")) {
   const 正本か = fs.existsSync(path.join(HERE, ".git"));
   const g = (...a) => spawnSync("git", a, { cwd: HERE, encoding: "utf8", windowsHide: true });
   if (!正本か) {
-    未測.push("版と中身が1対1かは見ていません(ここは配布先で、正本の履歴が読めません)");
+    測れない.push("版と中身が1対1かは見ていません(ここは配布先で、正本の履歴が読めません)");
   } else {
     const いまの版 = (() => { try { return fs.readFileSync(path.join(HERE, "KIT_VERSION"), "utf8").trim(); } catch (_) { return ""; } })();
     const 版を上げた = g("log", "-1", "--format=%H", "--", "KIT_VERSION");
@@ -1839,7 +1853,12 @@ if (process.argv.includes("--why")) {
      *   3つ目はこの塊の自己更新の性質そのもの ── 受領証を書けるようになった版を取る回の pull は、
      *   **まだ受領証を書けない古い pull.mjs** が走っている。もう一度回せば消える。
      *   ★これを言わないと、配布先は『壊れている』と読んで直しに行く(実際そうなった)。 */
-    未測.push('この塊が**どの中身から来たか分かりません**(取り直しの受領証がありません)。'
+    /* ★正本には受領証が生まれない(自分を pull しないので)── そこで不明を出し続けると、
+     *   正本の合否が永久に不明になる。配布先では回せば消えるので【未測】のまま。 */
+    const ここが正本 = fs.existsSync(path.join(HERE, '.git'));
+    if (ここが正本) 測れない.push('ここは正本なので受領証は生まれません(自分を取り直さないため)'
+      + ' ── 配布先では、どの中身から来たかが受領証で決まります');
+    else 未測.push('この塊が**どの中身から来たか分かりません**(取り直しの受領証がありません)。'
       + '意味は3つあります ── 手で写した / degit で入れた / '
       + '**受領証の機能が入った版に上げた直後**(その回の pull は、まだ受領証を書けない古い pull.mjs が走っています)。'
       + '3つ目なら `node guardian/pull.mjs` をもう一度回せば消えます ── '
@@ -2028,26 +2047,43 @@ if (process.argv.includes('--receipt')) {
   let h = 2166136261;
   for (const f of 並び) { const t = f + '=' + 現在の指紋[f] + ';';
     for (let k = 0; k < t.length; k++) { h ^= t.charCodeAt(k); h = Math.imul(h, 16777619); } }
-  const verdict = ng.length ? '外れ' : (未測.length ? '未測あり' : '通過');
+  const verdict = ng.length ? '外れ' : (未測.length ? '未測あり' : (測れない.length ? '通過(ここでは測れないものあり)' : '通過'));
   process.stdout.write(JSON.stringify({
     sourceSha: 取得元, verdict, currentDigest: (h >>> 0).toString(36) + '-' + 並び.length,
-    ng: ng.length, 未測: 未測.length, ok: ok.length,
+    ng: ng.length, 未測: 未測.length, 測れない: 測れない.length, ok: ok.length,
   }, null, 1) + NL2);
   process.exit(ng.length ? 1 : (未測.length ? 2 : 0));
 }
 for (const s of ok) console.log('  ✓ ' + s);
 for (const s of 未測) console.log('  ? 未測 ' + s);
+for (const s of 測れない) console.log('  － ここでは測れない ' + s);
 if (ng.length) {
   console.log('');
   for (const s of ng) console.log('  ✗ ' + s);
   console.log(`\n塊の自己検査: ${ng.length}件の外れ`
-    + (未測.length ? ` / 未測 ${未測.length}件` : ''));
+    + (未測.length ? ` / 未測 ${未測.length}件` : '')
+    + (測れない.length ? ` / ここでは測れない ${測れない.length}件` : ''));
   process.exit(1);
 }
+/* ★出口は【未測が在れば2】(2026-08-31、配布先の実測)。
+ *   直す前は未測でも0を返していたので、`verdict` が**通過に数えていた** ──
+ *   画面には「未測1件」と出ているのに、合否は「不明0」と言っていた。
+ *   ★この塊の芯は【不明を緑に数えない】である。それが機械の側で消えていた。
+ * ★「ここでは測れない」は0のまま ── 構造的に測れないものを不明に数えると、
+ *   すべての配布先の合否が永久に不明になり、不明が読み飛ばされる(7条・直せない赤と同じ形)。
+ *   だが**黙らない**: 件数も中身も必ず出す。 */
 if (未測.length) {
-  console.log(`\n塊の自己検査: 通過 ${ok.length}件 / **未測 ${未測.length}件**`);
+  console.log(`\n塊の自己検査: 通過 ${ok.length}件 / **未測 ${未測.length}件**`
+    + (測れない.length ? ` / ここでは測れない ${測れない.length}件` : ''));
   console.log('  ※【未測】は合格ではありません。**測れていない**という意味です'
-    + '(guardian.config.json に宣言を書くと測れるようになります)。');
+    + '(guardian.config.json に宣言を書く / pull を回す ── 測れるようになります)。');
+  console.log('  ★出口2を返します ── 合否(verdict)はこれを【不明】として受け、緑に数えません。');
+  process.exit(2);
+}
+if (測れない.length) {
+  console.log(`\n塊の自己検査: 通過 ${ok.length}件 / ここでは測れない ${測れない.length}件`);
+  console.log('  ※【ここでは測れない】は、その場所に前提が無いという意味です'
+    + '(正本の履歴が無い / その文書が無い)。**直せるものではないので止めませんが、通ったとも言いません。**');
   process.exit(0);
 }
 console.log(`\n塊の自己検査: ${ok.length}件すべて期待どおり`);
