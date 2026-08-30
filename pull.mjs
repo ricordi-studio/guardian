@@ -156,6 +156,27 @@ if (c.status !== 0) {
   console.error('  正本は公開なので認証は要りません。ネットに繋がっているか、git が入っているかを確かめてください。');
   process.exit(1);
 }
+/* ★【どこから取ったか】の受領証を残す(2026-08-31、配布先(CodeX)の提案)。
+ *
+ *   いままで配布先が言えるのは「版 9.xx で緑」だけだった。だが版は**人が上げる番号**で、
+ *   同じ版のまま中身が変わることも、push されていない差が在ることもある。
+ *   実際この会議で「9.29 で緑」と報告された時点で、正本は既に 9.30 だった。
+ * ★SHA なら**その中身そのもの**を指せる。配布先の「緑」が、どの中身の緑かが決まる。
+ *   ★これは未 push を**検出**する仕組みではない ── 未 push は SHA を発行できないので、
+ *     そもそも測定を依頼できない、という形で入口が閉まる(提案者の言葉)。
+ * ★.git を消す前に読む(消したあとでは分からない)。読めなければ書かない ── 嘘の受領証は作らない。 */
+{
+  const r = 走る('git', ['-C', 仮, 'rev-parse', 'HEAD']);
+  const sha = r.status === 0 ? String(r.stdout || '').trim() : '';
+  if (/^[0-9a-f]{40}$/.test(sha)) {
+    try {
+      const 置き場 = path.join(HERE, '.guardian');
+      fs.mkdirSync(置き場, { recursive: true });
+      fs.writeFileSync(path.join(置き場, 'pulled.json'),
+        JSON.stringify({ sha, 正本, at: new Date().toISOString() }, null, 1) + '\n');
+    } catch (_) { /* 受領証が書けなくても取り直しは止めない */ }
+  }
+}
 try { fs.rmSync(path.join(仮, '.git'), { recursive: true, force: true }); } catch (_) {}
 
 /* ── ①' 食い違いを、正本と突き合わせて仕分ける(クローンが済んでから) ── */
