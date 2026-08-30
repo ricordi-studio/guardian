@@ -2,52 +2,68 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "pull.mjs::依頼SHA",
-   "記号": "依頼SHA",
-   "場所": "pull.mjs",
+   "key": "check.mjs::MAP_PATH",
+   "記号": "MAP_PATH",
+   "場所": "check.mjs",
    "環": 1,
-   "根": "正本",
-   "きっかけ": "「正本」を呼んでいる"
+   "根": "map",
+   "きっかけ": "「map」を呼んでいる"
   },
   {
-   "key": "pull.mjs::一覧",
-   "記号": "一覧",
-   "場所": "pull.mjs",
+   "key": "check.mjs::pickBlock",
+   "記号": "pickBlock",
+   "場所": "check.mjs",
    "環": 1,
-   "根": "正本",
-   "きっかけ": "「正本」を呼んでいる"
+   "根": "map",
+   "きっかけ": "「map」を呼んでいる"
   },
   {
-   "key": "pull.mjs::受領証を書く",
-   "記号": "受領証を書く",
-   "場所": "pull.mjs",
+   "key": "check.mjs::残りを全部取る口",
+   "記号": "残りを全部取る口",
+   "場所": "check.mjs",
    "環": 1,
-   "根": "正本",
-   "きっかけ": "「正本」を呼んでいる"
+   "根": "map",
+   "きっかけ": "「map」を呼んでいる"
   },
   {
-   "key": "pull.mjs::全消える",
-   "記号": "全消える",
-   "場所": "pull.mjs",
+   "key": "neighbors.mjs::callersOf",
+   "記号": "callersOf",
+   "場所": "neighbors.mjs",
    "環": 1,
-   "根": "正本",
-   "きっかけ": "「正本」を呼んでいる"
+   "根": "lineOfIndex",
+   "きっかけ": "「lineOfIndex」を呼んでいる"
   },
   {
-   "key": "pull.mjs::取得SHA",
-   "記号": "取得SHA",
-   "場所": "pull.mjs",
+   "key": "neighbors.mjs::残りを全部取る口",
+   "記号": "残りを全部取る口",
+   "場所": "neighbors.mjs",
+   "環": 1,
+   "根": "知っている口",
+   "きっかけ": "「知っている口」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::欄名",
+   "記号": "欄名",
+   "場所": "neighbors.mjs",
+   "環": 1,
+   "根": "lineOfIndex",
+   "きっかけ": "「lineOfIndex」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::frontier",
+   "記号": "frontier",
+   "場所": "neighbors.mjs",
    "環": 2,
-   "根": "正本",
-   "きっかけ": "「依頼SHA」を呼んでいる"
+   "根": "lineOfIndex",
+   "きっかけ": "「callersOf」を呼んでいる"
   },
   {
-   "key": "pull.mjs::新しい",
-   "記号": "新しい",
-   "場所": "pull.mjs",
+   "key": "neighbors.mjs::isExported",
+   "記号": "isExported",
+   "場所": "neighbors.mjs",
    "環": 2,
-   "根": "正本",
-   "きっかけ": "「一覧」を呼んでいる"
+   "根": "lineOfIndex",
+   "きっかけ": "「callersOf」を呼んでいる"
   }
  ]
 }

@@ -65,7 +65,7 @@ import { spawnSync } from 'node:child_process';
  *   selfcheck の B11 が、SPEC.md の表と**この出力**を突き合わせる(44条の双子)。
  * ★穴として書く: これが証明するのは「その口を受け付ける」までで、
  *   **その口が仕事をする**ことではない。そこは各口の検査の仕事。 */
-const 知っている口 = ['--口一覧', '--list', '--gate', '--sweep', '--root', '--base', '--escaped'];
+const 知っている口 = ['--口一覧', '--list', '--gate', '--sweep', '--定義一覧', '--root', '--base', '--escaped'];
 const 値を取る口 = { '--root': 1, '--base': 1, '--escaped': 2 };
 const 残りを全部取る口 = [];
 /* ★順番: **未知の口の走査が先、`--口一覧` は後**(2026-08-31、配布先の実測)。
@@ -128,6 +128,7 @@ const BASE_OVERRIDE = baseArg >= 0 ? argv[baseArg + 1] : '';
 const escArg = argv.indexOf('--escaped');
 const ESCAPED = escArg >= 0 ? [argv[escArg + 1], argv[escArg + 2]] : null;
 const SWEEP = argv.includes('--sweep');
+const 定義一覧 = argv.includes('--定義一覧');
 
 const read = (p) => { try { return fs.readFileSync(path.join(ROOT, p), 'utf8'); } catch (_) { return ''; } };
 /* ★失敗を空文字と区別する(2026-08-30、違和感の掘り出しで見つかった)。
@@ -443,6 +444,24 @@ const lineOfIndex = (f, idx) => {
  * 半径の門をいくら広げても、変更点から辿れない重複には届かない(2026-08-26 依頼主の問いから)。
  * だから軸を分けた: 全体走査は定期監査の観点3・4の下ごしらえで、疑いを列挙するだけ。
  * ★列挙は疑いであって判定ではない ── 発見の扱いは監査の掟(勝手に直さない・判断を仰ぐ)。 */
+/* ★【定義の一覧】を機械が読む形で出す(2026-08-31、第2の議題)。
+ *
+ * ★なぜ口にするか: 定義の拾い方(function / class / 型 / const)は**ここが正本**である。
+ *   `check.mjs` が同じ regex を持つと、**片方だけ直る**日が来る(39条)。
+ *   だから写さずに**答えさせる** ── 9.50 の `--口一覧` と同じ形。
+ * ★出す形は「ファイル<TAB>名前<TAB>種類」。種類は fn(関数・クラス)/ 値(それ以外)。
+ *   ★型かどうかは**ここでは分けない** ── 分けるなら defs に印を足すことになり、
+ *     門の判定まで変わる。いまの利用者(地図との突き合わせ)は名前が要るだけである。
+ * ★ネットに出ず、何も書き換えない ── 読んで出すだけ。 */
+if (定義一覧) {
+  const 行 = [];
+  for (const [f, c] of corpus)
+    for (const d of c.defs) 行.push(f + String.fromCharCode(9) + d.name + String.fromCharCode(9) + (d.fn ? "fn" : "値"));
+  行.sort();
+  process.stdout.write(行.join(String.fromCharCode(10)) + String.fromCharCode(10));
+  process.exit(0);
+}
+
 if (SWEEP) {
   const entryRes = (N.entry_symbols || []).map((s) => new RegExp(s));
   const 同名 = new Map();            // name -> Set(file)。定義がどこに散っているか
