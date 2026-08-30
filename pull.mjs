@@ -223,6 +223,29 @@ if (依頼SHA) {
     try { fs.rmSync(仮, { recursive: true, force: true }); } catch (_) {}
     process.exit(1);
   }
+  /* ★【戻った先が、同じ依頼をもう一度受けられるか】を配る前に確かめる
+   *   (2026-08-31、配布先(CodeX)の案A・現場A の実測)。
+   *
+   * ★実際に起きた経路: --at で 9.38 へ戻ると、その 9.38 に --at は無い。
+   *   2回目の `pull --at X` は**黙って無視されて main を取る** ── 測定契約が2回目で崩れる。
+   *   9.43 の「知らない口は出口1」は**ここから先にしか届かない**(過去版は直せない)。
+   * ★だから入口で閉める: **--at を持たない中身は、--at では配らない。**
+   *   過去版を測るなら、この現場を書き換えずに**外の git で使い捨ての写しを作る**
+   *   (配布先はそれで 9.22 → 9.30 の実測をしている ── --at は一度も要らなかった)。
+   * ★見るのは版の番号ではなく**実装が在るか**である ── 版は人が上げる表示名なので。 */
+  let 相手 = '';
+  try { 相手 = fs.readFileSync(path.join(仮, 'pull.mjs'), 'utf8'); } catch (_) {}
+  if (!相手.includes("process.argv.indexOf('--at')")) {
+    let 相手の版 = '?';
+    try { 相手の版 = fs.readFileSync(path.join(仮, 'KIT_VERSION'), 'utf8').trim(); } catch (_) {}
+    console.error('✗ その中身(版 ' + 相手の版 + ')は --at を持っていません: ' + 依頼SHA);
+    console.error('  配ると、**次に同じ --at を打っても黙って無視され、main を取ります**');
+    console.error('  ── 「その SHA を測った」という記録だけが残り、中身は main になります。');
+    console.error('  過去の中身を測るなら、この現場を書き換えずに外の git で使い捨ての写しを作ってください:');
+    console.error('    git clone ' + 正本 + ' <使い捨ての場所> && git -C <使い捨ての場所> checkout ' + 依頼SHA);
+    try { fs.rmSync(仮, { recursive: true, force: true }); } catch (_) {}
+    process.exit(1);
+  }
   console.log('★依頼された中身を取ります: ' + 依頼SHA + '(main ではありません)');
 }
 /* ★【どこから取ったか】の受領証を残す(2026-08-31、配布先(CodeX)の提案)。
