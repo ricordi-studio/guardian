@@ -41,7 +41,7 @@ const 柵を落とす = (t) => String(t || '').replace(/```[\s\S]*?```/g, '');
  *   selfcheck の B11 が、SPEC.md の表と**この出力**を突き合わせる(44条の双子)。
  * ★穴として書く: これが証明するのは「その口を受け付ける」までで、
  *   **その口が仕事をする**ことではない。そこは各口の検査の仕事。 */
-const 知っている口 = ['--口一覧', '--片方だけ', '--名指しされていない', '--宣言の外', '--root', '--selectors', '--tighten'];
+const 知っている口 = ['--口一覧', '--片方だけ', '--名指しされていない', '--宣言の外', '--呼び先が地図に無い', '--root', '--selectors', '--tighten'];
 const 値を取る口 = { '--root': 1 };
 const 残りを全部取る口 = ['--selectors'];
 /* ★順番: **未知の口の走査が先、`--口一覧` は後**(2026-08-31、配布先の実測)。
@@ -466,6 +466,80 @@ if (!map) {
     + "(一時領域や生成物が混ざります ── 本物がそこに埋もれます)");
   if (!場所の外.length && !一覧の外.length) notes.push("この現場のコードは、全部どこかの宣言に入っている");
 }
+/* ---------- A7. 【地図が名指しするファイルが呼んでいるのに、地図に無いファイル】
+ *   (2026-08-31、配布先の実測) ----------
+ *
+ * ★実際に起きた: 配布先の地図に「見立て」の項が在り、
+ *   接点として `worker/src/index.ts` が**書いてあった**。だが**その index.ts が呼んでいる
+ *   `worker/src/foxgod/`(10ファイル・4777行)は、地図のどこにも無かった**。
+ *   ★**項は在る。実名も在る。ファイルも在る。それでも接点が足りない。**
+ *     A4 は「片方だけ」を探すので出ない。A5 は数には入っている。
+ *     **A6(宣言の外)だけが出した** ── だが A6 は `sources` の話で、地図の話ではない。
+ * ★だからここは【1歩だけ辿る】── 地図に載っているファイルが **import / require している先**が、
+ *   地図のどこにも載っていないなら、その1件を出す。**1歩だけ**にするのは、
+ *   2歩3歩と辿ると器の全部が出てきて、7条(鳴りすぎ)に落ちるからである。
+ * ★見るのは**相対の呼び先だけ**(外の部品は地図に載せる対象ではない)。
+ *   git が無視しているものも見ない(A6 と同じ物差し)。
+ * ★落とさない ── 索引に全部は載らない。**数と、取り出す口だけ**(9.72 の3段)。 */
+{
+  const 呼び先 = [];
+  try {
+    const 地図の中身 = 柵を落とす(map);
+    const 地図のファイル = new Set();
+    for (const m of 地図の中身.matchAll(/`([^`\n]+)`/g)) {
+      const t = m[1].trim();
+      if (/^[\w.@/-]+$/.test(t) && /\.[a-z0-9]+$/i.test(t)) {
+        for (const base of ["", ...(cfg.pathBases || [])]) {
+          const f = path.resolve(ROOT, base, t);
+          if (fs.existsSync(f)) { 地図のファイル.add(f); break; }
+        }
+      }
+    }
+    let 管理下 = null;
+    {
+      const r = spawnSync('git', ['-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard'],
+        { encoding: 'utf8', windowsHide: true, maxBuffer: 64 * 1024 * 1024 });
+      if (r.status === 0) 管理下 = new Set(String(r.stdout || "").split(NL)
+        .map((x) => x.trim()).filter(Boolean).map((x) => path.resolve(ROOT, x)));
+    }
+    const 拡張 = ["", ".ts", ".tsx", ".js", ".mjs", ".cjs", ".jsx"];
+    const 解く = (元, 先) => {
+      const 基 = path.resolve(path.dirname(元), 先);
+      for (const e of 拡張) { const f = 基 + e; if (fs.existsSync(f) && fs.statSync(f).isFile()) return f; }
+      for (const e of 拡張.slice(1)) { const f = path.join(基, "index" + e); if (fs.existsSync(f)) return f; }
+      return null;
+    };
+    const 見た = new Set();
+    for (const f of 地図のファイル) {
+      let t = "";
+      try { t = fs.readFileSync(f, "utf8"); } catch (_) { continue; }
+      for (const m of t.matchAll(/(?:from|import|require)\s*\(?\s*["\x27](\.[^"\x27]+)["\x27]/g)) {
+        const 先 = 解く(f, m[1]);
+        if (!先 || 地図のファイル.has(先)) continue;
+        if (管理下 && !管理下.has(先)) continue;
+        const 鍵 = path.relative(ROOT, 先).split(path.sep).join("/");
+        if (見た.has(鍵)) continue;
+        見た.add(鍵);
+        呼び先.push(path.relative(ROOT, f).split(path.sep).join("/") + String.fromCharCode(9) + 鍵);
+      }
+    }
+    呼び先.sort();
+  } catch (e) {
+    notes.push("地図の呼び先は**見ていません**(" + String(e && e.message).slice(0, 80) + ")");
+  }
+  if (process.argv.includes("--呼び先が地図に無い")) {
+    if (呼び先.length) process.stdout.write(呼び先.join(NL) + NL);
+    process.exit(0);        /* 0件は0行 */
+  }
+  if (呼び先.length) {
+    notes.push("**地図に載っているファイルが呼んでいるのに、地図に無いファイルが " + 呼び先.length + " 件**あります: "
+      + 呼び先.slice(0, 3).map((x) => x.split(String.fromCharCode(9)).join(" → ")).join(" / ")
+      + (呼び先.length > 3 ? " ほか" + (呼び先.length - 3) + "件" : "")
+      + " ── ★**項も実名もファイルも在るのに、接点が足りない**形です"
+      + "(A4 も A5 も出しません)。索引に全部は載らないので、落としません。中身は `--呼び先が地図に無い` で出せます");
+  } else notes.push("地図に載っているファイルの呼び先は、全部どこかの項に載っている");
+}
+
 /* ---------- B. 宣言された不変条件 ----------
  * 4つの形しかない:
  *   same    … 複数箇所から1つの値を抜いて、全部同じか(為替・版番号)
