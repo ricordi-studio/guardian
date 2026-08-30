@@ -2079,8 +2079,12 @@ if (process.argv.includes("--why")) {
     let sha = "";
     try { sha = String(JSON.parse(fs.readFileSync(path.join(HERE, ".guardian", "pulled.json"), "utf8")).sha || ""); }
     catch (_) { sha = ""; }
-    process.stdout.write(sha + NL2);
-    process.exit(0);
+    /* ★空は0行、そして「無い」は【不明】の符号で返す(2026-08-31、9.67 の規律を自分に当てた)。
+     *   直す前は受領証が無くても【空行を1行】出して出口0だった ──
+     *   **0件は0行**であり、そして**受領証が無いのは「空」ではなく「どこから来たか分からない」**。
+     *   B0 が画面では【未測】と言っているのに、機械の口は出口0を返していた(9.48 と同じ食い違い)。 */
+    if (sha) { process.stdout.write(sha + NL2); process.exit(0); }
+    process.exit(2);          /* 受領証が無い = 不明(この塊の符号) */
   }
   let 受領証 = null;
   try { 受領証 = JSON.parse(fs.readFileSync(path.join(HERE, '.guardian', 'pulled.json'), 'utf8')); } catch (_) {}
