@@ -41,7 +41,7 @@ const 柵を落とす = (t) => String(t || '').replace(/```[\s\S]*?```/g, '');
  *   selfcheck の B11 が、SPEC.md の表と**この出力**を突き合わせる(44条の双子)。
  * ★穴として書く: これが証明するのは「その口を受け付ける」までで、
  *   **その口が仕事をする**ことではない。そこは各口の検査の仕事。 */
-const 知っている口 = ['--口一覧', '--片方だけ', '--名指しされていない', '--root', '--selectors', '--tighten'];
+const 知っている口 = ['--口一覧', '--片方だけ', '--名指しされていない', '--宣言の外', '--root', '--selectors', '--tighten'];
 const 値を取る口 = { '--root': 1 };
 const 残りを全部取る口 = ['--selectors'];
 /* ★順番: **未知の口の走査が先、`--口一覧` は後**(2026-08-31、配布先の実測)。
@@ -369,6 +369,80 @@ if (!map) {
   }
 }
 
+/* ---------- A6. 【検査が読んでいないコード】を数える(2026-08-31、配布先の実測) ----------
+ *
+ * ★実際に起きた: 配布先の `worker/src/foxgod/`(**10ファイル・4777行**)が、
+ *   地図にも `sources` にも**1文字も無かった**。器からは呼ばれている。
+ *   ★**宣言に無いものは、どの検査にも掛からない。**そして
+ *     **言っていないことは、外からは「問題なし」に見える** ── 11時間ぜんぶ緑だった。
+ * ★今夜の「壊れ方」のいちばん外側:
+ *   黙る < 鳴りすぎる < 正しく見える値 < 関係ない口が黙る < ★**検査が存在すら知らない**
+ *
+ * ★★数え方は【2つ】に分ける ── 宣言の形が2種類あるからである:
+ *     ① どの【場所】の宣言にも入っていない(watch / neighbors.code / selectors / map の外)
+ *     ② 場所には入っているが、**`sources` に無い** ← ★配布先が踏んだのはこちら
+ *   `sources` は**ファイルの一覧**で、B の検査(不変条件・固有名・重複)はそこしか読まない。
+ *   だから「見張っている場所の中に在るのに、検査は一度も開いていない」が起きる。
+ * ★落とさない(7条)── 在って当然のものは多い(試験・生成物・持ち込み)。
+ *   **数と、取り出す口だけ**を置く(9.72 の3段の1段目と2段目)。判定は作らない。
+ * ★配布先では**塊(guardian/)を数えない** ── 道具は道具の都合で増えるので(A5 と同じ理由)。 */
+{
+  const 場所の外 = [];
+  const 一覧の外 = [];
+  try {
+    const 要らない = /(^|[\\/])(\.git|node_modules|dist|build|coverage|\.guardian|\.next|out|vendor)([\\/]|$)/;
+    const コード = /\.(m?js|cjs|ts|tsx|jsx|gs|py|rb|go|rs|java|php|sh)$/i;
+    const 塊は別 = path.resolve(KIT) !== path.resolve(ROOT);
+    /* ★宣言で外した場所(neighbors.skip_dirs)は最初から数えない ── そこは「見ない」と宣言済みである。
+     *   実測: これを入れる前は 正本で 57件 出て、ほぼ全部が research/lab の実験用の写しだった。 */
+    const 外した場所 = ((cfg.neighbors && cfg.neighbors.skip_dirs) || []).map((x) => path.resolve(ROOT, x));
+    const 場所 = new Set();
+    const 足す = (x) => { if (typeof x === "string" && x) 場所.add(path.resolve(ROOT, x)); };
+    for (const x of (cfg.watch || [])) 足す(x);
+    for (const x of ((cfg.neighbors && cfg.neighbors.code) || [])) 足す(x);
+    for (const x of (cfg.selectors || [])) 足す(x);
+    足す(cfg.map);
+    const 読む一覧 = new Set((cfg.sources || []).map((x) => path.resolve(ROOT, x)));
+    const 場所に在る = (f) => {
+      for (const d of 場所) if (f === d || f.startsWith(d + path.sep)) return true;
+      return false;
+    };
+    const 歩く = (dir) => {
+      for (const en of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, en.name);
+        if (要らない.test(full)) continue;
+        if (外した場所.some((d) => full === d || full.startsWith(d + path.sep))) continue;
+        if (塊は別 && (full === path.resolve(KIT) || full.startsWith(path.resolve(KIT) + path.sep))) continue;
+        if (en.isDirectory()) { 歩く(full); continue; }
+        if (!コード.test(en.name)) continue;
+        const 相対 = path.relative(ROOT, full).split(path.sep).join("/");
+        if (!場所に在る(full)) 場所の外.push(相対);
+        else if (読む一覧.size && !読む一覧.has(full)) 一覧の外.push(相対);
+      }
+    };
+    歩く(ROOT);
+    場所の外.sort(); 一覧の外.sort();
+  } catch (e) {
+    notes.push("検査が読んでいないコードが在るかは**見ていません**(" + String(e && e.message).slice(0, 80) + ")");
+  }
+  if (process.argv.includes("--宣言の外")) {
+    const 出る = [...場所の外.map((x) => "場所の外" + String.fromCharCode(9) + x),
+      ...一覧の外.map((x) => "sourcesの外" + String.fromCharCode(9) + x)];
+    if (出る.length) process.stdout.write(出る.join(NL) + NL);
+    process.exit(0);        /* 0件は0行 */
+  }
+  const 言う = (名, 一覧, 説明) => {
+    if (!一覧.length) return;
+    notes.push("**" + 名 + " が " + 一覧.length + " ファイル**あります: "
+      + 一覧.slice(0, 5).join(" / ") + (一覧.length > 5 ? " ほか" + (一覧.length - 5) + "件" : "")
+      + " ── " + 説明 + "(落としません。中身は `--宣言の外` で出せます)");
+  };
+  言う("どの場所の宣言にも入っていないコード", 場所の外,
+    "★**宣言に無いものは、どの検査にも掛かりません**(全部が緑でも、そこは見ていません)");
+  言う("見張っている場所に在るのに `sources` に無いコード", 一覧の外,
+    "★**B の検査(不変条件・固有名・重複)は `sources` しか読みません** ── そこは一度も開かれていません");
+  if (!場所の外.length && !一覧の外.length) notes.push("この現場のコードは、全部どこかの宣言に入っている");
+}
 /* ---------- B. 宣言された不変条件 ----------
  * 4つの形しかない:
  *   same    … 複数箇所から1つの値を抜いて、全部同じか(為替・版番号)
