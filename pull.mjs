@@ -26,6 +26,42 @@ import { spawnSync } from 'node:child_process';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const 正本 = 'https://github.com/ricordi-studio/guardian.git';
+/* ★【知らない口は、黙って無視しない】(2026-08-31、配布先(現場A)の実測)。
+ *
+ * ★実際に起きた経路 ── これは今夜ずっと話していた「1回目は古い自分で走る」の続きである:
+ *     依頼「SHA X を測って」
+ *       → pull --at X    … 成功。中身が X(版 9.38)になる
+ *       → 直して測り直す
+ *       → pull --at X    … ★9.38 に --at という口は無い。**黙って無視して main を取る**
+ *       → 「X を測った」と報告する            ← 嘘。測ったのは main
+ *   受領証は正しく main の SHA を出す。だが人は『--at X と打った』記憶で報告する。
+ *   ★つまり**測定契約が2回目で崩れる**。しかも黙って崩れる。
+ * ★だから知らない --xxx は**その場で出口1**。打った瞬間に止まる。
+ * ★穴: 未来の口を先取りして渡す運用ができなくなる。だが pull の引数は測定契約に使うものなので、
+ *   **黙って別の動きをするより、止まる方が安い**(提案者の言葉)。
+ * ★この直し自体は、古い版には届かない ── 9.42 以前を取ってから戻る経路は依然として黙る。
+ *   届くのは『ここから先』だけである。それでも入れる理由は、口はこれからも増えるからである。 */
+{
+  const 知っている口 = ['--check', '--force', '--distributed', '--at'];
+  const 値を取る口 = ['--at'];
+  const 渡されたもの = process.argv.slice(2);
+  const 知らない = [];
+  for (let i = 0; i < 渡されたもの.length; i++) {
+    const v = 渡されたもの[i];
+    if (!v.startsWith('--')) continue;             /* 口の値(SHA など)は飛ばす */
+    if (!知っている口.includes(v)) { 知らない.push(v); continue; }
+    if (値を取る口.includes(v)) i++;               /* 次は値なので見ない */
+  }
+  if (知らない.length) {
+    let 版 = '?';
+    try { 版 = fs.readFileSync(path.join(HERE, 'KIT_VERSION'), 'utf8').trim(); } catch (_) {}
+    console.error('✗ この版(' + 版 + ')は、その口を知りません: ' + 知らない.join(', '));
+    console.error('  知っている口: ' + 知っている口.join(' / '));
+    console.error('  ★黙って無視すると、**打ったつもりと違う動きをしたまま報告することになります**');
+    console.error('  (`--at` は 9.41 以降です。古い中身へ戻したあとは、まずその口が在るかを確かめてください)');
+    process.exit(1);
+  }
+}
 const 見るだけ = process.argv.includes('--check');
 
 /* ★シェルを通さない(2026-08-30、違和感の掘り出しで見つかった)。
