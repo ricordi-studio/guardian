@@ -2029,10 +2029,17 @@ if (process.argv.includes('--tighten')) {
 }
 
 /* ---------- 結果 ---------- */
-/* ★3語で出す: ✓ 通過 / ? 未測 / ✗ 外れ。
+/* ★4語で出す: ✓ 通過 / ? 未測 / － ここでは測れない / ✗ 外れ。
  *   未測は【止めない】が【緑に混ぜない】── verdict.mjs の「不明」と同じ扱い。
- *   ★出口は 0 のまま(未測は失敗ではない)。合否の側で拾いたい現場は、
- *     guardian.config.json の evidence に `"unknownIf": "未測 [1-9]"` を足すと【不明】になる。 */
+ * ★出口も4語ぶん持つ(2026-08-31、配布先の実測): 外れ=1 / **未測=2(不明)** /
+ *   ここでは測れない=0 / それ以外=0。
+ *   ★直す前は未測でも0を返していたので、verdict が通過に数えていた ──
+ *     画面には「未測1件」と出ているのに、合否は「不明0」。**CI は画面を読まない。**
+ *   ★そして直す前のここには「合否で拾いたい現場は evidence に unknownIf を足すと【不明】になる」
+ *     と書いてあったが、**verdict はそれを出口0のときに見ていなかった** ──
+ *     案内された逃げ道が実装に無い、という形だった(9.49 で verdict 側も直した)。
+ *   ★人に見せる語彙と、機械に返す符号は、同じ数だけ持つ。
+ *     語彙が4つで符号が3つなら、どれか2つが同じ符号に潰れ、潰れた方は必ず緑に化ける。 */
 /* ★【受領証】── 取得元と、いまの中身と、合否を【同じ回で】返す(2026-08-31、CodeX の指摘)。
  *
  *   `--sha` が言えるのは『最後に pull が記録した SHA』までで、
@@ -2050,6 +2057,7 @@ if (process.argv.includes('--receipt')) {
   const verdict = ng.length ? '外れ' : (未測.length ? '未測あり' : (測れない.length ? '通過(ここでは測れないものあり)' : '通過'));
   process.stdout.write(JSON.stringify({
     sourceSha: 取得元, verdict, currentDigest: (h >>> 0).toString(36) + '-' + 並び.length,
+    version: (() => { try { return fs.readFileSync(path.join(HERE, 'KIT_VERSION'), 'utf8').trim(); } catch (_) { return null; } })(),
     ng: ng.length, 未測: 未測.length, 測れない: 測れない.length, ok: ok.length,
   }, null, 1) + NL2);
   process.exit(ng.length ? 1 : (未測.length ? 2 : 0));

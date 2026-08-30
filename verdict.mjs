@@ -103,6 +103,16 @@ if (!cfg) {
 
     if (cantRun) push('不明', name, `動かせません(${e.run})`, out);
     else if (timedOut) push('不明', name, `${e.timeoutSec || 600}秒で返りませんでした`, out);
+    /* ★宣言した「不明の形」は、出口0より【先に】見る(2026-08-31、配布先の実走)。
+     *   直す前はこの判定が status===0 の**後ろ**に在ったので、出口0のときは一度も見られなかった。
+     *   ところが selfcheck には「合否で拾いたい現場は evidence に unknownIf を足すと
+     *   【不明】になる」と**案内が書いてあった** ── 案内された逃げ道が、実装に存在しなかった。
+     * ★これは黙る事故より質が悪い ── **逃げ道を信じて設定した人が、設定した気になったまま緑を受け取る。**
+     * ★出口の値では絞らない ── 前提が無くて落ちる道具は多い(出口1で「◯◯が要ります」と出す)。
+     *   絞ると、宣言した現場の逃げ道がまた消える。実測: 出口0と2だけに絞ったら、
+     *   合否の見本(CASES)が1件赤くなった ── **どの出力を不明と読むかは、その現場の宣言が決める。** */
+    else if (unknownRe && unknownRe.test(out))
+      push('不明', name, `${sec}秒 / 宣言した不明の形に当たりました(unknownIf)` + (e.needs ? ` ── 前提: ${e.needs}` : ``), out);
     else if (r.status === 0) push('通過', name, `${sec}秒`, out);
     /* ★出口2は【不明】(2026-08-30、新規プロジェクトの実走で見つかった)。
      *   neighbors.mjs の頭には『出口: 0=通過 / 1=差戻 / 2=不明。合否(verdict)は 2 を
@@ -111,7 +121,6 @@ if (!cfg) {
      *   合否は**差戻**と言った ── 『測れていない』が『違反を機械で示せた』に化けていた。
      * ★宣言と実装の食い違いは、この塊がいちばん嫌う形である。実装をコメントに合わせる。 */
     else if (r.status === 2) push('不明', name, `${sec}秒 / 出口 2(測れなかった)`, out);
-    else if (unknownRe && unknownRe.test(out)) push('不明', name, e.needs ? `前提が揃っていません(${e.needs})` : '前提が揃っていません', out);
     else if (e.warnOnly) push('注意', name, `${sec}秒 / 出口 ${r.status}`, out);
     else push('差戻', name, `${sec}秒 / 出口 ${r.status}`, out);
   }
