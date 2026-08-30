@@ -109,6 +109,8 @@ if (!fs.existsSync(cfgPath)) {
     map: 'docs/CODEMAP.md',
     _watch: '地図が指している実装の場所。フックはここを触ったときだけ鳴り、監査の催促もここの変更で駆動する',
     watch: watch.length ? watch : ['src'],
+    _context: '★この道具が【どう運用されるか】。誰が・いつ・どれだけ・何度・どこへ公開されるか。ここが空だと運用の欠落(上限・錠・記録・退避)は永久に出ない ── 実測: 問いを3通りに変えても同じ3件を落とし、文脈4行を足した1回だけが見つけた(' + KIT + '/hunch.md)',
+    context: [],
     auditHours: 3,
     _sources: '記号の実在照合の対象。地図に書いた実名がここに無ければ落ちる(導入時に自動で拾った候補)',
     sources,
@@ -141,6 +143,7 @@ if (!fs.existsSync(cfgPath)) {
   if (!DRY) fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2) + '\n');
   did.push(`guardian.config.json を置きました（見張る場所 ${cfg.watch.join('/')} ・ソース候補 ${sources.length}件を自動で拾いました）`);
   todo.push('guardian.config.json の checks が空です。**同じ意味の値が複数箇所にある所**を探して並べてください(WHY.md の B を参照)');
+  todo.push('guardian.config.json の **context が空**です。**この道具がどう運用されるか**(誰が・いつ・どれだけ・何度・どこへ公開されるか)を数行で書いてください ── ここが空だと【運用の欠落】(上限・錠・記録・退避)は、どんな問い方をしても永久に出ません(' + KIT + '/hunch.md)');
   todo.push('guardian.config.json の evidence が空です。**このリポジトリで実際に回る検査**(型・単体・e2e・lint)を並べてください ── 空のままだと合否は【不明】のまま(不明は合格ではない)');
 } else {
   skipped.push('guardian.config.json は既にあるので触っていません');
