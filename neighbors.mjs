@@ -492,7 +492,12 @@ if (跨ぐ記号) {
         }
         if (見た) 他所++;
       }
-      if (他所) 出.push(d.name + String.fromCharCode(9) + (他所 + 1) + String.fromCharCode(9) + home);
+      /* ★4列目に【書き出しているか】を出す(2026-08-31、配布先の宿題から)。
+       *   跨ぐだけでは雑音が落ちなかった(正本55件 / 配布先280件)。
+       *   export は**その現場が意図して外へ出した印**なので、接点に近いはずである。
+       *   ★これも物差しであって判定ではない ── 効くかどうかは当ててから言う。 */
+      if (他所) 出.push(d.name + String.fromCharCode(9) + (他所 + 1) + String.fromCharCode(9) + home
+        + String.fromCharCode(9) + (d.exp ? "export" : "内"));
     }
   出.sort();
   if (出.length) process.stdout.write(出.join(String.fromCharCode(10)) + String.fromCharCode(10));
