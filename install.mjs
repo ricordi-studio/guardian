@@ -254,18 +254,50 @@ else {
 const snippet = fs.readFileSync(path.join(HERE, 'templates', 'CLAUDE-snippet.md'), 'utf8')
   .replace(/<!--[\s\S]*?-->/g, '')
   .replace(/tools\/guardian/g, KIT).replace(/\n{3,}/g, '\n\n').trim();
+/* ★マーカーで囲んだ区間を【置き換える】(2026-08-30、違和感の掘り出しで見つかった)。
+ *
+ *   直す前は「既に書いてあるか」を `${KIT}/RULES.md` という**導出値**で判定していたが、
+ *   貼る本文(templates/CLAUDE-snippet.md)は `guardian/RULES.md` と**べた書き**だった。
+ *   つまり KIT が 'guardian' 以外(塊自身の現場では '.'、tools/guardian に置いた現場では
+ *   'tools/guardian')のとき、**判定は永久に一致せず、回すたびに同じ節が増える**。
+ *   実測: cwd を変えて回すだけで「## 修繕の仕組み」が4個まで増えた。
+ *   ★この事故は現物に残っていた ── この塊自身の CLAUDE.md に同じ節が2つ並んでいた。
+ *
+ * ★もう1つ、直す前は【一度書いたら二度と更新しない】形でもあった。
+ *   塊に新しい層を足しても、既存の配布先の CLAUDE.md は永久に古い案内のまま。
+ *
+ * ★だから、機械が人の文書へ追記する道具が普通にやる形にした ──
+ *   マーカーで区間を囲み、**その区間を丸ごと置き換える**。
+ *   区間の外(人が書いたもの)には触らない。区間は1つしか無いので二重にならない。 */
+const 始 = '<!-- guardian:begin 修繕の仕組み(この区間は install.mjs が書き換えます。外側は触りません) -->';
+const 終 = '<!-- guardian:end -->';
+const 中身 = 始 + '\n\n## 修繕の仕組み\n\n' + snippet + '\n' + 終;
+
 const claudePath = path.join(ROOT, 'CLAUDE.md');
 let claude = '';
 try { claude = fs.readFileSync(claudePath, 'utf8'); } catch (_) {}
-if (claude.includes(`${KIT}/RULES.md`)) {
-  skipped.push('CLAUDE.md には既に書いてあります');
+
+const i = claude.indexOf(始), j = claude.indexOf(終);
+let body;
+if (i >= 0 && j > i) {
+  const 前 = claude.slice(0, i), 後 = claude.slice(j + 終.length);
+  body = 前 + 中身 + 後;
+  if (body === claude) skipped.push('CLAUDE.md は既に最新です');
+  else did.push('CLAUDE.md の区間を更新しました(区間の外は触っていません)');
+} else if (claude) {
+  /* ★古い形(マーカー無しで貼られた節)が在れば、名指しで教える。勝手には消さない。 */
+  if (/^##\s*修繕の仕組み/m.test(claude)) {
+    todo.push('CLAUDE.md に**マーカーの無い古い「修繕の仕組み」の節**が残っています。'
+      + '中身は現場のものなので勝手に消しません ── 読んで、要らなければ手で消してください'
+      + '(以後はマーカーの区間だけが更新されます)');
+  }
+  body = claude.replace(/\s*$/, '') + '\n\n' + 中身 + '\n';
+  did.push('CLAUDE.md に読む順の指定を足しました');
 } else {
-  const body = claude
-    ? claude.replace(/\s*$/, '') + '\n\n## 修繕の仕組み(' + KIT + ')\n\n' + snippet + '\n'
-    : '# CLAUDE.md — 開発規範\n\n## 修繕の仕組み(' + KIT + ')\n\n' + snippet + '\n';
-  if (!DRY) fs.writeFileSync(claudePath, body);
-  did.push(claude ? 'CLAUDE.md に読む順の指定を足しました' : 'CLAUDE.md を作りました');
+  body = '# CLAUDE.md — 開発規範\n\n' + 中身 + '\n';
+  did.push('CLAUDE.md を作りました');
 }
+if (!DRY && body !== claude) fs.writeFileSync(claudePath, body);
 
 todo.push('docs/CODEMAP.md がまだ空です。**触った機能から**項を足していってください(全部いっぺんに書かなくてよい)');
 todo.push(`検査を回す: node ${KIT}/check.mjs`);

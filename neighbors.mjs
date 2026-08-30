@@ -194,7 +194,12 @@ function parseDiff(text) {
 }
 const changed = parseDiff(diff);
 
-const inDirs = (f, dirs) => dirs.some((d) => f === d || f.startsWith(d.replace(/\/?$/, '/')));
+/* ★"."(現場の根)は、直下のファイルも含む(2026-08-30、掘っている最中に見つかった)。
+ *   直す前は f.startsWith("./") を見ていたので、code:["."] と宣言した現場では
+ *   **直下のファイルが1つも「器のコード」と見なされなかった**。
+ *   この塊自身がその宣言なので、--escaped が常に「元の変更に器のコードが無い」と言い、
+ *   **環の測定が一度も動いていなかった。** */
+const inDirs = (f, dirs) => dirs.some((d) => d === '.' || d === './' || f === d || f.startsWith(d.replace(/\/?$/, '/')));
 const isCode = (f) => inDirs(f, CODE_DIRS) && EXT.test(f);
 const isNote = (f) => inDirs(f, NOTE_DIRS) && /\.json$/.test(f);
 
@@ -500,7 +505,16 @@ if (ESCAPED) {
   let 台帳 = { 記録: [] };
   try { 台帳 = JSON.parse(read(台帳P)); } catch (_) {}
   if (!Array.isArray(台帳.記録)) 台帳 = { 記録: [] };
-  台帳.記録.push({ at: new Date().toISOString(), 元: rangeOf(元引数), 直し: rangeOf(直し引数), 結果, 最大環: 最大, 届かない });
+  /* ★同じ事故を二度数えない(2026-08-30、違和感の掘り出しで見つかった)。
+   *   直す前は push するだけで重複判定が無く、**同じ引数で3回回したら3件積まれた**。
+   *   実測: 2回目で「★rings を超えた逃しが繰り返し出ています ── 上げる判断材料です」が出た。
+   *   「環の数は信仰ではなく台帳が決める」という設計が、**再実行1回で歪む**。
+   *   元と直しの範囲は記録しているのに、照合に使っていなかった。 */
+  const 印 = rangeOf(元引数) + " → " + rangeOf(直し引数);
+  const 既に = 台帳.記録.findIndex((r) => (r.元 + " → " + r.直し) === 印);
+  const 新記録 = { at: new Date().toISOString(), 元: rangeOf(元引数), 直し: rangeOf(直し引数), 結果, 最大環: 最大, 届かない };
+  if (既に >= 0) { 台帳.記録[既に] = 新記録; console.log("(同じ範囲の記録を上書きしました ── 二度数えません)"); }
+  else 台帳.記録.push(新記録);
   fs.mkdirSync(path.dirname(path.join(ROOT, 台帳P)), { recursive: true });
   fs.writeFileSync(path.join(ROOT, 台帳P), JSON.stringify(台帳, null, 1));
   const 超え = 台帳.記録.filter((r) => r.最大環 > RINGS).length;

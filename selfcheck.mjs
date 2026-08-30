@@ -42,6 +42,31 @@ function 宣言を読む() {
   }
   return { 在り処: "", 宣言: null };
 }
+/* ★この現場の根(宣言が在る場所)。報告書の落とし先に使う ── cwd に落とすと
+ *   回した場所で行き先が変わり、正本で回すと自己検査を赤くする(2026-08-30)。 */
+/* ★拾えなかったことを、緑にしない(2026-08-30、違和感の掘り出しで見つかった)。
+ *
+ *   この照合は install.mjs / pull.mjs を**文字列の形**で切って中身を取り出す。
+ *   形が変われば何も拾えなくなるが、直す前は「0件は全部入っています ✓」と**緑**を返した。
+ *   実測: install.mjs の path.join(ROOT, …) を別の書き方に変えても、B7 は緑のままだった。
+ *
+ *   これは selfcheck.mjs が生まれた事故そのもの ──
+ *   **何も見ていない検査が緑を返し続け、番人が居るつもりで居なかった**(WHY)。
+ *   check.mjs の検査には probe(見本)が義務づけられているのに、
+ *   selfcheck の中に後から書いたこの照合には無かった。
+ *
+ * ★だから【必ず在るはずのもの】を1つ決めて、それが拾えなければ**照合自身を落とす**。 */
+function 拾えたか(名, 実際, 必ず在る) {
+  const 欠け = 必ず在る.filter((x) => !実際.has(x));
+  if (!欠け.length) return true;
+  ng.push(名 + ': 拾い方が当たっていません(' + 欠け.join(', ') + ' が見つからない)'
+    + ' ── 相手の書き方が変わった可能性があります。**この照合は何も見ていないので、緑にできません**');
+  return false;
+}
+const ROOT_DIR = (() => {
+  const { 在り処 } = 宣言を読む();
+  return 在り処 ? path.dirname(在り処) : process.cwd();
+})();
 const NL2 = String.fromCharCode(10);
 const ok = [];
 const ng = [];
@@ -525,7 +550,15 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
       for (const f of 違う) {
         出.push("---", "", "### " + f, "", "```js", 読む(f), "```", "");
       }
-      const 先 = path.join(process.cwd(), "guardian-report.md");
+      /* ★落とす先を固定する(2026-08-30、違和感の掘り出しで見つかった)。
+       *   直す前は process.cwd() ── 回した場所で落ち先が変わり、同名の既存ファイルを確認なく上書きした。
+       *   さらに正本(塊がリポジトリそのもの)で回すと直下に残り、
+       *   **その直後の自己検査が「配るものとも現場のものとも決まっていません」で赤くなった** ──
+       *   報告書を作る行為が、自分の自己検査を壊していた。
+       *   .guardian/ はこの現場の作業記録の置き場(=配らないもの)なので、そこへ落とす。 */
+      const 出先 = path.join(ROOT_DIR, ".guardian");
+      try { fs.mkdirSync(出先, { recursive: true }); } catch (_) {}
+      const 先 = path.join(出先, "guardian-report.md");
       fs.writeFileSync(先, 出.join("\n"));
       ok.push("改善報告を書きました: " + 先 + "(" + 違う.length + "ファイル)── 承認を得てから元の塊へ渡してください");
     } else {
@@ -692,7 +725,15 @@ if (process.argv.includes("--why")) {
           "- 足した事故: " + 足された.length + "件",
           "- 個人情報の見張り: " + (語.length ? 語.length + "語を通しました" : "**宣言が空のため見張っていません**(guardian.config.json の private)"),
           "", "---", "", ...足された];
-        const 先 = path.join(process.cwd(), "guardian-why-report.md");
+      /* ★落とす先を固定する(2026-08-30、違和感の掘り出しで見つかった)。
+       *   直す前は process.cwd() ── 回した場所で落ち先が変わり、同名の既存ファイルを確認なく上書きした。
+       *   さらに正本(塊がリポジトリそのもの)で回すと直下に残り、
+       *   **その直後の自己検査が「配るものとも現場のものとも決まっていません」で赤くなった** ──
+       *   報告書を作る行為が、自分の自己検査を壊していた。
+       *   .guardian/ はこの現場の作業記録の置き場(=配らないもの)なので、そこへ落とす。 */
+        const 出先 = path.join(ROOT_DIR, ".guardian");
+        try { fs.mkdirSync(出先, { recursive: true }); } catch (_) {}
+        const 先 = path.join(出先, "guardian-why-report.md");
         fs.writeFileSync(先, 出.join("\n"));
         const 送る = "gh issue create --repo ricordi-studio/guardian"
           + " --title " + JSON.stringify("事故レポート: " + 足された.length + "件")
@@ -890,8 +931,12 @@ if (process.argv.includes("--why")) {
   const 配るもの = 取る('配るもの');
   const 現場のもの = 取る('現場のもの');
 
-  if (!配るもの || !現場のもの) {
-    ng.push('pull.mjs の【配るもの】【現場のもの】が読めません。書き方を変えたならこの検査も直すこと');
+  /* 見本: この2つは必ず在る。拾えなければ pull.mjs の書き方が変わった合図(2026-08-30) */
+  const 拾えた = 配るもの && 現場のもの
+    && 拾えたか('配るもの', 配るもの, ['check.mjs', 'selfcheck.mjs'])
+    && 拾えたか('現場のもの', 現場のもの, ['guardian.config.json', 'docs']);
+  if (!拾えた) {
+    if (配るもの && 現場のもの) { /* 見本が落としたので、ここでは何も言わない */ } else ng.push('pull.mjs の【配るもの】【現場のもの】が読めません。書き方を変えたならこの検査も直すこと');
   } else {
     /* B6a: 分類の網羅(この現場が正本であるときだけ意味がある ── 塊がリポジトリそのもの) */
     const 正本か = fs.existsSync(path.join(HERE, '..', '.git')) || fs.existsSync(path.join(HERE, '.git'));
@@ -925,12 +970,17 @@ if (process.argv.includes("--why")) {
 
     /* B7: install が配布先に作るものは、定義上すべて現場固有物である */
     const 作る = new Set([...kit('install.mjs').matchAll(/path\.join\(ROOT,\s*'([^']+)'/g)].map((m) => m[1]));
+    /* 見本: install は必ずこの3つを配布先に作る。拾えなければ形が変わった合図 */
+    if (!拾えたか('install が配布先に作るもの', 作る, ['docs', 'guardian.config.json', 'CLAUDE.md'])) {
+      /* 落としたので、この先は数えない */
+    } else {
     const 漏れ = [...作る].filter((p) => !現場のもの.has(p));
     if (漏れ.length) {
       ng.push('install.mjs が配布先に作るものが【現場のもの】に入っていません(配ると配布先のものを壊します): '
         + 漏れ.join(', '));
     } else {
       ok.push('install が配布先に作るもの(' + 作る.size + '件)は、全て【現場のもの】に入っている');
+    }
     }
   }
 }

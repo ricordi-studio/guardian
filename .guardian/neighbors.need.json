@@ -2,11 +2,116 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "hooks/lib-root.js::loadConfig",
-   "記号": "loadConfig",
-   "場所": "hooks/lib-root.js",
+   "key": "install.mjs::added",
+   "記号": "added",
+   "場所": "install.mjs",
    "環": 1,
-   "きっかけ": "「findRoot」を呼んでいる"
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::CC",
+   "記号": "CC",
+   "場所": "install.mjs",
+   "環": 1,
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::cfgPath",
+   "記号": "cfgPath",
+   "場所": "install.mjs",
+   "環": 1,
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::findInstallRoot",
+   "記号": "findInstallRoot",
+   "場所": "install.mjs",
+   "環": 1,
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::setPath",
+   "記号": "setPath",
+   "場所": "install.mjs",
+   "環": 1,
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::frontier",
+   "記号": "frontier",
+   "場所": "neighbors.mjs",
+   "環": 1,
+   "きっかけ": "「isExported」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::isCode",
+   "記号": "isCode",
+   "場所": "neighbors.mjs",
+   "環": 1,
+   "きっかけ": "「inDirs」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::isNote",
+   "記号": "isNote",
+   "場所": "neighbors.mjs",
+   "環": 1,
+   "きっかけ": "「inDirs」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::touched",
+   "記号": "touched",
+   "場所": "neighbors.mjs",
+   "環": 1,
+   "きっかけ": "「changed」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::一般語",
+   "記号": "一般語",
+   "場所": "neighbors.mjs",
+   "環": 1,
+   "きっかけ": "「changed」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::一覧",
+   "記号": "一覧",
+   "場所": "pull.mjs",
+   "環": 1,
+   "きっかけ": "「現場のもの」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::ROOT",
+   "記号": "ROOT",
+   "場所": "install.mjs",
+   "環": 2,
+   "きっかけ": "「findInstallRoot」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::settings",
+   "記号": "settings",
+   "場所": "install.mjs",
+   "環": 2,
+   "きっかけ": "「setPath」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::known",
+   "記号": "known",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "きっかけ": "「touched」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::報告",
+   "記号": "報告",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "きっかけ": "「touched」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::新しい",
+   "記号": "新しい",
+   "場所": "pull.mjs",
+   "環": 2,
+   "きっかけ": "「一覧」を呼んでいる"
   }
  ]
 }

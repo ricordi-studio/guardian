@@ -44,7 +44,13 @@ const 走る = (cmd, args, opts = {}) =>
 }
 
 /* ── ② 正本を一時領域に取る ── */
-const 仮 = path.join(HERE, '..', '.guardian-pull-tmp');
+/* ★一時フォルダは【塊の中】に作る(2026-08-30、違和感の掘り出しで見つかった)。
+ *   直す前は HERE/../.guardian-pull-tmp ── 塊の**外**に作っていた。
+ *   配布先ではプロジェクトの根、そして**正本ではデスクトップ直下**になる
+ *   (塊がリポジトリそのものなので HERE の1つ上はデスクトップ)。
+ *   しかも作る前に rmSync(recursive, force) するので、**同名のフォルダが在れば警告なく消える**。
+ *   この道具の冒頭には「guardian/ しか触らない」と書いてあった ── 宣言と実装が食い違っていた。 */
+const 仮 = path.join(HERE, '.guardian-pull-tmp');
 try { fs.rmSync(仮, { recursive: true, force: true }); } catch (_) {}
 const c = 走る('git', ['clone', '--depth', '1', '-q', 正本, JSON.stringify(仮)]);
 if (c.status !== 0) {
@@ -87,17 +93,41 @@ const 現場のもの = new Set([
   '.guardian',              // Guardian 自身の作業記録
   '.claude', 'CLAUDE.md',   // Guardian 自身のフック登録と開発規範
   'research',               // AI Council(研究の記録。配布物ではない)
+  '.guardian-pull-tmp',    // 取り直しの作業場(塊の中に作る。下の 仮 と同じ名前)
   '.git', '.github', 'node_modules',
 ]);
 
-/* ★取る前に、正本の直下が**全部どちらかに分類されているか**を見る(門)。
- *   分類されていないものが1つでもあれば、**取らずに止まる** ──
- *   混入(配ってはいけないものを配る)と欠落(配るべきものを配らない)の、
- *   どちらが起きるか分からない状態でコピーを始めないため。 */
+/* ★分類表は【上流の版】で判定する(2026-08-30、違和感の掘り出しで見つかった)。
+ *
+ *   分類表(配るもの / 現場のもの)は、置き換えられる当の pull.mjs の中に在る。
+ *   直す前はその**手元の古い表**で門を回していたので、上流が新しいファイルを足して
+ *   **上流側では正しく分類済み**にしても、配布先は「決まっていません」と言って取り直しを拒み、
+ *   「正本の pull.mjs に書いてください」(もう書いてある)と案内した ── **手で直すまで更新できない自己ロック**。
+ *
+ * ★上流の表を読んで判定する。読めなければ手元の表に落とす(そのときは黙らずに言う)。
+ *   ★上流を信じてよいのは【分類の網羅】の判定だけである ── 実際に何を配るかは、
+ *     この後の一覧でも上流の表を使うので、どちらも同じ1つを見ることになる。 */
+const 表を読む = (src, 名) => {
+  const h = src.indexOf(名 + ' = new Set([');
+  if (h < 0) return null;
+  const t = src.indexOf(']);', h);
+  if (t < 0) return null;
+  return new Set([...src.slice(h, t).matchAll(/'([^']*)'/g)].map((m) => m[1]));
+};
 {
+  const 上流の表 = (() => {
+    try {
+      const src = fs.readFileSync(path.join(仮, 'pull.mjs'), 'utf8');
+      const w = 表を読む(src, '配るもの'), b = 表を読む(src, '現場のもの');
+      return (w && b && w.has('check.mjs') && b.has('docs')) ? { 配る: w, 現場: b } : null;
+    } catch (_) { return null; }
+  })();
+  if (!上流の表) console.log('(上流の分類表が読めないので、手元の表で判定します)');
+  const W = 上流の表 ? 上流の表.配る : 配るもの;
+  const B = 上流の表 ? 上流の表.現場 : 現場のもの;
   const 直下 = fs.readdirSync(仮).map((n) => n);
-  const 未分類 = 直下.filter((n) => !配るもの.has(n) && !現場のもの.has(n));
-  const 両方 = 直下.filter((n) => 配るもの.has(n) && 現場のもの.has(n));
+  const 未分類 = 直下.filter((n) => !W.has(n) && !B.has(n));
+  const 両方 = 直下.filter((n) => W.has(n) && B.has(n));
   if (未分類.length || 両方.length) {
     fs.rmSync(仮, { recursive: true, force: true });
     if (未分類.length) {
@@ -110,6 +140,8 @@ const 現場のもの = new Set([
     }
     process.exit(1);
   }
+  /* この先の一覧も、上流の表で歩く(手元の古い表で歩くと、新しいものが欠落する) */
+  if (上流の表) { for (const x of 上流の表.配る) 配るもの.add(x); for (const x of 上流の表.現場) 現場のもの.add(x); }
 }
 
 const 一覧 = (dir, 元 = dir, 深さ = 0) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
