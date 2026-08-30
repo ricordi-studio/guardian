@@ -31,6 +31,42 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+/* ★【この道具が知っている口】── 宣言ではなく、ここが実装そのものである
+ *   (2026-08-31、第2の議題。配布先(現場A)の実測が発端)。
+ *
+ * ★実際に起きたこと: 案内されている口を「ソースにその文字列が在るか」で照合したら、
+ *   3通りの数え方で3通りの答えが出た。とくに `neighbors --list` は**文字列としては在るが、
+ *   argv を見ていない**(既定動作だった)── **書いてある ≠ 口として在る**。
+ *   これは 9.46 で `PROTOCOL.json` に置き換えたばかりの「綴りで能力を測る」罠と同じ形である。
+ * ★だから【この配列が唯一の正】にする: ここが未知の口を拒み、ここが `--口一覧` を答える。
+ *   selfcheck の B11 が、SPEC.md の表と**この出力**を突き合わせる(44条の双子)。
+ * ★穴として書く: これが証明するのは「その口を受け付ける」までで、
+ *   **その口が仕事をする**ことではない。そこは各口の検査の仕事。 */
+const 知っている口 = ['--口一覧', '--check'];
+const 値を取る口 = {};
+const 残りを全部取る口 = [];
+if (process.argv.includes('--口一覧')) {
+  process.stdout.write(知っている口.join(String.fromCharCode(10)) + String.fromCharCode(10));
+  process.exit(0);
+}
+{
+  const 渡された = process.argv.slice(2);
+  const 知らない = [];
+  for (let i = 0; i < 渡された.length; i++) {
+    const v = 渡された[i];
+    if (!v.startsWith('--')) continue;          /* 口の値は飛ばす */
+    if (残りを全部取る口.includes(v)) break;     /* ここから先は全部その口の値 */
+    if (!知っている口.includes(v)) { 知らない.push(v); continue; }
+    i += (値を取る口[v] || 0);
+  }
+  if (知らない.length) {
+    console.error('✗ この道具は、その口を知りません: ' + 知らない.join(', '));
+    console.error('  知っている口: ' + 知っている口.join(' / '));
+    console.error('  ★黙って無視すると、打ったつもりと違う動きをしたまま報告することになります');
+    process.exit(1);
+  }
+}
+
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const 見るだけ = process.argv.includes('--check');
 

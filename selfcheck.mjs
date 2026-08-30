@@ -24,6 +24,42 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+/* ★【この道具が知っている口】── 宣言ではなく、ここが実装そのものである
+ *   (2026-08-31、第2の議題。配布先(現場A)の実測が発端)。
+ *
+ * ★実際に起きたこと: 案内されている口を「ソースにその文字列が在るか」で照合したら、
+ *   3通りの数え方で3通りの答えが出た。とくに `neighbors --list` は**文字列としては在るが、
+ *   argv を見ていない**(既定動作だった)── **書いてある ≠ 口として在る**。
+ *   これは 9.46 で `PROTOCOL.json` に置き換えたばかりの「綴りで能力を測る」罠と同じ形である。
+ * ★だから【この配列が唯一の正】にする: ここが未知の口を拒み、ここが `--口一覧` を答える。
+ *   selfcheck の B11 が、SPEC.md の表と**この出力**を突き合わせる(44条の双子)。
+ * ★穴として書く: これが証明するのは「その口を受け付ける」までで、
+ *   **その口が仕事をする**ことではない。そこは各口の検査の仕事。 */
+const 知っている口 = ['--口一覧', '--changed', '--dry', '--receipt', '--report', '--send', '--sha', '--stamp', '--tighten', '--why'];
+const 値を取る口 = {};
+const 残りを全部取る口 = [];
+if (process.argv.includes('--口一覧')) {
+  process.stdout.write(知っている口.join(String.fromCharCode(10)) + String.fromCharCode(10));
+  process.exit(0);
+}
+{
+  const 渡された = process.argv.slice(2);
+  const 知らない = [];
+  for (let i = 0; i < 渡された.length; i++) {
+    const v = 渡された[i];
+    if (!v.startsWith('--')) continue;          /* 口の値は飛ばす */
+    if (残りを全部取る口.includes(v)) break;     /* ここから先は全部その口の値 */
+    if (!知っている口.includes(v)) { 知らない.push(v); continue; }
+    i += (値を取る口[v] || 0);
+  }
+  if (知らない.length) {
+    console.error('✗ この道具は、その口を知りません: ' + 知らない.join(', '));
+    console.error('  知っている口: ' + 知っている口.join(' / '));
+    console.error('  ★黙って無視すると、打ったつもりと違う動きをしたまま報告することになります');
+    process.exit(1);
+  }
+}
+
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 /** この現場の宣言(guardian.config.json)を読む唯一の口(2026-08-28)。
@@ -1815,6 +1851,62 @@ if (process.argv.includes("--why")) {
           ok.push("版 " + いまの版 + " と中身が1対1(公開してから配る中身は変わっていません)");
         }
       }
+    }
+  }
+}
+/* B11. 【案内されている口が、本当に口として在るか】
+ *   (2026-08-31、第2の議題。配布先(現場A)の実測が発端)。
+ *
+ * ★実際に起きた: 案内されている口を「ソースにその文字列が在るか」で照合したら、
+ *   3通りの数え方で3通りの答えが出た。とくに `neighbors --list` は**文字列としては在るが、
+ *   argv を見ていない**(既定動作だった)── **書いてある ≠ 口として在る**。
+ *   これは 9.46 で PROTOCOL.json に置き換えたばかりの「綴りで能力を測る」罠と同じ形である。
+ * ★だから綴りを読まない ── **道具に答えさせる**(`--口一覧`)。それを SPEC.md の表と突き合わせる。
+ *   道具の側では、その同じ配列が未知の口を拒む ── **答えと振る舞いが同じ1つから出る**(44条)。
+ * ★安全に走らせられる理由: `--口一覧` は他に何もせず、すぐ出口0で終わる(何も書き換えない)。
+ * ★穴として書く: 証明できるのは「その口を受け付ける」までで、**その口が仕事をする**ことではない。
+ *   そこは各口の検査の仕事である(9.43 の未知オプション拒否と同じ線)。 */
+{
+  const 道具 = ["check.mjs", "index.mjs", "install.mjs", "neighbors.mjs", "pull.mjs", "selfcheck.mjs", "verdict.mjs"];
+  let spec = null;
+  try { spec = fs.readFileSync(path.join(HERE, "SPEC.md"), "utf8"); } catch (_) {}
+  if (!spec) {
+    未測.push("案内されている口は見ていません(SPEC.md が読めません)");
+  } else {
+    /* SPEC の表を読む。行の頭が `道具名` なら持ち主が変わり、`| |` なら直前の持ち主のまま */
+    const 宣言 = {};
+    let いま = null;
+    for (const 行 of spec.split(NL2)) {
+      if (!行.startsWith("|")) { continue; }
+      const m = 行.match(/^\|\s*`([A-Za-z0-9_.\/-]+\.(?:mjs|js))`\s*\|/);
+      if (m) { いま = m[1]; if (!宣言[いま]) 宣言[いま] = new Set(); }
+      if (!いま || !宣言[いま]) continue;
+      /* 口の欄(2番目のセル)だけを見る ── 説明文に出てくる口は数えない */
+      const セル = 行.split("|");
+      const 口欄 = セル.length > 2 ? セル[2] : "";
+      for (const g of 口欄.matchAll(/`(--[^`\s]+)/g)) 宣言[いま].add(g[1]);
+    }
+    const ずれ = [];
+    const 測れた = [];
+    for (const t of 道具) {
+      const r = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧"],
+        { encoding: "utf8", windowsHide: true, cwd: HERE });
+      if (r.status !== 0) { ずれ.push(t + "(--口一覧 が答えません)"); continue; }
+      const 実際 = new Set(String(r.stdout || "").split(NL2).map((x) => x.trim()).filter(Boolean));
+      const 書いてある = 宣言[t] || new Set();
+      const 案内だけ = [...書いてある].filter((x) => !実際.has(x));
+      const 実装だけ = [...実際].filter((x) => !書いてある.has(x));
+      if (案内だけ.length) ずれ.push(t + ": SPEC に在るが口として無い ── " + 案内だけ.join(", "));
+      if (実装だけ.length) ずれ.push(t + ": 口として在るが SPEC に無い ── " + 実装だけ.join(", "));
+      if (!案内だけ.length && !実装だけ.length) 測れた.push(t + "(" + 実際.size + ")");
+    }
+    if (ずれ.length) {
+      ng.push("★案内と口が食い違っています: " + ずれ.join(" / ")
+        + " ── **案内された口が存在しないのは、黙る事故より質が悪い**"
+        + "(案内どおり打った人が、打ったつもりのまま別の動きを受け取ります)");
+    } else {
+      ok.push("案内されている口は、全部その道具が口として答える(" + 測れた.join(" / ")
+        + " ── 綴りではなく --口一覧 に答えさせて突き合わせた)");
     }
   }
 }

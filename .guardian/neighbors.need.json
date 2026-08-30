@@ -2,36 +2,116 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "selfcheck.mjs::NL2",
-   "記号": "NL2",
-   "場所": "selfcheck.mjs",
+   "key": "install.mjs::added",
+   "記号": "added",
+   "場所": "install.mjs",
    "環": 1,
-   "根": "未測",
-   "きっかけ": "「未測」を呼んでいる"
+   "根": "DRY",
+   "きっかけ": "「DRY」を呼んでいる"
   },
   {
-   "key": "selfcheck.mjs::CASES",
-   "記号": "CASES",
-   "場所": "selfcheck.mjs",
-   "環": 2,
-   "根": "未測",
-   "きっかけ": "「NL2」を呼んでいる"
+   "key": "install.mjs::cfgPath",
+   "記号": "cfgPath",
+   "場所": "install.mjs",
+   "環": 1,
+   "根": "DRY",
+   "きっかけ": "「DRY」を呼んでいる"
   },
   {
-   "key": "selfcheck.mjs::DECISIONS_MD",
-   "記号": "DECISIONS_MD",
-   "場所": "selfcheck.mjs",
-   "環": 2,
-   "根": "未測",
-   "きっかけ": "「NL2」を呼んでいる"
+   "key": "install.mjs::claude",
+   "記号": "claude",
+   "場所": "install.mjs",
+   "環": 1,
+   "根": "DRY",
+   "きっかけ": "「DRY」を呼んでいる"
   },
   {
-   "key": "selfcheck.mjs::RULES_MD",
-   "記号": "RULES_MD",
-   "場所": "selfcheck.mjs",
+   "key": "install.mjs::write",
+   "記号": "write",
+   "場所": "install.mjs",
+   "環": 1,
+   "根": "DRY",
+   "きっかけ": "「DRY」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::依頼SHA",
+   "記号": "依頼SHA",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "正本",
+   "きっかけ": "「正本」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::一覧",
+   "記号": "一覧",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "正本",
+   "きっかけ": "「正本」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::受領証を書く",
+   "記号": "受領証を書く",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "正本",
+   "きっかけ": "「正本」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::全消える",
+   "記号": "全消える",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "正本",
+   "きっかけ": "「正本」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::CC",
+   "記号": "CC",
+   "場所": "install.mjs",
    "環": 2,
-   "根": "未測",
-   "きっかけ": "「NL2」を呼んでいる"
+   "根": "DRY",
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::findInstallRoot",
+   "記号": "findInstallRoot",
+   "場所": "install.mjs",
+   "環": 2,
+   "根": "DRY",
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::mapPath",
+   "記号": "mapPath",
+   "場所": "install.mjs",
+   "環": 2,
+   "根": "DRY",
+   "きっかけ": "「write」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::setPath",
+   "記号": "setPath",
+   "場所": "install.mjs",
+   "環": 2,
+   "根": "DRY",
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::取得SHA",
+   "記号": "取得SHA",
+   "場所": "pull.mjs",
+   "環": 2,
+   "根": "正本",
+   "きっかけ": "「依頼SHA」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::新しい",
+   "記号": "新しい",
+   "場所": "pull.mjs",
+   "環": 2,
+   "根": "正本",
+   "きっかけ": "「一覧」を呼んでいる"
   }
  ]
 }

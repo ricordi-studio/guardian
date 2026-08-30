@@ -42,8 +42,12 @@ const 正本 = 'https://github.com/ricordi-studio/guardian.git';
  * ★この直し自体は、古い版には届かない ── 9.42 以前を取ってから戻る経路は依然として黙る。
  *   届くのは『ここから先』だけである。それでも入れる理由は、口はこれからも増えるからである。 */
 {
-  const 知っている口 = ['--check', '--force', '--distributed', '--at'];
+  const 知っている口 = ['--口一覧', '--check', '--force', '--distributed', '--at'];
   const 値を取る口 = ['--at'];
+  if (process.argv.includes('--口一覧')) {
+    process.stdout.write(知っている口.join(String.fromCharCode(10)) + String.fromCharCode(10));
+    process.exit(0);
+  }
   const 渡されたもの = process.argv.slice(2);
   const 知らない = [];
   for (let i = 0; i < 渡されたもの.length; i++) {
