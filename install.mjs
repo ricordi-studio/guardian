@@ -387,6 +387,42 @@ if (!DRY) {
 }
 
 /* ---------- 結果 ---------- */
+/* ---------- 塊の中に【正本の現場のもの】が混ざっていないか(2026-08-30) ----------
+ *
+ * ★`npx degit`(と `git clone`)は Guardian の宣言を一切読まないので、
+ *   正本のリポジトリを**丸ごと** guardian/ に落とす ── `.claude` / `CLAUDE.md` / `docs` /
+ *   `research` / `talk` / `guardian.config.json` まで付いてくる。
+ *   実測(2026-08-30、新規プロジェクトで実走): 6項目が混入した。
+ * ★実害は 9.13 の守り(塊のフォルダを根と見なさない)で消えているので、**止めない**。
+ *   だが黙っていると「Guardian はこういうものだ」と思われ、次に取り直したとき
+ *   `pull` が「配るものとも現場のものとも決まっていません」で止まる形にもなる。
+ * ★勝手に消さない ── 中身が現場のものである可能性がゼロではない(この塊の掟)。
+ *   **名指しして、消す1行を渡す**までが機械の仕事。
+ * ★何が「正本の現場のもの」かは pull.mjs の宣言が持つ(39条・写さない)。 */
+{
+  const 表を取る = (名) => {
+    let src = '';
+    try { src = fs.readFileSync(path.join(HERE, 'pull.mjs'), 'utf8'); } catch (_) { return null; }
+    const h = src.indexOf(名 + ' = new Set([');
+    if (h < 0) return null;
+    return [...src.slice(h, src.indexOf(']);', h)).matchAll(/'([^']*)'/g)].map((m) => m[1]);
+  };
+  const 現場のもの = 表を取る('現場のもの');
+  if (!現場のもの) {
+    todo.push('塊の中に正本のものが混ざっていないか**見ていません**(' + KIT + '/pull.mjs から宣言が読めません)');
+  } else {
+    const 混入 = 現場のもの
+      .filter((n) => !n.startsWith('.git') && n !== 'node_modules' && n !== '.guardian-pull-tmp')
+      .filter((n) => fs.existsSync(path.join(HERE, n)));
+    if (混入.length) {
+      todo.push('★塊の中に**正本の現場のもの**が混ざっています: ' + 混入.join(', ')
+        + ' ── `npx degit` / `git clone` は Guardian の宣言を読まないので丸ごと落ちてきます。'
+        + '**動作に実害はありません**が、要らないので消してください:'
+        + String.fromCharCode(10) + '     rm -rf ' + 混入.map((n) => KIT + '/' + n).join(' '));
+    }
+  }
+}
+
 /* ---------- 古い名前の置き去りを見る(2026-08-28) ---------- */
 /* ★実際に起きた: 塊の名前を codemap → guardian に変えて配ったとき、配布先に
  *   codemap.config.json(その現場が**自分で書いた検査2件**入り)が残り、
