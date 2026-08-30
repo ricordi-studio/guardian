@@ -387,6 +387,7 @@ if (!map) {
  *   **数と、取り出す口だけ**を置く(9.72 の3段の1段目と2段目)。判定は作らない。
  * ★配布先では**塊(guardian/)を数えない** ── 道具は道具の都合で増えるので(A5 と同じ理由)。 */
 {
+  let 管理下 = null;   /* try の外に置く ── 締めの1行がここを読む */
   const 場所の外 = [];
   const 一覧の外 = [];
   try {
@@ -396,6 +397,25 @@ if (!map) {
     /* ★宣言で外した場所(neighbors.skip_dirs)は最初から数えない ── そこは「見ない」と宣言済みである。
      *   実測: これを入れる前は 正本で 57件 出て、ほぼ全部が research/lab の実験用の写しだった。 */
     const 外した場所 = ((cfg.neighbors && cfg.neighbors.skip_dirs) || []).map((x) => path.resolve(ROOT, x));
+    /* ★git が「管理しない」と言っているものは数えない(2026-08-31、配布先の実測)。
+ *
+     *   実測(配布先): 142件のうち **115件が `worker/.wrangler`**(ビルドの一時領域)だった。
+     *   **本物27件が、一時生成物に 4:1 で埋もれていた**。
+     * ★`.gitignore` は**その現場が「管理しない」と宣言したもの**なので、
+     *   「宣言に無いものを数える」計器から見れば**構造的に外れている**。
+     * ★読み方は git に聞く ── `.gitignore` を自分で解釈しない(入れ子・否定・除外規則が在る)。
+     *   `git ls-files --cached --others --exclude-standard` = **管理しているもの + まだ管理していないが無視もされていないもの**。
+     * ★git が答えなければ**絞らない**。そして**絞らなかったと言う** ── 黙って全部数えると、
+     *   その現場では「一時領域だらけ」に見えて、本物が埋もれる(7条)。 */
+    /* git に聞く(下の 管理下 を埋める) */
+    {
+      const r = spawnSync('git', ['-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard'],
+        { encoding: 'utf8', windowsHide: true, maxBuffer: 64 * 1024 * 1024 });
+      if (r.status === 0) {
+        管理下 = new Set(String(r.stdout || "").split(NL).map((x) => x.trim()).filter(Boolean)
+          .map((x) => path.resolve(ROOT, x)));
+      }
+    }
     const 場所 = new Set();
     const 足す = (x) => { if (typeof x === "string" && x) 場所.add(path.resolve(ROOT, x)); };
     for (const x of (cfg.watch || [])) 足す(x);
@@ -415,6 +435,7 @@ if (!map) {
         if (塊は別 && (full === path.resolve(KIT) || full.startsWith(path.resolve(KIT) + path.sep))) continue;
         if (en.isDirectory()) { 歩く(full); continue; }
         if (!コード.test(en.name)) continue;
+        if (管理下 && !管理下.has(full)) continue;   /* git が無視しているもの */
         const 相対 = path.relative(ROOT, full).split(path.sep).join("/");
         if (!場所に在る(full)) 場所の外.push(相対);
         else if (読む一覧.size && !読む一覧.has(full)) 一覧の外.push(相対);
@@ -441,6 +462,8 @@ if (!map) {
     "★**宣言に無いものは、どの検査にも掛かりません**(全部が緑でも、そこは見ていません)");
   言う("見張っている場所に在るのに `sources` に無いコード", 一覧の外,
     "★**B の検査(不変条件・固有名・重複)は `sources` しか読みません** ── そこは一度も開かれていません");
+  if (管理下 === null) notes.push("★git が答えないので、**無視されているファイルも数えています**"
+    + "(一時領域や生成物が混ざります ── 本物がそこに埋もれます)");
   if (!場所の外.length && !一覧の外.length) notes.push("この現場のコードは、全部どこかの宣言に入っている");
 }
 /* ---------- B. 宣言された不変条件 ----------
