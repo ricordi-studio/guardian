@@ -72,14 +72,22 @@ const read = (p) => { try { return fs.readFileSync(path.join(ROOT, p), 'utf8'); 
  *   fatal: unknown revision で落ちる → 差分が空 → 触れた記号ゼロ → 近傍ゼロ →
  *   **門が出口0で「通過」**。いちばん効いてほしい CI で、門が最初から死んでいた。
  * ★測れなかったことは黙らない ── 呼ぶ側が【不明】に落とせるよう、失敗を返り値で伝える。 */
-const shRaw = (cmd) => {
-  const r = spawnSync(cmd, { cwd: ROOT, shell: true, encoding: 'utf8', windowsHide: true, maxBuffer: 128 * 1024 * 1024 });
+/* ★シェルを通さない(2026-08-30、違和感の掘り出しで見つかった)。
+ *   直す前は1本の文字列を `shell: true` で渡していたので、**経路を自分で括る必要**があり、
+ *   `git show <版>:<経路>` は括られていなかった。
+ *   実測: `src/my file.js`(空白入り)を含むリポジトリで `--escaped` を回すと git が落ち、
+ *   その失敗が握り潰されて **「測れません: 元の変更に器のコードが無い」** と出た ── **嘘の説明**。
+ *   空白を消しただけの対照では「環0」と正しく出る。
+ * ★引数の配列で渡せば、括る作法そのものが要らなくなる(括り忘れが起きる場所を消す)。
+ *   9.16 まで居た sh / shRaw(名前を囲まない ── もう実装に無いので)は、同じ仕事をシェル経由でやっていた。 */
+const gitRaw = (...args) => {
+  const r = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8', windowsHide: true, maxBuffer: 128 * 1024 * 1024 });
   return { ok: r.status === 0, out: r.stdout || '', err: String(r.stderr || '').trim(), code: r.status };
 };
 const 測れなかった = [];
-const sh = (cmd) => {
-  const r = shRaw(cmd);
-  if (!r.ok) 測れなかった.push(cmd.split(' ').slice(0, 3).join(' ') + ' … ' + (r.err.split('\n')[0] || ('出口' + r.code)));
+const git = (...args) => {
+  const r = gitRaw(...args);
+  if (!r.ok) 測れなかった.push('git ' + args.slice(0, 2).join(' ') + ' … ' + (r.err.split('\n')[0] || ('出口' + r.code)));
   return r.out;
 };
 
@@ -126,9 +134,9 @@ const SKIP_DIRS = (N.skip_dirs || []).map((s) => String(s).replace(/^\.\//, '').
 const inSkipped = (p) => SKIP_DIRS.some((d) => p === d || p.startsWith(d + '/'));
 
 /* ---------- 差分を読む(汚れた作業木があればそれ、無ければ直前のコミット) ---------- */
-const dirty = sh('git status --porcelain').trim();
+const dirty = git('status','--porcelain').trim();
 const range = BASE_OVERRIDE || (dirty ? 'HEAD' : 'HEAD~1..HEAD');
-const diff = sh(`git diff -U0 ${range}`);
+const diff = git('diff','-U0',range);
 /* ★git が答えなかったら【不明】。空の差分と区別する(2026-08-30)。
  *   CI は既定で浅く取る(--depth 1)ので `HEAD~1..HEAD` が落ちる。
  *   直す前はそれが「差分ゼロ=近傍ゼロ=通過」に化けていた。 */
@@ -148,12 +156,29 @@ if (測れなかった.length) {
  *   除いた件数は黙らず表に出す(何を見なかったかが分からない計器は、計器ではない)。
  * ★コメントの形は、行コメント・囲みコメント・HTMLコメントの3種を素にする で落とす。
  */
-const 素にする = (s) => String(s)
-  .replace(/<!--[\s\S]*?-->/g, '')
-  .replace(/\/\*[\s\S]*?\*\//g, '')
-  .replace(/(^|[^:])\/\/.*$/g, '$1')      // URL の // は消さない
-  .replace(/(^|\s)#.*$/g, '$1')
-  .replace(/\s+/g, ' ').trim();
+/* ★`#` をコメントと見なしてよいのは【その言語だけ】(2026-08-30、違和感の掘り出しで見つかった)。
+ *
+ *   直す前は拡張子に関係なく `(^|\s)#` から行末までを落としていた。
+ *   だが `#` がコメントなのは shell / Python / Ruby / YAML などで、
+ *   **HTML・CSS では ID セレクタ、JS では私有フィールド**である。
+ *   ★既定の `ext`(install.mjs が書く)には **html が入っている**ので、これは特別な設定ではない。
+ *
+ *   実測①: `.html` の `  #main .row { … }` を `#side` に変える(直下の
+ *   `querySelector(" #main")` が壊れる)→ 門は **「コメントと空白だけの変更 1行は数えていません」**。
+ *   黙って見逃すのではなく、**嘘を言っていた**。
+ *   実測②: JS のクラス私有フィールド `  #count = 0;` も行頭の空白+# で丸ごと落ちる。
+ *
+ * ★知らない拡張子では**落とさない**(安全な向き)。落とさなければ門が鳴るだけで済むが、
+ *   落とすと**見えない失敗**になる ── どちらに転ぶか分からないときは、鳴る側へ倒す。 */
+const 井桁がコメントの言語 = /\.(sh|bash|zsh|py|rb|pl|r|yml|yaml|toml|ini|conf|cfg|mk|gitignore|dockerfile|ps1)$/i;
+const 素にする = (s, f) => {
+  let t = String(s)
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/g, '$1');    // URL の // は消さない
+  if (f && 井桁がコメントの言語.test(f)) t = t.replace(/(^|\s)#.*$/g, '$1');
+  return t.replace(/\s+/g, ' ').trim();
+};
 
 let 数えなかった = 0;
 function parseDiff(text) {
@@ -166,7 +191,8 @@ function parseDiff(text) {
     const { f, s, n, 消, 足 } = 保留;
     保留 = null;
     /* 中身(コメントと空白を除く)が同じなら、その塊は数えない */
-    if (消.length && 足.length && 消.map(素にする).join('\n') === 足.map(素にする).join('\n')) {
+    const 素 = (l) => 素にする(l, f);
+    if (消.length && 足.length && 消.map(素).join('\n') === 足.map(素).join('\n')) {
       数えなかった += 足.length;
       return;
     }
@@ -177,7 +203,14 @@ function parseDiff(text) {
   };
   for (const line of text.split('\n')) {
     const f = line.match(/^\+\+\+ b\/(.*)$/);
-    if (f) { 締める(); file = f[1]; continue; }
+    /* ★経路に空白があると、git は見出しの末尾に**タブ**を足す(2026-08-30、掘っている最中に見つかった)。
+     *     +++ b/src/my file.js<TAB>
+     *   落とさないと拡張子の判定(`.js` で終わるか)が外れ、**そのファイルは門から丸ごと消える**。
+     *   実測: `src/my file.js` を直しても「器のコードに変更なし」。--escaped は
+     *   「元の変更に器のコードが無い」という**別の理由**を表示していた。
+     *   ★「空白入りの経路」は、この塊が既に2度踏んでいる形である(install.mjs の冒頭 / --escaped)。
+     *     こちらの現場に空白が無いので、実測しないと一生出ない。 */
+    if (f) { 締める(); file = f[1].replace(/\t$/, ''); continue; }
     if (line.startsWith('--- ')) continue;
     const h = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
     if (h && file) {
@@ -208,6 +241,16 @@ const IDENT = '[$A-Za-z0-9_\\u3040-\\u30FF\\u4E00-\\u9FFF]';
 const DEF_FN = new RegExp('^(?:export\\s+)?(?:async\\s+)?function\\s+(' + IDENT + '+)');
 const DEF_CONST = new RegExp('^(?:export\\s+)?(?:const|let)\\s+(' + IDENT + '+)\\s*[=:]');
 const WORDCHAR = new RegExp(IDENT);
+/* ★長さの閾値は【ASCIIの物差し】である(2026-08-30、違和感の掘り出しで見つかった)。
+ *
+ *   `x` `i` `_` のような1文字は雑音だから落とす ── これはラテン文字の話で、
+ *   **日本語では1文字が1語**である(仮・始・終・前・率・語・出・先・外…)。
+ *   実測: `pull.mjs` の `const 仮`(= `rmSync(recursive, force)` が消す先)の行を書き換えたら、
+ *   触れた記号は **`走る`** ── 3つ前の無関係な関数だった。定義として数えられないので、
+ *   その行は**手前の定義の持ち物**として集計される。**門が別の記号について尋ねる。**
+ * ★この塊自身が日本語で書かれているので、これは毎日効いている。 */
+const 日本語を含む = (n) => /[぀-ヿ々一-鿿]/.test(n);
+const 語として十分 = (n) => n.length >= 2 || 日本語を含む(n);
 
 function walk(dir, out) {
   let ents = [];
@@ -248,7 +291,7 @@ function defsOfText(text, html) {
     if (!html && /^\s/.test(lines[i])) continue;
     const mf = L.match(DEF_FN);
     const m = mf || L.match(DEF_CONST);
-    if (m && m[1].length >= 2) defs.push({ name: m[1], line: i + 1, exp: /^export\s/.test(L), fn: !!mf });
+    if (m && 語として十分(m[1])) defs.push({ name: m[1], line: i + 1, exp: /^export\s/.test(L), fn: !!mf });
   }
   return defs;
 }
@@ -346,8 +389,12 @@ if (SWEEP) {
   /* 写経の疑い: 同名の【関数】が複数ファイルに定義されている(このプロジェクトが実際に
    * 患った病気 ── 同じ処理を14箇所に写して、書き忘れた所だけ壊れた。WHY 141)。
    * const の同名(argv / sh 等の道具の作法)はノイズなので、関数だけ・名前4文字以上に絞る */
+  /* ★ここも ASCII の物差し(上の 語として十分 と同じ理由)。
+   *   4文字は「sh / argv のような道具の作法を落とす」ための値だが、日本語では4文字は長い語で、
+   *   `走る` `読む` `歩く` のような写経は**全部この網を抜ける**。日本語は2文字から見る。 */
+  const 名前が十分長い = (n) => n.length >= 4 || (日本語を含む(n) && n.length >= 2);
   const 写経疑い = [...同名.entries()]
-    .filter(([name, files]) => files.size >= 2 && name.length >= 4
+    .filter(([name, files]) => files.size >= 2 && 名前が十分長い(name)
       && [...files].some((f) => corpus.get(f).defs.some((d) => d.name === name && d.fn)))
     .sort((a, b) => b[1].size - a[1].size);
   console.log('■ 同名の関数が複数ファイルに(写経の疑い ' + 写経疑い.length + '件)── 観点3(重複)の材料');
@@ -366,9 +413,28 @@ const touched = new Map();   // name -> Set(file)
 /* ★新規ファイル(未追跡)は git diff に出ない ── 最初の実走で自分自身(この道具)が
  * すり抜けたのを見つけた(2026-08-26)。新しく作った器のコードこそ近傍(呼び手の配線)を
  * 見るべきなので、未追跡のコードは【全部の記号を触れた扱い】にする。 */
+/* ★宣言 skip_dirs で外した場所を【黙って見逃さない】(2026-08-30、違和感の掘り出しで見つかった)。
+ *
+ *   skip_dirs は「重複していることが正しい場所」を --sweep のコーパスから外すために足した。
+ *   ところがコーパスは門も使うので、**外した場所は門でも定義が引けず**、
+ *   そこを編集しても「器のコードに変更なし」で終わっていた ── **しかも何も言わない**。
+ *   実測: `research/` にコードを足して --list → 「器のコードに変更なし」。
+ *   コメントだけの変更は「N行は数えていません」と出すのに、こちらは無言だった。
+ *   ★地図(docs/CODEMAP.md)には「門には効かない」と**逆のことが書いてあった**(こちらも直した)。
+ * ★見ないこと自体は宣言どおりで正しい。**見なかったと言わないこと**が間違い
+ *   ── 何を見なかったか分からない計器は、計器ではない(この道具の既存の掟)。 */
+const 宣言で外した = [];
+const 外した件を言う = () => {
+  if (!宣言で外した.length) return;
+  const 一意 = [...new Set(宣言で外した)];
+  console.log('  (宣言 skip_dirs で外した場所の変更 ' + 一意.length + '件は**見ていません**: '
+    + 一意.slice(0, 8).join(', ') + (一意.length > 8 ? ' ほか' + (一意.length - 8) + '件' : '') + ')');
+};
+
 if (!BASE_OVERRIDE && dirty !== '') {
-  const untracked = sh('git ls-files --others --exclude-standard').trim().split('\n').filter(Boolean);
+  const untracked = git('ls-files','--others','--exclude-standard').trim().split('\n').filter(Boolean);
   for (const f of untracked) {
+    if (isCode(f) && inSkipped(f)) { 宣言で外した.push(f); continue; }
     if (!isCode(f) || SKIP_TOUCHED.some((re) => re.test(f))) continue;
     const c = corpus.get(f);
     if (!c) continue;
@@ -380,6 +446,7 @@ if (!BASE_OVERRIDE && dirty !== '') {
   }
 }
 for (const [f, lines] of changed) {
+  if (isCode(f) && inSkipped(f)) { 宣言で外した.push(f); continue; }
   if (!isCode(f)) continue;
   if (SKIP_TOUCHED.some((re) => re.test(f))) continue;
   if (!corpus.has(f)) {
@@ -394,6 +461,55 @@ for (const [f, lines] of changed) {
     touched.get(name).add(f);
   }
 }
+
+/* ---------- ②' 変更の印(回答が【どの変更に対するもの】かを持たせる) ----------
+ *
+ * ★2026-08-30、違和感の掘り出しで見つかった。直す前は、回答に【いつのものか】が
+ *   一切書かれておらず、--gate は近傍の顔ぶれ(file::記号)だけで照合していた。
+ *   回答ファイルは range を**記録しているのに、照合には使っていなかった**。
+ *
+ * ★実測(これが直す理由):
+ *   変更A(write() に無害な定数を1行足す)に「影響なし」と答えて通過 →
+ *   Aを捨てて変更B(write() から**冪等の守り(既にあれば触らない)を削除**=本物の退行)を入れ、
+ *   --list を回さずいきなり --gate → **「通過(2件すべてに回答あり)」**。
+ *   回答の理由は、もう存在しない変更Aの話をしていた。
+ *   ★回答は【コミットに含める】設計なので、次のセッションもその古い回答を引き継ぐ。
+ *
+ * ★range では捕まらない: 作業木が汚れていれば range は常に "HEAD" で、
+ *   まったく別の変更でも同じ文字列になる。だから**中身の印**で見る。
+ * ★印は【その近傍を呼び出した元の記号(根)の本体】から取る。
+ *   ・根が変われば、その根から生えた近傍の回答は全部やり直し(考えた前提が変わったから)
+ *   ・無関係な所を直しても、この根の回答は生き残る(鳴り過ぎる門は読み飛ばされる・7条)
+ * ★指紋の作り方は selfcheck.mjs の 指紋() と同じ FNV-1a だが、**測る対象が違う**
+ *   (あちら=配られた塊のファイル全体 / こちら=いま直した記号の本体)。
+ *   findRoot → findInstallRoot と同じ理由で、ひとつにせず名前を分けてある。 */
+const 印を取る = (s) => {
+  let h = 2166136261;
+  for (let k = 0; k < s.length; k++) { h ^= s.charCodeAt(k); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36) + '-' + s.length;
+};
+/* 記号の本体 = 定義行から、次の定義行の手前まで(いまの作業木の中身) */
+const 本体 = (f, name) => {
+  const c = corpus.get(f);
+  if (!c) return '';
+  const i = c.defs.findIndex((d) => d.name === name);
+  if (i < 0) return '';
+  const from = c.defs[i].line;
+  const to = i + 1 < c.defs.length ? c.defs[i + 1].line - 1 : c.lines.length;
+  return c.lines.slice(from - 1, to).join('\n');
+};
+const 印の控え = new Map();
+const 根の印 = (根) => {
+  if (印の控え.has(根)) return 印の控え.get(根);
+  let v;
+  if (根.startsWith('note:')) v = 印を取る(read(根.slice(5)));
+  else {
+    const files = touched.get(根);
+    v = files ? 印を取る([...files].sort().map((f) => 本体(f, 根)).join('\n----\n')) : '';
+  }
+  印の控え.set(根, v);
+  return v;
+};
 
 /* ---------- ② 呼び出し元を数える(名前の一致・単語境界つき) ----------
  * ★探す範囲は【定義と同じファイル】+【export されていれば全ファイル】。
@@ -449,11 +565,11 @@ if (ESCAPED) {
   const rightOf = (r) => r.split('..').pop();
   const touchedOf = (range) => {
     const right = rightOf(range);
-    const map = parseDiff(sh('git diff -U0 ' + range));
+    const map = parseDiff(git('diff','-U0',range));
     const names = new Map();
     for (const [f, lines] of map) {
       if (!isCode(f) || SKIP_TOUCHED.some((re) => re.test(f))) continue;
-      const text = sh('git show ' + right + ':' + f);
+      const text = git('show', right + ':' + f);
       if (!text) continue;
       const defs = defsOfText(text, f.endsWith('.html'));
       for (const ln of lines) {
@@ -465,8 +581,17 @@ if (ESCAPED) {
     }
     return names;
   };
+  /* ★測れなかったことを、ここでも見る(2026-08-30、違和感の掘り出しで見つかった)。
+   *   `測れなかった` は 143行目で一度見るきりで、--escaped からは**二度と見られなかった**。
+   *   そのため git が落ちても「器のコードが無い」という**別の理由**が表示される ──
+   *   道具が、自分が測れなかったことを、測った結果として語っていた。 */
+  const 前の失敗 = 測れなかった.length;
   const 元 = touchedOf(rangeOf(元引数));
   const 犯人 = touchedOf(rangeOf(直し引数));
+  if (測れなかった.length > 前の失敗) {
+    不明で終わる('git が答えませんでした ── ' + 測れなかった.slice(前の失敗).join(' / ')
+      + '\n  (その版にそのファイルが無い / 浅いクローン、などが典型です)');
+  }
   if (!元.size || !犯人.size) {
     console.log('測れません: ' + (!元.size ? '元の変更に器のコードが無い' : '直しの変更に器のコードが無い')
       + '(ノートだけの変更や、コードの外の直しはこの軸の外です)');
@@ -526,18 +651,19 @@ if (ESCAPED) {
 }
 
 /* ---------- ③ 近傍を環ごとに広げる ---------- */
-const need = new Map();      // key(file::name) -> { 記号, 場所, 環, きっかけ }
+const need = new Map();      // key(file::name) -> { 記号, 場所, 環, きっかけ, 根 }
 const known = new Set([...touched.keys()]);
-let frontier = [...touched.keys()].map((name) => ({ name, files: touched.get(name) }));
+/* 根 = この近傍を呼び出した【元の触れた記号】。回答の鮮度(印)はここから取る */
+let frontier = [...touched.keys()].map((name) => ({ name, files: touched.get(name), 根: name }));
 for (let ring = 1; ring <= RINGS; ring++) {
   const next = [];
-  for (const { name, files } of frontier) {
+  for (const { name, files, 根 } of frontier) {
     if (IGNORE.has(name)) continue;
     const r = callersOf(name, files, isExported(name, files));
     if (r.wide) {
       const key = '*::' + name;
       if (!need.has(key)) need.set(key, {
-        記号: name + '(呼び出しが' + MAX_CALLERS + '箇所超)', 場所: '(広域)', 環: ring,
+        記号: name + '(呼び出しが' + MAX_CALLERS + '箇所超)', 場所: '(広域)', 環: ring, 根,
         きっかけ: '「' + name + '」は呼び手が多すぎて列挙できません。まとめて1つ答えてください' });
       continue;
     }
@@ -545,8 +671,8 @@ for (let ring = 1; ring <= RINGS; ring++) {
       const [f, caller] = key.split('::');
       if (known.has(caller) || IGNORE.has(caller)) continue;
       if (!need.has(key)) {
-        need.set(key, { 記号: caller, 場所: f, 環: ring, きっかけ: '「' + name + '」を呼んでいる' });
-        next.push({ name: caller, files: new Set([f]) });
+        need.set(key, { 記号: caller, 場所: f, 環: ring, 根, きっかけ: '「' + name + '」を呼んでいる' });
+        next.push({ name: caller, files: new Set([f]), 根 });
       }
     }
   }
@@ -559,7 +685,19 @@ for (let ring = 1; ring <= RINGS; ring++) {
  * 別ファイルで変わった一般語(key / range / name)まで拾って、それを含む全コードを
  * 近傍に膨らませていた(2026-08-27 実走: gas の無関係な関数が5件出た)。
  * ★短い一般語は、宣言の欄名としてもコード中の別物としても出るので数えない。 */
-const 一般語 = new Set(['key', 'name', 'range', 'type', 'path', 'value', 'text', 'data', 'list', 'model', 'url', 'body']);
+/* ★一般語の一覧を【宣言で差し替えられる】ようにする(2026-08-30、違和感の掘り出しで見つかった)。
+ *   skip_dirs / ignore_symbols / entry_symbols / skip_touched は全部宣言が持つのに、
+ *   ここだけがエンジンにべた書きだった ── **エンジンは現場固有のことを1つも持たない**(39条)と食い違う。
+ *   実測: 欄名が本当に `type` の現場では、その読み手が**永久に近傍に出ない**(黙って落ちる)。 */
+const 一般語 = new Set(Array.isArray(N.common_keys) ? N.common_keys
+  : ['key', 'name', 'range', 'type', 'path', 'value', 'text', 'data', 'list', 'model', 'url', 'body']);
+/* ★欄名の拾い方(2026-08-30、違和感の掘り出しで見つかった)。
+ *   直す前は `line.match(...)` で **1行につき1件しか拾えず**、`[A-Za-z0-9_.]{3,}` なので
+ *   日本語の欄名も2文字の欄名も届かなかった。
+ *   実測: 見本の欄3つ(type / limitBytes / 上限。**この現場の記号ではないので囲まない**)を全部変えて → 1行JSONなら **0/3**、
+ *   整形済みでも **1/3**(`type` は一般語、`上限` は正規表現に届かない)。
+ *   → 全件拾う(matchAll)/ 日本語を許す / 短い一般語は ASCII のときだけ落とす。 */
+const 欄名 = /"([A-Za-z0-9_.぀-ヿ一-鿿]+)"\s*:/g;
 for (const [f, lines] of changed) {
   if (!isNote(f)) continue;
   const keys = new Set();
@@ -567,8 +705,12 @@ for (const [f, lines] of changed) {
   const 塊 = diff.split(/^diff --git /m).find((b) => b.includes('+++ b/' + f)) || '';
   for (const line of 塊.split('\n')) {
     if (!/^[+-]/.test(line) || /^[+-]{3}/.test(line)) continue;
-    const m = line.match(/"([A-Za-z0-9_.]{3,})"\s*:/);
-    if (m && !m[1].startsWith('_') && !一般語.has(m[1])) keys.add(m[1]);
+    for (const m of line.matchAll(欄名)) {
+      const k = m[1];
+      if (k.startsWith('_') || 一般語.has(k)) continue;
+      if (!日本語を含む(k) && k.length < 3) continue;   // 短い英字は、欄名としてもコード中の別物としても出る
+      keys.add(k);
+    }
   }
   for (const k of keys) {
     for (const [cf, c] of corpus) {
@@ -583,7 +725,8 @@ for (const [f, lines] of changed) {
         if (!enc || known.has(enc) || IGNORE.has(enc)) continue;
         const key = cf + '::' + enc;
         if (!need.has(key)) need.set(key, {
-          記号: enc, 場所: cf, 環: 1, きっかけ: 'ノート ' + f + ' の「' + k + '」を読んでいる' });
+          記号: enc, 場所: cf, 環: 1, 根: 'note:' + f,
+          きっかけ: 'ノート ' + f + ' の「' + k + '」を読んでいる' });
       }
     }
   }
@@ -597,14 +740,58 @@ if (!GATE) {
   console.log('比べた範囲: ' + range + (dirty ? '(作業木の未コミット分)' : ''));
   console.log('触れた記号: ' + ([...touched.keys()].join(', ') || '(器のコードに変更なし)'));
   if (数えなかった) console.log('  (コメントと空白だけの変更 ' + 数えなかった + '行は数えていません)');
+  外した件を言う();
   if (!一覧.length) { console.log('近傍: なし ── 答えるべき相手が居ません'); process.exit(0); }
   console.log('答えるべき近傍(' + 一覧.length + '件):');
   for (const x of 一覧) console.log('  [環' + x.環 + '] ' + x.記号 + '  @' + x.場所 + '  ← ' + x.きっかけ);
   /* 回答の下書き。既にある回答は残す(書き直しの手間と、消える事故を防ぐ) */
+  /* ★人が手で埋めるファイルを、黙って上書きしない(2026-08-30、違和感の掘り出しで見つかった)。
+   *   直す前は JSON.parse の失敗を【空の catch】で握り潰し、そのまま下書きで上書きしていた。
+   *   実測: 回答2件を埋めたあと**末尾に "," を1文字足す**(手編集でいちばん起きる事故)だけで、
+   *   両方とも {"判定":"","理由":""} に戻った ── 警告も控えも無い。
+   *   ここは**人が時間をかけて理由を書く所**であって、機械が黙って消してよい所ではない。
+   * ★読めなかったら止める。消えたものは戻せないが、止まったものは進められる。 */
+  const 生 = read(ANSWER_PATH);
   let prev = {};
-  try { prev = JSON.parse(read(ANSWER_PATH)).answers || {}; } catch (_) {}
+  if (生.trim()) {
+    try { prev = JSON.parse(生).answers || {}; }
+    catch (e) {
+      console.log('✗ 回答が読めません(JSONとして壊れています): ' + ANSWER_PATH);
+      console.log('    ' + String(e.message).slice(0, 160));
+      console.log('  ★上書きせずに止めます ── ここに書いた理由が消えるからです。');
+      console.log('  直してからもう一度 --list するか、要らないなら、そのファイルを消してください。');
+      process.exit(1);
+    }
+  }
   const draft = {};
-  for (const x of 一覧) draft[x.key] = prev[x.key] || { 判定: '', 理由: '' };
+  /* ★古くなった回答は【判定だけを空に戻し、理由は残す】(2026-08-30、この直しを自分に当てて分かった)。
+   *
+   *   印を足した最初の版は、古い回答をそのまま持ち越していた。すると --gate は正しく差戻すが、
+   *   **書き手が再確認する道が「印を手で書き換える」しか無い** ── それは門を手で開ける操作で、
+   *   この道具がいちばん避けたい形である(実際、自分の変更でそこに突き当たった)。
+   * ★判定を空に戻せば、埋め直すこと自体が【読み直した】という痕跡になる。
+   *   理由は消さない ── 前に何を考えたかは、読み直すときの出発点として要る。 */
+  for (const x of 一覧) {
+    const いま = 根の印(x.根);
+    const 前 = prev[x.key];
+    if (!前) draft[x.key] = { 判定: '', 理由: '', 印: いま };
+    else if (前.印 === いま) draft[x.key] = 前;
+    else draft[x.key] = { 判定: '', 理由: 前.理由 || '', 印: いま };
+  }
+  /* ★近傍から外れた回答は【名前を出してから】落とす(黙って消さない)。
+   *   差分が縮むと近傍も縮むので、前に書いた理由が音も無く消える経路がここに在った。 */
+  const 外れた = Object.keys(prev).filter((k) => !(k in draft) && (prev[k].判定 || prev[k].理由));
+  if (外れた.length) {
+    console.log('この回の近傍から外れた回答 ' + 外れた.length + '件(下書きからは落とします): ' + 外れた.join(', '));
+    console.log('  ※まだ必要なら、この --list を回す前の版を git から戻してください');
+  }
+  /* ★どれを空に戻したかを言う(黙って戻すと、埋めたはずの判定が消えたように見える) */
+  const 戻した = 一覧.filter((x) => prev[x.key] && prev[x.key].判定 && !draft[x.key].判定);
+  if (戻した.length) {
+    console.log('★別の変更に対する回答だったので、判定を ' + 戻した.length + '件 空に戻しました'
+      + '(**理由は残してあります** ── 読み直して、判定を入れ直してください):');
+    for (const x of 戻した) console.log('  ・' + x.記号 + ' @' + x.場所 + '(根「' + x.根 + '」が、答えたときと違う中身になっています)');
+  }
   fs.mkdirSync(path.dirname(path.join(ROOT, ANSWER_PATH)), { recursive: true });
   fs.writeFileSync(path.join(ROOT, NEED_PATH), JSON.stringify({ range, need: 一覧 }, null, 1));
   fs.writeFileSync(path.join(ROOT, ANSWER_PATH), JSON.stringify({ range, answers: draft }, null, 1));
@@ -613,7 +800,11 @@ if (!GATE) {
 }
 
 /* --gate */
-if (!一覧.length) { console.log('近傍照合: 近傍なし(答えるべき相手が居ません)── 通過'); process.exit(0); }
+if (!一覧.length) {
+  console.log('近傍照合: 近傍なし(答えるべき相手が居ません)── 通過');
+  外した件を言う();     /* ★「近傍なし」で終わる回こそ、見なかった場所を言う(無音を安全と読ませない) */
+  process.exit(0);
+}
 let answers = {};
 try { answers = JSON.parse(read(ANSWER_PATH)).answers || {}; } catch (_) {}
 const 落ち = [];
@@ -621,6 +812,20 @@ const 報告 = [];
 for (const x of 一覧) {
   const a = answers[x.key] || answers[x.記号];
   if (!a || !a.判定) { 落ち.push('未回答: [環' + x.環 + '] ' + x.記号 + ' @' + x.場所 + ' ← ' + x.きっかけ); continue; }
+  /* ★その回答が【この変更に対するもの】か(2026-08-30)。
+   *   顔ぶれ(file::記号)だけで照合していたので、根の中身が別物に入れ替わっても素通しだった。
+   *   実測: 無害な変更に「影響なし」と答えて通したあと、同じ関数から冪等の守りを削除しても
+   *   --gate は「通過(2件すべてに回答あり)」と言った。 */
+  const いまの印 = 根の印(x.根);
+  if (!a.印) {
+    落ち.push('回答に印がありません(古い形式): ' + x.記号 + ' ── `--list` で作り直してください');
+    continue;
+  }
+  if (a.印 !== いまの印) {
+    落ち.push('別の変更に対する回答です: ' + x.記号 + ' @' + x.場所
+      + '(根「' + x.根 + '」が、答えたときと違う中身になっています)');
+    continue;
+  }
   if (a.判定 === '触れた') {
     if (!touched.has(x.記号) && !x.key.startsWith('*::'))
       落ち.push('「触れた」と答えたのに差分に無い: ' + x.記号 + '(直したなら差分に入るはず)');
@@ -639,9 +844,11 @@ if (報告.length) {
 }
 if (落ち.length) {
   console.log('近傍照合: 差戻 ── 修正の外側に、答えていない近傍があります');
+  外した件を言う();
   for (const m of 落ち) console.log('  ✗ ' + m);
   console.log('直し方: node guardian/neighbors.mjs --list で下書きを作り、' + ANSWER_PATH + ' の判定と理由を埋める');
   process.exit(1);
 }
+外した件を言う();
 console.log('近傍照合: 通過(' + 一覧.length + '件すべてに回答あり' + (報告.length ? ' / うち報告 ' + 報告.length + '件' : '') + ')');
 process.exit(0);

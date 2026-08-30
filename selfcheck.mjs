@@ -68,7 +68,20 @@ const ROOT_DIR = (() => {
   return 在り処 ? path.dirname(在り処) : process.cwd();
 })();
 const NL2 = String.fromCharCode(10);
+/* ★第3の語彙【未測】(2026-08-30、違和感の掘り出しで見つかった)。
+ *
+ *   この塊の芯は【不明を緑に数えない】(verdict.mjs)。ところが自己検査には
+ *   ok / ng の2語しか無く、"測っていない" を ok に混ぜていた。
+ *   実測: まっさらな導入先で
+ *     ✓ 個人情報の見張りは**していません**(private が空)
+ *     ✓ 運用の欠落は見ていません(context が空)
+ *   と出たうえで **「59件すべて期待どおり」** ── 全部宣言済みの正本と**同じ数字・同じ文**。
+ *   数が「測って通った」と「測っていない」を区別できていなかった。
+ *   ★しかもこの自己検査は verdict の**証拠①**である ── 合否の根拠が、そこで嘘をつく。
+ * ★未測は【失敗ではない】ので止めない(不明は止めない・verdict と同じ規律)。
+ *   だが**緑には混ぜない**。数を分け、最後の1行でも分けて言う。 */
 const ok = [];
+const 未測 = [];
 const ng = [];
 let whyLoose = null;      // 守りが下限より増えている(--tighten で上げる)
 
@@ -530,9 +543,39 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
   };
   const 違う = 対象.filter((f) => 記録[f] !== いま[f]);
 
+  /* ★【この塊が、単独のリポジトリとして置かれているか】= 正本で回しているか。
+   *   配布先では塊は <プロジェクト>/guardian/ なので HERE/.git は無い。
+   *   ★B6a の 正本か(HERE/../.git も見る)とは【別の判定】である ── あちらは
+   *     配布先でも真になる(guardian/ の1つ上はプロジェクトの .git)。
+   *     直すかどうかは依頼主の判断なので触っていない(docs/HANDOVER.md に記録した)。 */
+  const 塊が単独のリポジトリ = fs.existsSync(path.join(HERE, ".git"));
+
   if (process.argv.includes("--stamp")) {
-    押す();
-    ok.push("エンジンの指紋を押し直しました(" + 対象.length + "件)── 配った先へも配り直すこと");
+    /* ★一言で押させない(2026-08-30、違和感の掘り出しで見つかった)。
+     *
+     *   直す前の --stamp は、確認も控えも一覧も無く ENGINE_FP を押し直した。
+     *   pull.mjs は「配られたときの中身と違います」という**文字列**で
+     *   「この現場の直りを上書きしない」を守っているので、**一言でその守りが外れる**。
+     * ★実測: 配布先で verdict.mjs を直す → selfcheck 赤・pull 拒否 →
+     *   **その赤い文が案内するとおり** --stamp → selfcheck 緑 →
+     *   `pull --check` が「変わるもの: verdict.mjs」。**その現場の直りは次の取り直しで消える。**
+     * ★赤い文は配布先の人も読む。「意図した変更なら --stamp」は、
+     *   バグを直した現場にはそのまま当てはまるように読める ── だから道具の側で止める。
+     * ★正本では --stamp は普通の作業なので止めない。止めるのは【還す道がまだ在る所】だけ。 */
+    if (!塊が単独のリポジトリ && 違う.length) {
+      ng.push("★ここは配布先です。--stamp を押すと、この現場で直した分(" + 違う.join(", ") + ")が"
+        + "**記録ごと消えます** ── 次の `pull.mjs` が黙って上書きするようになります。"
+        + "先に `--report` で1枚を作り、正本へ渡してください。"
+        + "(正本で取り込んでから配り直せば、指紋は正しく揃います)");
+    } else {
+      /* 何を押すのかを必ず出す ── 黙って押す道具は、押した人にも何をしたか残らない */
+      console.log(違う.length
+        ? "  押し直す前の食い違い(" + 違う.length + "件): " + 違う.join(", ")
+        : "  食い違いはありません(押しても中身は変わりません)");
+      押す();
+      ok.push("エンジンの指紋を押し直しました(" + 対象.length + "件"
+        + (違う.length ? " / うち変わっていたのは " + 違う.length + "件" : "") + ")── 配った先へも配り直すこと");
+    }
   } else if (!Object.keys(記録).length) {
     ng.push("ENGINE_FP がありません。`node guardian/selfcheck.mjs --stamp` で押してください");
   } else if (違う.length) {
@@ -562,9 +605,16 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
       fs.writeFileSync(先, 出.join("\n"));
       ok.push("改善報告を書きました: " + 先 + "(" + 違う.length + "ファイル)── 承認を得てから元の塊へ渡してください");
     } else {
+      /* ★案内は【読む人がどこに居るか】で変える(2026-08-30)。
+       *   直す前はどこで読んでも「意図した変更なら --stamp」と出ていた。
+       *   配布先でバグを直した人は「意図した変更」をしているので、その案内を自分に当てはめる ──
+       *   そして押した瞬間に、還す道(pull.mjs の守り)が外れる。 */
       ng.push("★この塊は配られたときの中身と違います(" + 違う.join(", ") + ")。"
         + "**直したなら元の塊へ戻すこと**(戻さないと、次に配ったとき直りが消えます)。"
-        + "`--report` で渡す1枚を作れます。意図した変更なら `--stamp` で押し直してください");
+        + "`--report` で渡す1枚を作れます。"
+        + (塊が単独のリポジトリ
+            ? "意図した変更なら `--stamp` で押し直してください"
+            : "★ここは配布先なので `--stamp` は使えません(押すと、この直りが記録ごと消えるため)"));
     }
   } else {
     ok.push("エンジンは配られたときの中身のまま(" + 対象.length + "件)");
@@ -588,7 +638,7 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
     } catch (_) { return []; }
   })();
   if (!語.length) {
-    ok.push("個人情報の見張りは**していません**(guardian.config.json の private が空)"
+    未測.push("個人情報の見張りは**していません**(guardian.config.json の private が空)"
       + " ── 配るなら、伏せたい語をそこに並べてください");
   } else {
     const 見つかった = [];
@@ -941,7 +991,7 @@ if (process.argv.includes("--why")) {
     /* B6a: 分類の網羅(この現場が正本であるときだけ意味がある ── 塊がリポジトリそのもの) */
     const 正本か = fs.existsSync(path.join(HERE, '..', '.git')) || fs.existsSync(path.join(HERE, '.git'));
     if (!正本か) {
-      ok.push('配布境界の網羅は見ていません(ここは正本ではないので、直下に現場のものが同居しません)');
+      未測.push('配布境界の網羅は見ていません(ここは正本ではないので、直下に現場のものが同居しません)');
     } else {
       const 直下 = fs.readdirSync(HERE);
       const 未分類 = 直下.filter((n) => !配るもの.has(n) && !現場のもの.has(n));
@@ -1024,6 +1074,80 @@ if (process.argv.includes("--why")) {
   }
 }
 
+/* B8b. 【install が2回目に判断を変えないか】(2026-08-30、違和感の掘り出しで見つかった)。
+ *
+ * ★実際に起きた: `CC`(この現場は Claude Code か)の判定材料に `CLAUDE.md` が入っていたが、
+ *   **その CLAUDE.md は同じ install が下(手順6)で作る**。だから
+ *     1回目「この現場に Claude Code の仕掛けが見当たらないので、フックは入れていません」+ CLAUDE.md 作成
+ *     2回目(**何も変えずに**)「フックを4本足しました」
+ *   ── 冪等が破れ、**他所の道具の現場に勝手にフックが入る**。
+ * ★**冪等とは「2回目が1回目と同じ」ではなく「2回目が、1回目の出力を見ない」**である。
+ * ★理屈で確かめない ── 見本を建てて**2回回す**(この事故は理屈の上では起きないので)。
+ *   ついでに、判定が効くべき現場(人が書いた CLAUDE.md / .claude)でも入ることを見る
+ *   ── 片側だけ見る検査は「何も入れない」に退化しても緑になる。 */
+{
+  const 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-cc-'));
+  try {
+    /* 見本を建てる: 塊は <根>/guardian/ に置き、install が読むものだけ用意する */
+    const 建てる = (名, 仕込み) => {
+      const 根 = path.join(仮, 名);
+      const 塊 = path.join(根, 'guardian');
+      fs.mkdirSync(path.join(塊, 'templates'), { recursive: true });
+      fs.mkdirSync(path.join(根, 'src'), { recursive: true });
+      fs.writeFileSync(path.join(根, 'src', 'a.js'), 'export const a = 1;\n');
+      fs.mkdirSync(path.join(根, '.git'), { recursive: true });      // 根の目印
+      /* ★見本の塊に selfcheck.mjs を置かない ── install は手順7で selfcheck を回すので、
+       *   置くと【この検査が install を呼び、その install が selfcheck を呼ぶ】無限の入れ子になる
+       *   (実測: 最初にそう書いたら、返ってこなくなった)。
+       *   ここで測るのは install の判定だけなので、塊は install.mjs と templates/ で足りる。 */
+      fs.copyFileSync(path.join(HERE, 'install.mjs'), path.join(塊, 'install.mjs'));
+      for (const t of fs.readdirSync(path.join(HERE, 'templates')))
+        fs.copyFileSync(path.join(HERE, 'templates', t), path.join(塊, 'templates', t));
+      仕込み(根);
+      return { 根, 塊 };
+    };
+    const 回す = ({ 根, 塊 }, ...引数) => {
+      const r = spawnSync(process.execPath, [path.join(塊, 'install.mjs'), ...引数],
+        { cwd: 根, encoding: 'utf8', windowsHide: true });
+      return String(r.stdout || '') + String(r.stderr || '');
+    };
+    const 入った = (出) => /フックを \d+ 本足しました|フックは登録済み/.test(出);
+
+    /* ① 他の道具の現場 ── 何回回しても入らない(これが破れていた) */
+    const 他所 = 建てる('other', () => {});
+    const 一度目 = 回す(他所), 二度目 = 回す(他所), 三度目 = 回す(他所);
+    /* ② 人が書いた CLAUDE.md が在る現場 ── 入る */
+    const 人 = 建てる('human', (根) => fs.writeFileSync(path.join(根, 'CLAUDE.md'), '# うちの規範\n\nテストは npm test。\n'));
+    const 人の結果 = 回す(人);
+    /* ③ .claude が在る現場 ── 入る */
+    const 一式 = 建てる('cc', (根) => fs.mkdirSync(path.join(根, '.claude'), { recursive: true }));
+    const 一式の結果 = 回す(一式);
+    /* ④ --hooks で強制 ── 入る */
+    const 強制 = 建てる('force', () => {});
+    const 強制の結果 = 回す(強制, '--hooks');
+    /* ⑤ --no-hooks で強制オフ ── .claude が在っても入らない(逃げ道が効くこと) */
+    const 拒否 = 建てる('nohooks', (根) => fs.mkdirSync(path.join(根, '.claude'), { recursive: true }));
+    const 拒否の結果 = 回す(拒否, '--no-hooks');
+
+    const 外れ = [];
+    if (入った(一度目)) 外れ.push('1回目で入った');
+    if (入った(二度目)) 外れ.push('**2回目で入った**(1回目が作った CLAUDE.md を根拠にしている)');
+    if (入った(三度目)) 外れ.push('3回目で入った');
+    if (!入った(人の結果)) 外れ.push('人が書いた CLAUDE.md の現場で入らなかった');
+    if (!入った(一式の結果)) 外れ.push('.claude が在る現場で入らなかった');
+    if (!入った(強制の結果)) 外れ.push('--hooks を付けても入らなかった');
+    if (入った(拒否の結果)) 外れ.push('--no-hooks を付けたのに入った');
+    if (外れ.length) ng.push('install の Claude Code 判定が期待どおりではありません: ' + 外れ.join(' / '));
+    else ok.push('install は2回目でも判断を変えない(他所の道具の現場に、回すたびにフックが増えない)');
+  } catch (e) {
+    /* ★見本が建てられなかったことを【緑にしない】(何も見ていないので) */
+    未測.push('install の Claude Code 判定は見ていません(見本を建てられませんでした: '
+      + String(e && e.message).slice(0, 120) + ')');
+  } finally {
+    fs.rmSync(仮, { recursive: true, force: true });
+  }
+}
+
 /* B9. 運用の文脈が宣言されているか(2026-08-30、実験室での実測から)
  *   ★止めない。だが【見ていない】ことを黙らない ── B1c(個人情報の見張り)と同じ形。
  *
@@ -1045,9 +1169,9 @@ if (process.argv.includes("--why")) {
   } catch (_) { 文脈 = null; }
 
   if (文脈 === null) {
-    ok.push('運用の文脈: 宣言が読めないので見ていません');
+    未測.push('運用の文脈: 宣言が読めないので見ていません');
   } else if (!文脈.length) {
-    ok.push('運用の文脈が宣言されていないので、**運用の欠落(上限・錠・記録・退避)は見ていません**'
+    未測.push('運用の文脈が宣言されていないので、**運用の欠落(上限・錠・記録・退避)は見ていません**'
       + ' ── guardian.config.json の context に書くまで、どんな問い方をしても出ません(guardian/hunch.md)');
   } else {
     ok.push('運用の文脈を ' + 文脈.length + ' 行 宣言している(違和感が届く広さは、ここで決まる)');
@@ -1070,11 +1194,23 @@ if (process.argv.includes('--tighten')) {
 }
 
 /* ---------- 結果 ---------- */
+/* ★3語で出す: ✓ 通過 / ? 未測 / ✗ 外れ。
+ *   未測は【止めない】が【緑に混ぜない】── verdict.mjs の「不明」と同じ扱い。
+ *   ★出口は 0 のまま(未測は失敗ではない)。合否の側で拾いたい現場は、
+ *     guardian.config.json の evidence に `"unknownIf": "未測 [1-9]"` を足すと【不明】になる。 */
 for (const s of ok) console.log('  ✓ ' + s);
+for (const s of 未測) console.log('  ? 未測 ' + s);
 if (ng.length) {
   console.log('');
   for (const s of ng) console.log('  ✗ ' + s);
-  console.log(`\n塊の自己検査: ${ng.length}件の外れ`);
+  console.log(`\n塊の自己検査: ${ng.length}件の外れ`
+    + (未測.length ? ` / 未測 ${未測.length}件` : ''));
   process.exit(1);
+}
+if (未測.length) {
+  console.log(`\n塊の自己検査: 通過 ${ok.length}件 / **未測 ${未測.length}件**`);
+  console.log('  ※【未測】は合格ではありません。**測れていない**という意味です'
+    + '(guardian.config.json に宣言を書くと測れるようになります)。');
+  process.exit(0);
 }
 console.log(`\n塊の自己検査: ${ok.length}件すべて期待どおり`);

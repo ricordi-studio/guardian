@@ -130,6 +130,9 @@ if (!fs.existsSync(cfgPath)) {
       max_callers: 40,
       skip_touched: ['\.selftest\.', '\.e2e\.', '\.test\.', '\.spec\.'],
       ignore_symbols: [],
+      /* ★欄は【書かない】= エンジンの既定を使う、という意味にしてある(空配列を書くと「1語も落とさない」)。
+       *   既定の一覧を写すと正本が2つになるので、ここには案内だけ置く(39条)。 */
+      _common_keys: 'ノート(宣言)の欄名のうち、コード中の別物としても出るので数えない語の一覧。書かなければエンジンの既定(' + KIT + '/neighbors.mjs の 一般語)。★この現場で**本当に使っている欄名**が既定に入っているなら、既定から外した一覧をここに書くこと ── 外さないと、その欄の読み手は近傍に出ない(黙って落ちる)',
       _entry_symbols: '実行環境が名前で呼ぶ入口(GASのdoPost等)。参照ゼロでも死にコードではない',
       entry_symbols: [],
     },
@@ -162,10 +165,35 @@ if (!fs.existsSync(cfgPath)) {
  * ★塊自身を開発する現場(KIT === ".")では、CLAUDE.md は塊の配布物なので判定材料にならない。
  *   そこは「Claude Code で開発している前提」で入れる ── 要らなければ --no-hooks で外せる
  *   (2026-08-29 実地: CLAUDE.md はあるのに .claude が無く、フックが入らなかった)。 */
+/* ★【自分が作ったものを、次の回の根拠にしない】(2026-08-30、違和感の掘り出しで見つかった)。
+ *
+ *   直す前の判定材料は「.claude か CLAUDE.md が在るか」だった。
+ *   ところが **CLAUDE.md は、この install が下(手順6)で作る**。
+ *   実測: .claude の無い現場で回すと
+ *     1回目「この現場に Claude Code の仕掛けが見当たらないので、フックは入れていません」+ CLAUDE.md 作成
+ *     2回目(**何も変えずに**)「フックを4本足しました」
+ *   ── 冪等が破れ、しかも**他所の道具の現場に勝手にフックが入る**。
+ *   この判定のすぐ上に「他の道具の現場で .claude/ を勝手に作らない」と書いてあった。
+ *
+ * ★だから CLAUDE.md は【人が書いた中身があるときだけ】根拠にする。
+ *   マーカー区間(install が書き換える所)と、install が作るときの見出しを外して、
+ *   何か残れば人の文書。何も残らなければ install の作りもの ── 根拠にしない。 */
+const 始 = '<!-- guardian:begin 修繕の仕組み(この区間は install.mjs が書き換えます。外側は触りません) -->';
+const 終 = '<!-- guardian:end -->';
+const 既定の見出し = '# CLAUDE.md — 開発規範';
+const 人が書いた開発規範 = (() => {
+  let t = '';
+  try { t = fs.readFileSync(path.join(ROOT, 'CLAUDE.md'), 'utf8'); } catch (_) { return false; }
+  const i = t.indexOf(始), j = t.indexOf(終);
+  const 外 = (i >= 0 && j > i ? t.slice(0, i) + t.slice(j + 終.length) : t)
+    .split(既定の見出し).join('')
+    .trim();
+  return 外.length > 0;
+})();
 const CC = process.argv.includes('--hooks') ? true
   : process.argv.includes('--no-hooks') ? false
   : KIT === '.' ? true
-  : (fs.existsSync(path.join(ROOT, '.claude')) || fs.existsSync(path.join(ROOT, 'CLAUDE.md')));
+  : (fs.existsSync(path.join(ROOT, '.claude')) || 人が書いた開発規範);
 
 /* ---------- 3. フックの登録(既存を壊さない) ---------- */
 if (CC) {
@@ -269,8 +297,7 @@ const snippet = fs.readFileSync(path.join(HERE, 'templates', 'CLAUDE-snippet.md'
  * ★だから、機械が人の文書へ追記する道具が普通にやる形にした ──
  *   マーカーで区間を囲み、**その区間を丸ごと置き換える**。
  *   区間の外(人が書いたもの)には触らない。区間は1つしか無いので二重にならない。 */
-const 始 = '<!-- guardian:begin 修繕の仕組み(この区間は install.mjs が書き換えます。外側は触りません) -->';
-const 終 = '<!-- guardian:end -->';
+/* 始 / 終 は CC の判定でも使うので、上(手順3の手前)で定義してある ── 正本は1つ */
 const 中身 = 始 + '\n\n## 修繕の仕組み\n\n' + snippet + '\n' + 終;
 
 const claudePath = path.join(ROOT, 'CLAUDE.md');
@@ -294,7 +321,7 @@ if (i >= 0 && j > i) {
   body = claude.replace(/\s*$/, '') + '\n\n' + 中身 + '\n';
   did.push('CLAUDE.md に読む順の指定を足しました');
 } else {
-  body = '# CLAUDE.md — 開発規範\n\n' + 中身 + '\n';
+  body = 既定の見出し + '\n\n' + 中身 + '\n';
   did.push('CLAUDE.md を作りました');
 }
 if (!DRY && body !== claude) fs.writeFileSync(claudePath, body);

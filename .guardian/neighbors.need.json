@@ -6,20 +6,7 @@
    "記号": "added",
    "場所": "install.mjs",
    "環": 1,
-   "きっかけ": "「claude」を呼んでいる"
-  },
-  {
-   "key": "install.mjs::CC",
-   "記号": "CC",
-   "場所": "install.mjs",
-   "環": 1,
-   "きっかけ": "「claude」を呼んでいる"
-  },
-  {
-   "key": "install.mjs::cfgPath",
-   "記号": "cfgPath",
-   "場所": "install.mjs",
-   "環": 1,
+   "根": "claude",
    "きっかけ": "「claude」を呼んでいる"
   },
   {
@@ -27,6 +14,7 @@
    "記号": "findInstallRoot",
    "場所": "install.mjs",
    "環": 1,
+   "根": "claude",
    "きっかけ": "「claude」を呼んでいる"
   },
   {
@@ -34,55 +22,103 @@
    "記号": "setPath",
    "場所": "install.mjs",
    "環": 1,
+   "根": "claude",
    "きっかけ": "「claude」を呼んでいる"
   },
   {
-   "key": "neighbors.mjs::frontier",
-   "記号": "frontier",
-   "場所": "neighbors.mjs",
+   "key": "install.mjs::中身",
+   "記号": "中身",
+   "場所": "install.mjs",
    "環": 1,
-   "きっかけ": "「isExported」を呼んでいる"
+   "根": "始",
+   "きっかけ": "「始」を呼んでいる"
   },
   {
-   "key": "neighbors.mjs::isCode",
-   "記号": "isCode",
+   "key": "neighbors.mjs::answers",
+   "記号": "answers",
    "場所": "neighbors.mjs",
    "環": 1,
-   "きっかけ": "「inDirs」を呼んでいる"
+   "根": "read",
+   "きっかけ": "「read」を呼んでいる"
   },
   {
-   "key": "neighbors.mjs::isNote",
-   "記号": "isNote",
+   "key": "neighbors.mjs::callersOf",
+   "記号": "callersOf",
    "場所": "neighbors.mjs",
    "環": 1,
-   "きっかけ": "「inDirs」を呼んでいる"
+   "根": "WORDCHAR",
+   "きっかけ": "「WORDCHAR」を呼んでいる"
   },
   {
-   "key": "neighbors.mjs::touched",
-   "記号": "touched",
+   "key": "neighbors.mjs::cfg",
+   "記号": "cfg",
    "場所": "neighbors.mjs",
    "環": 1,
-   "きっかけ": "「changed」を呼んでいる"
+   "根": "read",
+   "きっかけ": "「read」を呼んでいる"
   },
   {
-   "key": "neighbors.mjs::一般語",
-   "記号": "一般語",
+   "key": "neighbors.mjs::changed",
+   "記号": "changed",
    "場所": "neighbors.mjs",
    "環": 1,
-   "きっかけ": "「changed」を呼んでいる"
+   "根": "diff",
+   "きっかけ": "「diff」を呼んでいる"
   },
   {
-   "key": "pull.mjs::一覧",
-   "記号": "一覧",
-   "場所": "pull.mjs",
+   "key": "neighbors.mjs::corpus",
+   "記号": "corpus",
+   "場所": "neighbors.mjs",
    "環": 1,
-   "きっかけ": "「現場のもの」を呼んでいる"
+   "根": "read",
+   "きっかけ": "「read」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::NEED_PATH",
+   "記号": "NEED_PATH",
+   "場所": "neighbors.mjs",
+   "環": 1,
+   "根": "need",
+   "きっかけ": "「need」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::range",
+   "記号": "range",
+   "場所": "neighbors.mjs",
+   "環": 1,
+   "根": "dirty",
+   "きっかけ": "「dirty」を呼んでいる"
+  },
+  {
+   "key": "selfcheck.mjs::CASES",
+   "記号": "CASES",
+   "場所": "selfcheck.mjs",
+   "環": 1,
+   "根": "NL2",
+   "きっかけ": "「NL2」を呼んでいる"
+  },
+  {
+   "key": "selfcheck.mjs::DECISIONS_MD",
+   "記号": "DECISIONS_MD",
+   "場所": "selfcheck.mjs",
+   "環": 1,
+   "根": "NL2",
+   "きっかけ": "「NL2」を呼んでいる"
+  },
+  {
+   "key": "selfcheck.mjs::RULES_MD",
+   "記号": "RULES_MD",
+   "場所": "selfcheck.mjs",
+   "環": 1,
+   "根": "NL2",
+   "きっかけ": "「NL2」を呼んでいる"
   },
   {
    "key": "install.mjs::ROOT",
    "記号": "ROOT",
    "場所": "install.mjs",
    "環": 2,
+   "根": "claude",
    "きっかけ": "「findInstallRoot」を呼んでいる"
   },
   {
@@ -90,28 +126,32 @@
    "記号": "settings",
    "場所": "install.mjs",
    "環": 2,
+   "根": "claude",
    "きっかけ": "「setPath」を呼んでいる"
   },
   {
-   "key": "neighbors.mjs::known",
-   "記号": "known",
+   "key": "neighbors.mjs::enclosing",
+   "記号": "enclosing",
    "場所": "neighbors.mjs",
    "環": 2,
-   "きっかけ": "「touched」を呼んでいる"
+   "根": "read",
+   "きっかけ": "「corpus」を呼んでいる"
   },
   {
-   "key": "neighbors.mjs::報告",
-   "記号": "報告",
+   "key": "neighbors.mjs::多重定義",
+   "記号": "多重定義",
    "場所": "neighbors.mjs",
    "環": 2,
-   "きっかけ": "「touched」を呼んでいる"
+   "根": "read",
+   "きっかけ": "「corpus」を呼んでいる"
   },
   {
-   "key": "pull.mjs::新しい",
-   "記号": "新しい",
-   "場所": "pull.mjs",
+   "key": "selfcheck.mjs::BASE",
+   "記号": "BASE",
+   "場所": "selfcheck.mjs",
    "環": 2,
-   "きっかけ": "「一覧」を呼んでいる"
+   "根": "NL2",
+   "きっかけ": "「DECISIONS_MD」を呼んでいる"
   }
  ]
 }
