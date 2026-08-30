@@ -90,6 +90,9 @@ const ng = [];
  *   見張って【見つかった】現場でも、そのまま公開リポジトリへ投げられた。**
  *   しかも報告書の冒頭には「**宣言が空のため見張っていません**」と自分で書いたうえで送る。
  * ★外向き・不可逆(公開の issue)なので、ここは黙って通してはいけない。 */
+/* ★この現場の索引(塊の外)。**数の照合と個人情報の見張りが、同じ一覧を見る**(39条)。
+ *   2026-08-31: 見張りが塊しか歩いておらず、名前が乗るのはむしろこちらだと配布先が実測した。 */
+const OUT = ['CLAUDE.md', 'STATUS.md', 'docs/CODEMAP.md'];
 const 個人情報の見張り = { 状態: "見張っていない", 見つかった: [], 語数: 0 };
 /* ★正本のアドレスは【1箇所】から読む(2026-08-30、違和感の掘り出しで見つかった)。
  *
@@ -754,6 +757,23 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
       }
     };
     歩く(HERE);
+    /* ★【この現場の索引】も見る(2026-08-31、配布先の実測)。
+     *
+     *   直す前は塊(HERE)しか歩いていなかった。配布先では HERE = <proj>/guardian なので、
+     *   **その現場の CODEMAP / STATUS / CLAUDE.md / 宣言は一度も見ていない**。
+     *   ところが配布先が実測したところ、名前が乗るのは**まさにそちら**だった:
+     *     CODEMAP(1300行) 2件 / STATUS(3300行) 3件 / **宣言 8件(見張った全語)**
+     *   ★端末固有の絶対パスは0件だった ── 心配していた所は空振りで、
+     *     本当に乗るのは**人の名前**の方だった。
+     * ★これは「隔離した写しを CI へ置いてよいか」を機械が言えるようにするための目でもある
+     *   (配布先の提案)。伏せる語を宣言している現場なら、そのまま使える。
+     * ★宣言そのもの(guardian.config.json)は見張る語を並べる所なので、数えない ── 下の 歩く と同じ扱い。 */
+    for (const d of OUT) {
+      if (/guardian\.config\.json$/.test(d)) continue;
+      let t = '';
+      try { t = fs.readFileSync(path.join(ROOT_DIR, d), 'utf8'); } catch (_) { continue; }
+      for (const w of 語) if (t.includes(w)) 見つかった.push(d + ': ' + w);
+    }
     個人情報の見張り.見つかった = 見つかった;
     if (見つかった.length)
       ng.push("★塊にこの現場の個人情報が混ざっています: " + 見つかった.slice(0, 8).join(" / ")
@@ -985,7 +1005,7 @@ if (process.argv.includes("--why")) {
     })(),
   };
   const DOCS = ['METHOD.md', 'README.md', 'RULES.md', 'WHY.md', 'audit.md', 'install.md'];
-  const OUT = ['CLAUDE.md', 'STATUS.md', 'docs/CODEMAP.md'];                       // 塊の外だが、同じ数を書いている所
+  /* OUT は上(module の頭)で宣言している ── 個人情報の見張りも同じ一覧を見るため(39条) */
   const bad = [];
   const look = (label, text) => {
     if (!text) return;

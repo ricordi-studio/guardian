@@ -2,44 +2,44 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "check.mjs::MAP_PATH",
-   "記号": "MAP_PATH",
-   "場所": "check.mjs",
+   "key": "selfcheck.mjs::CASES",
+   "記号": "CASES",
+   "場所": "selfcheck.mjs",
    "環": 1,
-   "根": "map",
-   "きっかけ": "「map」を呼んでいる"
+   "根": "ng",
+   "きっかけ": "「ng」を呼んでいる"
   },
   {
-   "key": "check.mjs::pickBlock",
-   "記号": "pickBlock",
-   "場所": "check.mjs",
+   "key": "selfcheck.mjs::NL2",
+   "記号": "NL2",
+   "場所": "selfcheck.mjs",
    "環": 1,
-   "根": "map",
-   "きっかけ": "「map」を呼んでいる"
+   "根": "ng",
+   "きっかけ": "「ng」を呼んでいる"
   },
   {
-   "key": "hooks/codemap.js::main",
-   "記号": "main",
-   "場所": "hooks/codemap.js",
+   "key": "selfcheck.mjs::拾えたか",
+   "記号": "拾えたか",
+   "場所": "selfcheck.mjs",
    "環": 1,
-   "根": "parseMap",
-   "きっかけ": "「parseMap」を呼んでいる"
+   "根": "ng",
+   "きっかけ": "「ng」を呼んでいる"
   },
   {
-   "key": "hooks/codemap.js::touched",
-   "記号": "touched",
-   "場所": "hooks/codemap.js",
-   "環": 1,
-   "根": "境界",
-   "きっかけ": "「境界」を呼んでいる"
-  },
-  {
-   "key": "hooks/codemap.js::raw",
-   "記号": "raw",
-   "場所": "hooks/codemap.js",
+   "key": "selfcheck.mjs::DECISIONS_MD",
+   "記号": "DECISIONS_MD",
+   "場所": "selfcheck.mjs",
    "環": 2,
-   "根": "parseMap",
-   "きっかけ": "「main」を呼んでいる"
+   "根": "ng",
+   "きっかけ": "「NL2」を呼んでいる"
+  },
+  {
+   "key": "selfcheck.mjs::RULES_MD",
+   "記号": "RULES_MD",
+   "場所": "selfcheck.mjs",
+   "環": 2,
+   "根": "ng",
+   "きっかけ": "「NL2」を呼んでいる"
   }
  ]
 }
