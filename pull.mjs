@@ -342,6 +342,10 @@ if (全消える.length) console.log('消えるもの: ' + 全消える.join(', 
 
 console.log('正本: ' + 正本);
 console.log('版: ' + 旧版 + ' → ' + 新版);
+/* ★取った中身そのものを1行出す(2026-08-31、配布先の提案)。
+ *   版だけだと『同じ版で中身が違う』ときに配布先が何も言えない。 */
+{ try { const r = JSON.parse(fs.readFileSync(path.join(HERE, '.guardian', 'pulled.json'), 'utf8'));
+    if (r && r.sha) console.log('取得元: ' + r.sha); } catch (_) {} }
 console.log('変わるもの: ' + (変わる.length ? 変わる.join(', ') : 'なし')
   + (増える.length ? ' / 増えるもの: ' + 増える.join(', ') : ''));
 

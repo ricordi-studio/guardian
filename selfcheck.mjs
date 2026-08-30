@@ -1519,6 +1519,15 @@ if (process.argv.includes("--why")) {
  * ★`pull.mjs` が取り直しのたびに SHA を受領証として残す。ここはそれを読んで出すだけ。
  * ★無ければ**未測**(手で写した / degit で入れた等)── 「分からない」を緑に混ぜない。 */
 {
+  /* ★機械が読む口(2026-08-31、配布先の提案)。
+   *   「どれを取ったか」と「どれを測ったか」を、同じ値かどうか機械で照合できるようにする。 */
+  if (process.argv.includes("--sha")) {
+    let sha = "";
+    try { sha = String(JSON.parse(fs.readFileSync(path.join(HERE, ".guardian", "pulled.json"), "utf8")).sha || ""); }
+    catch (_) { sha = ""; }
+    process.stdout.write(sha + NL2);
+    process.exit(0);
+  }
   let 受領証 = null;
   try { 受領証 = JSON.parse(fs.readFileSync(path.join(HERE, '.guardian', 'pulled.json'), 'utf8')); } catch (_) {}
   if (受領証 && /^[0-9a-f]{40}$/.test(受領証.sha || '')) {
