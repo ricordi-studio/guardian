@@ -91,6 +91,13 @@ const NEED_PATH = N.need || '.guardian/neighbors.need.json';
 const MAX_CALLERS = Number(N.max_callers) || 40;
 const SKIP_TOUCHED = (N.skip_touched || []).map((s) => new RegExp(s));
 const IGNORE = new Set(N.ignore_symbols || []);
+/* ★コーパスから外す場所(2026-08-30 監査で見つかった)。
+ *   実験用の見本・写経の再現・生成物のように、**重複していることが正しい**場所がある。
+ *   実測: 実験室(同じ仕様から3体に独立に実装させた)を足した日、写経の疑いが 12件 → 46件になった。
+ *   増えた34件は**全部が意図した重複**で、これは誤検出である ── 誤検出1件が検査全体の信用を殺す
+ *   (README の約束6)。**どこを外すかは現場ごとに違うので、宣言が持つ。** */
+const SKIP_DIRS = (N.skip_dirs || []).map((s) => String(s).replace(/^\.\//, '').replace(/\/+$/, ''));
+const inSkipped = (p) => SKIP_DIRS.some((d) => p === d || p.startsWith(d + '/'));
 
 /* ---------- 差分を読む(汚れた作業木があればそれ、無ければ直前のコミット) ---------- */
 const dirty = sh('git status --porcelain').trim();
@@ -170,15 +177,20 @@ function walk(dir, out) {
   for (const e of ents) {
     if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
     const p = dir + '/' + e.name;
+    if (inSkipped(p.replace(/^\.\//, ''))) continue;                 // 宣言で外した場所
     if (e.isDirectory()) walk(p, out);
     else if (EXT.test(e.name)) out.push(p);
   }
   return out;
 }
+/* ★経路の表記を揃えてから重複を落とす(2026-08-30 監査で見つかった)。
+ *   宣言が [".", "hooks"] のように**重なる場所**を挙げていると、同じファイルが
+ *   "./hooks/clock.js" と "hooks/clock.js" の2通りで入り、**同じ1ファイルを写経だと報告する**。
+ *   実測: 写経の疑い12件のうち**10件がこれ**だった ── 表記ゆれは重複ではない。 */
 const corpusFiles = [...new Set(CODE_DIRS.flatMap((d) => {
   const abs = path.join(ROOT, d);
   try { return fs.statSync(abs).isDirectory() ? walk(d, []) : (EXT.test(d) ? [d] : []); } catch (_) { return []; }
-}))];
+}).map((f) => f.replace(/^\.\//, '')))];
 /* 定義の一覧をテキストから作る。逃し測定(--escaped)は【当時のコミットの中身】でも呼ぶので、
  * コーパス作りとは別の関数に切り出してある。 */
 function defsOfText(text, html) {
