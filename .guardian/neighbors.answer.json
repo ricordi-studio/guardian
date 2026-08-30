@@ -1,45 +1,85 @@
 {
  "range": "HEAD",
  "answers": {
-  "install.mjs::added": {
+  "hooks/codemap.js::main": {
    "判定": "影響なし",
-   "理由": "9.28 の直し(evidence の2層 / 出口2を不明 / B7 の作る・読むの区別)は、この記号の中身も呼ばれ方も変えていない。足したのは install の宣言生成と todo、verdict の分岐1本、selfcheck の抜き出しの絞り込みだけ",
-   "印": "1baxdp1-5430"
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "w0kr5q-499"
   },
-  "install.mjs::CC": {
+  "pull.mjs::一覧": {
    "判定": "影響なし",
-   "理由": "9.28 の直し(evidence の2層 / 出口2を不明 / B7 の作る・読むの区別)は、この記号の中身も呼ばれ方も変えていない。足したのは install の宣言生成と todo、verdict の分岐1本、selfcheck の抜き出しの絞り込みだけ",
-   "印": "1baxdp1-5430"
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "1cjuall-458"
   },
-  "install.mjs::cfgPath": {
+  "pull.mjs::現場のもの": {
    "判定": "影響なし",
-   "理由": "9.28 の直し(evidence の2層 / 出口2を不明 / B7 の作る・読むの区別)は、この記号の中身も呼ばれ方も変えていない。足したのは install の宣言生成と todo、verdict の分岐1本、selfcheck の抜き出しの絞り込みだけ",
-   "印": "1baxdp1-5430"
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "1cjuall-458"
   },
-  "install.mjs::findInstallRoot": {
+  "pull.mjs::消える": {
    "判定": "影響なし",
-   "理由": "9.28 の直し(evidence の2層 / 出口2を不明 / B7 の作る・読むの区別)は、この記号の中身も呼ばれ方も変えていない。足したのは install の宣言生成と todo、verdict の分岐1本、selfcheck の抜き出しの絞り込みだけ",
-   "印": "1baxdp1-5430"
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "1cjuall-458"
   },
-  "install.mjs::setPath": {
+  "pull.mjs::新版": {
    "判定": "影響なし",
-   "理由": "9.28 の直し(evidence の2層 / 出口2を不明 / B7 の作る・読むの区別)は、この記号の中身も呼ばれ方も変えていない。足したのは install の宣言生成と todo、verdict の分岐1本、selfcheck の抜き出しの絞り込みだけ",
-   "印": "1baxdp1-5430"
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "1cjuall-458"
   },
-  "install.mjs::ROOT": {
+  "pull.mjs::走る": {
    "判定": "影響なし",
-   "理由": "9.28 の直し(evidence の2層 / 出口2を不明 / B7 の作る・読むの区別)は、この記号の中身も呼ばれ方も変えていない。足したのは install の宣言生成と todo、verdict の分岐1本、selfcheck の抜き出しの絞り込みだけ",
-   "印": "1baxdp1-5430"
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "1cjuall-458"
   },
-  "install.mjs::settings": {
+  "pull.mjs::中の消える": {
    "判定": "影響なし",
-   "理由": "9.28 の直し(evidence の2層 / 出口2を不明 / B7 の作る・読むの区別)は、この記号の中身も呼ばれ方も変えていない。足したのは install の宣言生成と todo、verdict の分岐1本、selfcheck の抜き出しの絞り込みだけ",
-   "印": "1baxdp1-5430"
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "1cjuall-458"
   },
-  "install.mjs::snippet": {
+  "pull.mjs::読む": {
    "判定": "影響なし",
-   "理由": "9.28 の直し(evidence の2層 / 出口2を不明 / B7 の作る・読むの区別)は、この記号の中身も呼ばれ方も変えていない。足したのは install の宣言生成と todo、verdict の分岐1本、selfcheck の抜き出しの絞り込みだけ",
-   "印": "1baxdp1-5430"
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "1cjuall-458"
+  },
+  "pull.mjs::表を読む": {
+   "判定": "影響なし",
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "1cjuall-458"
+  },
+  "hooks/codemap.js::raw": {
+   "判定": "影響なし",
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "w0kr5q-499"
+  },
+  "pull.mjs::仮": {
+   "判定": "影響なし",
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "1cjuall-458"
+  },
+  "pull.mjs::旧版": {
+   "判定": "影響なし",
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "1cjuall-458"
+  },
+  "pull.mjs::食い違い": {
+   "判定": "影響なし",
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "1cjuall-458"
+  },
+  "pull.mjs::新しい": {
+   "判定": "影響なし",
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "1cjuall-458"
+  },
+  "pull.mjs::全消える": {
+   "判定": "影響なし",
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "1cjuall-458"
+  },
+  "pull.mjs::変わる": {
+   "判定": "影響なし",
+   "理由": "9.29 の直しは、塊の直下に package.json を1枚置く / hooks/codemap.js の逃げ道を囲みの中へ戻す / selfcheck にフックの起動検査を1本足す、の3つ。この記号の中身も呼ばれ方も変えていない",
+   "印": "1cjuall-458"
   }
  }
 }

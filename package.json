@@ -1,0 +1,8 @@
+{
+  "name": "guardian-kit",
+  "private": true,
+  "type": "commonjs",
+  "_": "★このファイルは【フックを守るためだけ】に在る(2026-08-30、配布先からの報告)。",
+  "_なぜ": "配布先の package.json に \"type\": \"module\" が在ると、guardian/hooks/*.js は ESM 扱いになり require が使えず、5本とも ReferenceError で落ちる。フックは失敗しても黙って通す設計(44条)なので、【静かに全滅する】── 検査自身が『報告は成功と出るので気づけません』と書いている、その形そのもの。",
+  "_直し方": "この1枚が guardian/ 以下の .js を CommonJS に固定する。hooks を .cjs へ改名するより、触る所が1つで済む。"
+}

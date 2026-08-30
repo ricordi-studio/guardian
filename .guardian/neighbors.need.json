@@ -2,68 +2,132 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "install.mjs::added",
-   "記号": "added",
-   "場所": "install.mjs",
+   "key": "hooks/codemap.js::main",
+   "記号": "main",
+   "場所": "hooks/codemap.js",
    "環": 1,
-   "根": "claude",
-   "きっかけ": "「claude」を呼んでいる"
+   "根": "clip",
+   "きっかけ": "「clip」を呼んでいる"
   },
   {
-   "key": "install.mjs::CC",
-   "記号": "CC",
-   "場所": "install.mjs",
+   "key": "pull.mjs::一覧",
+   "記号": "一覧",
+   "場所": "pull.mjs",
    "環": 1,
-   "根": "claude",
-   "きっかけ": "「claude」を呼んでいる"
+   "根": "配るもの",
+   "きっかけ": "「配るもの」を呼んでいる"
   },
   {
-   "key": "install.mjs::cfgPath",
-   "記号": "cfgPath",
-   "場所": "install.mjs",
+   "key": "pull.mjs::現場のもの",
+   "記号": "現場のもの",
+   "場所": "pull.mjs",
    "環": 1,
-   "根": "claude",
-   "きっかけ": "「claude」を呼んでいる"
+   "根": "配るもの",
+   "きっかけ": "「配るもの」を呼んでいる"
   },
   {
-   "key": "install.mjs::findInstallRoot",
-   "記号": "findInstallRoot",
-   "場所": "install.mjs",
+   "key": "pull.mjs::消える",
+   "記号": "消える",
+   "場所": "pull.mjs",
    "環": 1,
-   "根": "claude",
-   "きっかけ": "「claude」を呼んでいる"
+   "根": "配るもの",
+   "きっかけ": "「配るもの」を呼んでいる"
   },
   {
-   "key": "install.mjs::setPath",
-   "記号": "setPath",
-   "場所": "install.mjs",
+   "key": "pull.mjs::新版",
+   "記号": "新版",
+   "場所": "pull.mjs",
    "環": 1,
-   "根": "claude",
-   "きっかけ": "「claude」を呼んでいる"
+   "根": "配るもの",
+   "きっかけ": "「配るもの」を呼んでいる"
   },
   {
-   "key": "install.mjs::ROOT",
-   "記号": "ROOT",
-   "場所": "install.mjs",
+   "key": "pull.mjs::走る",
+   "記号": "走る",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "配るもの",
+   "きっかけ": "「配るもの」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::中の消える",
+   "記号": "中の消える",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "配るもの",
+   "きっかけ": "「配るもの」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::読む",
+   "記号": "読む",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "配るもの",
+   "きっかけ": "「配るもの」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::表を読む",
+   "記号": "表を読む",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "配るもの",
+   "きっかけ": "「配るもの」を呼んでいる"
+  },
+  {
+   "key": "hooks/codemap.js::raw",
+   "記号": "raw",
+   "場所": "hooks/codemap.js",
    "環": 2,
-   "根": "claude",
-   "きっかけ": "「findInstallRoot」を呼んでいる"
+   "根": "clip",
+   "きっかけ": "「main」を呼んでいる"
   },
   {
-   "key": "install.mjs::settings",
-   "記号": "settings",
-   "場所": "install.mjs",
+   "key": "pull.mjs::仮",
+   "記号": "仮",
+   "場所": "pull.mjs",
    "環": 2,
-   "根": "claude",
-   "きっかけ": "「setPath」を呼んでいる"
+   "根": "配るもの",
+   "きっかけ": "「走る」を呼んでいる"
   },
   {
-   "key": "install.mjs::snippet",
-   "記号": "snippet",
-   "場所": "install.mjs",
+   "key": "pull.mjs::旧版",
+   "記号": "旧版",
+   "場所": "pull.mjs",
    "環": 2,
-   "根": "claude",
-   "きっかけ": "「CC」を呼んでいる"
+   "根": "配るもの",
+   "きっかけ": "「読む」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::食い違い",
+   "記号": "食い違い",
+   "場所": "pull.mjs",
+   "環": 2,
+   "根": "配るもの",
+   "きっかけ": "「走る」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::新しい",
+   "記号": "新しい",
+   "場所": "pull.mjs",
+   "環": 2,
+   "根": "配るもの",
+   "きっかけ": "「一覧」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::全消える",
+   "記号": "全消える",
+   "場所": "pull.mjs",
+   "環": 2,
+   "根": "配るもの",
+   "きっかけ": "「新版」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::変わる",
+   "記号": "変わる",
+   "場所": "pull.mjs",
+   "環": 2,
+   "根": "配るもの",
+   "きっかけ": "「読む」を呼んでいる"
   }
  ]
 }

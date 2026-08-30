@@ -58,6 +58,8 @@ const 配るもの = new Set([
   /* エンジン */
   'check.mjs', 'selfcheck.mjs', 'neighbors.mjs', 'verdict.mjs', 'install.mjs', 'pull.mjs', 'index.mjs',
   'hooks', 'githooks', 'templates',
+  /* ★フックを CommonJS に固定するためだけの1枚(2026-08-30)。配布先が type:module だと5本とも静かに死ぬ */
+  'package.json',
   /* 文書 */
   'README.md', 'SPEC.md', 'METHOD.md', 'RULES.md', 'WHY.md', 'WHY_INDEX.md', 'WHY_SEEN',
   'CHANGELOG.md', 'KIT_VERSION', 'ENGINE_FP', 'audit.md', 'install.md', 'hunch.md',

@@ -1396,6 +1396,52 @@ if (process.argv.includes("--why")) {
   }
 }
 
+/* B8a. 【フックが、その現場で本当に起動するか】(2026-08-30、配布先からの報告⑤)。
+ *
+ * ★実際に起きた: 配布先の `package.json` に `"type": "module"` が在ると、
+ *   `guardian/hooks/*.js` は ESM 扱いになり `require is not defined` で落ちる。
+ *   **フックは失敗しても黙って通す設計(44条)なので、5本とも静かに全滅する。**
+ *   検査自身が「報告は成功と出るので気づけません」と書いている、その形そのもの。
+ *   実測: 空リポ + type:module + degit + install → 5本とも ReferenceError。
+ * ★こちらでは一生出ない ── この塊の直下に package.json が無かったから。
+ *   「自分の静かな現場で測ると、自分の現場の性質が見えない」の、これで6件目。
+ * ★直しは `guardian/package.json` に `{"type":"commonjs"}` の1枚。
+ *   だが**直したことを測らないと、次に誰かが消したときにまた静かに死ぬ**。だからここで起動を測る。
+ * ★測るのは【起動するか】だけ ── 中身の判断は各フックの仕事で、ここでは見ない。 */
+{
+  const 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-hook-'));
+  try {
+    /* 見本: その現場が ESM だと宣言している状態を作る */
+    fs.mkdirSync(path.join(仮, 'guardian', 'hooks'), { recursive: true });
+    fs.writeFileSync(path.join(仮, 'package.json'), JSON.stringify({ name: 'x', type: 'module' }) + '\n');
+    for (const f of fs.readdirSync(path.join(HERE, 'hooks')))
+      fs.copyFileSync(path.join(HERE, 'hooks', f), path.join(仮, 'guardian', 'hooks', f));
+    /* 塊の package.json も一緒に配られる ── それが在れば CommonJS に固定される */
+    try { fs.copyFileSync(path.join(HERE, 'package.json'), path.join(仮, 'guardian', 'package.json')); } catch (_) {}
+
+    const 落ちた = [];
+    for (const f of fs.readdirSync(path.join(仮, 'guardian', 'hooks'))) {
+      if (!f.endsWith('.js') || f === 'lib-root.js') continue;      // lib-root は入口ではなく道具
+      const r = spawnSync(process.execPath, [path.join(仮, 'guardian', 'hooks', f)],
+        { input: '{}', encoding: 'utf8', windowsHide: true });
+      const 出 = String(r.stdout || '') + String(r.stderr || '');
+      if (/ReferenceError|SyntaxError|ERR_REQUIRE_ESM|Cannot use import statement/.test(出)) 落ちた.push(f);
+    }
+    if (落ちた.length) {
+      ng.push('★フックが【その現場では起動しません】: ' + 落ちた.join(', ')
+        + ' ── 配布先の package.json に "type": "module" が在ると .js が ESM 扱いになります。'
+        + '**フックは失敗しても黙って通すので、静かに全滅します**(報告は成功と出る)。'
+        + '直しは、塊の直下に package.json を置いて type を commonjs にする(1枚で済む)');
+    } else {
+      ok.push('フックは type:module の現場でも起動する(package.json で CommonJS に固定)');
+    }
+  } catch (e) {
+    未測.push('フックの起動は見ていません(見本を建てられませんでした: ' + String(e && e.message).slice(0, 120) + ')');
+  } finally {
+    fs.rmSync(仮, { recursive: true, force: true });
+  }
+}
+
 /* B8c. 【門が、クラスで書かれた現場でも鳴るか】(2026-08-30、9.18 の作業中に見つかった)。
  *
  * ★実際に起きた: `defsOfText` が拾うのは function と const / let だけで、**class が定義にならない**。
