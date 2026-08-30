@@ -28,6 +28,7 @@
  *   ここに現場固有のことを書いた瞬間、塊として配れなくなる(RULES.md 39条 / METHOD.md)。
  *
  * 出口コード: 差戻あり=1 / 不明あり=2 / それ以外=0
+ *   ★子の出口2も【不明】として受ける(neighbors.mjs が宣言している約束)。
  *   ★不明を 0 にしない。CIも人も「0なら大丈夫」と読むので、そこで嘘をつくと全部が崩れる。
  */
 import fs from 'node:fs';
@@ -103,6 +104,13 @@ if (!cfg) {
     if (cantRun) push('不明', name, `動かせません(${e.run})`, out);
     else if (timedOut) push('不明', name, `${e.timeoutSec || 600}秒で返りませんでした`, out);
     else if (r.status === 0) push('通過', name, `${sec}秒`, out);
+    /* ★出口2は【不明】(2026-08-30、新規プロジェクトの実走で見つかった)。
+     *   neighbors.mjs の頭には『出口: 0=通過 / 1=差戻 / 2=不明。合否(verdict)は 2 を
+     *   「不明」として扱い、緑に数えない』と**書いてある**。だが verdict は実装していなかった。
+     *   実測: git の履歴がまだ無い新規プロジェクトで、門が正しく出口2(不明)を返したのに
+     *   合否は**差戻**と言った ── 『測れていない』が『違反を機械で示せた』に化けていた。
+     * ★宣言と実装の食い違いは、この塊がいちばん嫌う形である。実装をコメントに合わせる。 */
+    else if (r.status === 2) push('不明', name, `${sec}秒 / 出口 2(測れなかった)`, out);
     else if (unknownRe && unknownRe.test(out)) push('不明', name, e.needs ? `前提が揃っていません(${e.needs})` : '前提が揃っていません', out);
     else if (e.warnOnly) push('注意', name, `${sec}秒 / 出口 ${r.status}`, out);
     else push('差戻', name, `${sec}秒 / 出口 ${r.status}`, out);

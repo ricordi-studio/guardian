@@ -140,8 +140,19 @@ if (!fs.existsSync(cfgPath)) {
     },
     /* ★合否の証拠。**空だと合否は【不明】から始まる**(何も測っていないので、それが正しい)。
      *   このリポジトリで実際に回る検査を並べるまで、合格とは言わせない。 */
-    _evidence: '合否(verdict.mjs)が回す検査。name/run/fast/timeoutSec。空なら【不明】',
-    evidence: [],
+    /* ★【塊が配る4件】は、どの現場でも同じなので自動で書く(2026-08-30、配布先の実測から)。
+     *   配布先の言葉:「evidence 8件の決め方は、はっきり2層に割れている」──
+     *   塊の4件(どこでも同じ)と、現場の4件(その現場しか知らない)。
+     *   前者を空のままにする理由が無い。**空だと合否は【不明】のまま=まだ稼働していない。**
+     * ★後者は**勝手に埋めない**。埋めたら『測っていないのに緑』になる ── この塊が防ぎたいことそのもの。
+     *   代わりに package.json / Makefile / CI から**候補を出すだけ**にして、選ぶのは人。 */
+    _evidence: '合否(verdict.mjs)が回す検査。name/run/fast/timeoutSec。★塊の4件は自動で入っている。**この現場の検査を足すまで、測れているのは塊だけ**',
+    evidence: [
+      { name: '塊の自己検査(わざと壊して赤くなるか)', run: 'node ' + KIT + '/selfcheck.mjs', fast: true, timeoutSec: 180 },
+      { name: 'WHY の索引が最新か', run: 'node ' + KIT + '/index.mjs --check', fast: true, timeoutSec: 60 },
+      { name: '地図・正本', run: 'node ' + KIT + '/check.mjs', fast: true, timeoutSec: 120 },
+      { name: '近傍照合(修正の2つ外側に答えたか)', run: 'node ' + KIT + '/neighbors.mjs --gate', fast: true, timeoutSec: 120 },
+    ],
     selectors,
     okMarker: 'guardian:ok|lint-deps:ok',
   };
@@ -149,7 +160,29 @@ if (!fs.existsSync(cfgPath)) {
   did.push(`guardian.config.json を置きました（見張る場所 ${cfg.watch.join('/')} ・ソース候補 ${sources.length}件を自動で拾いました）`);
   todo.push('guardian.config.json の checks が空です。**同じ意味の値が複数箇所にある所**を探して並べてください(WHY.md の B を参照)');
   todo.push('guardian.config.json の **context が空**です。**この道具がどう運用されるか**(誰が・いつ・どれだけ・何度・どこへ公開されるか)を数行で書いてください ── ここが空だと【運用の欠落】(上限・錠・記録・退避)は、どんな問い方をしても永久に出ません(' + KIT + '/hunch.md)');
-  todo.push('guardian.config.json の evidence が空です。**このリポジトリで実際に回る検査**(型・単体・e2e・lint)を並べてください ── 空のままだと合否は【不明】のまま(不明は合格ではない)');
+  /* ★候補を出すだけ ── 選ぶのは人(2026-08-30、配布先の実測から) */
+  {
+    const 候補 = [];
+    try {
+      const pj = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));   // guardian:read
+      for (const k of Object.keys(pj.scripts || {})) 候補.push('npm run ' + k);
+    } catch (_) {}
+    try {
+      for (const m of fs.readFileSync(path.join(ROOT, 'Makefile'), 'utf8').matchAll(/^([a-zA-Z0-9_-]+):/gm)) 候補.push('make ' + m[1]);   // guardian:read
+    } catch (_) {}
+    try {
+      const dir = path.join(ROOT, '.github', 'workflows');
+      for (const f of fs.readdirSync(dir))
+        for (const m of fs.readFileSync(path.join(dir, f), 'utf8').matchAll(/^s*-s*run:s*(.+)$/gm)) 候補.push(m[1].trim());
+    } catch (_) {}
+    const 一意 = [...new Set(候補)].slice(0, 12);
+    todo.push('guardian.config.json の evidence には【塊の4件】だけが入っています。'
+      + '**この現場の検査を足すまで、測れているのは塊だけ**です(合否は通っても、この現場のことは何も言っていない)。'
+      + (一意.length ? String.fromCharCode(10) + '     候補(この現場から拾いました。**選ぶのは人**): ' + 一意.join(' / ') : '')
+      + String.fromCharCode(10) + '     ★並べ方の軸は【一段下が測れないもの】── 型は記号を測れるが振る舞いは測れない、'
+      + '単体は振る舞いを測れるが外との往復は測れない、e2e がそこを埋める。積み上げになるので、どれか1つでは足りない。'
+      + String.fromCharCode(10) + '     ★相手を起こす必要があるもの(e2e)は fast:false にして、CI の速い回では外れるようにする');
+  }
 } else {
   skipped.push('guardian.config.json は既にあるので触っていません');
 }

@@ -1221,7 +1221,16 @@ if (process.argv.includes("--why")) {
     }
 
     /* B7: install が配布先に作るものは、定義上すべて現場固有物である */
-    const 作る = new Set([...kit('install.mjs').matchAll(/path\.join\(ROOT,\s*'([^']+)'/g)].map((m) => m[1]));
+    /* ★【作る】と【読む】を分ける(2026-08-30、新規プロジェクトの実走で誤検出した)。
+     *   直す前は `path.join(ROOT, '…')` を全部『作るもの』と読んでいた。
+     *   install が候補を拾うために package.json / Makefile を**読む**ようになった途端、
+     *   その2つが『配布先に作るもの』として数えられ、**配るものを壊す**と赤くなった。
+     * ★読むだけの行は行末の `guardian:read` で外す ── 逃げ道ではなく、**向きの宣言**である。 */
+    const 作る = new Set();
+    for (const 行 of kit('install.mjs').split(/\r?\n/)) {
+      if (/guardian:read/.test(行)) continue;
+      for (const m of 行.matchAll(/path\.join\(ROOT,\s*'([^']+)'/g)) 作る.add(m[1]);
+    }
     /* 見本: install は必ずこの3つを配布先に作る。拾えなければ形が変わった合図 */
     if (!拾えたか('install が配布先に作るもの', 作る, ['docs', 'guardian.config.json', 'CLAUDE.md'])) {
       /* 落としたので、この先は数えない */
