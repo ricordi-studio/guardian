@@ -45,6 +45,13 @@ process.stdin.on('end', () => {
   for (const c of ['guardian.config.json', 'guardian/guardian.config.json']) {
     try { cfg = JSON.parse(fs.readFileSync(path.join(root, c), 'utf8')); break; } catch (_) {}
   }
+  /* ★止める固有名は【宣言】から集める(エンジンは持たない)。
+   *   onlyIn max:0 の pattern は「この語がここに在ってはいけない」の宣言そのもの。
+   *   宣言が無ければ ④ は**出さない**(見ていないものを、見たふりにしない)。 */
+  const 宣言の固有名 = (cfg.checks || [])
+    .filter((c) => c.kind === 'onlyIn' && Number(c.max) === 0 && c.pattern)
+    .map((c) => c.pattern)
+    .join('|') || null;
   const gate = cfg.reflex_gate || {};
   const files = gate.files || ['worker/src/index.ts', 'worker/src/vendors.ts'];
   if (!files.includes(rel)) process.exit(0);
@@ -72,9 +79,16 @@ process.stdin.on('end', () => {
     { 名: '相手の返事の文言で判定(英語の決め打ち)',
       形: new RegExp('/[^/' + B + 'n]*(max_tokens|too large|exceed|rate limit|not found|invalid|unauthorized|quota)[^/' + B + 'n]*/i?' + B + '.test' + B + '('),
       問: '返事の文言は会社ごとに違う。状態番号(4xx/5xx)や「試してみる」で済まないか? 文言で分けるなら、それは【作法】(棚)の知識として置けないか?' },
-    { 名: '会社名・モデル名で判定',
-      形: new RegExp('(===|!==|includes|startsWith|test)' + B + "s*" + B + "(?" + B + "s*['\"](openai|gemini|claude|anthropic|gpt-|claude-|gemini-)", 'i'),
-      問: 'それは【情報】(宣言)に書けば済むか? 器が会社を見分ける必要は本当にあるか?' },
+    /* ★固有名は【宣言】が持つ(2026-08-31、配布先の実測)。
+     *   直す前はここに社名が7つ埋まっていた ── **その3行上に**
+     *   「ここに会社名や具体の数は置かない ── 形だけ」と自分で書いてあるのに。
+     *   配布先の実測: 一覧に在る社名は止まり、**一覧に無い社名(新しい会社・日本語の社名)は素通り**した。
+     * ★`no-fixed-names.js` と同じ口(宣言の onlyIn max:0 の pattern)から読む。
+     *   あちらは「宣言から読む設計が、そのまま多言語対応になっている」と実測されている。
+     *   ★エンジンが社名を持つ必要は無い ── 持った瞬間、次の会社が生まれた日に穴が開く。 */
+    ...(宣言の固有名 ? [{ 名: '会社名・モデル名で判定(宣言から)',
+      形: new RegExp('(===|!==|includes|startsWith|test)' + B + 's*' + B + '(?' + B + "s*['\"](" + 宣言の固有名 + ')', 'i'),
+      問: 'それは【情報】(宣言)に書けば済むか? 器が会社を見分ける必要は本当にあるか?' }] : []),
   ];
 
   const hits = [];

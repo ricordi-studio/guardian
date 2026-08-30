@@ -1511,6 +1511,69 @@ if (process.argv.includes("--why")) {
   }
 }
 
+/* B8d. 【門が生きているか】── 起動でも中身でもなく、**止めるべきものを止めるか**
+ *   (2026-08-31、配布先からの提案)。
+ *
+ * ★配布先の言葉:「門の出力が平文 stderr + 終了コードなのは Claude Code の作法として正しいが、
+ *   **外から自動で確かめにくい**。配布先が『この門は生きているか』を機械で測れる口が欲しい」。
+ * ★実際、配布先は測り方を3回間違えている(相対パスを渡した / 出力を JSON だと思って grep した /
+ *   宣言に無いパターンで試した)。**測り方が当たっているかを、測る側が確かめられない**のが問題。
+ * ★だから見本をこちらで建てて、こちらの入力で測る ── 配布先は `selfcheck` を回すだけでよい。
+ * ★実測(2026-08-31): 9.32 の `no-reflex` は、社名がエンジンにべた書きされていたため
+ *   **一覧に無い会社(新しい会社・日本語の社名)を素通し**していた。この検査があれば出た。 */
+{
+  const 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-gate-'));
+  try {
+    fs.mkdirSync(path.join(仮, 'guardian', 'hooks'), { recursive: true });
+    fs.mkdirSync(path.join(仮, 'worker', 'src'), { recursive: true });
+    for (const f of fs.readdirSync(path.join(HERE, 'hooks')))
+      fs.copyFileSync(path.join(HERE, 'hooks', f), path.join(仮, 'guardian', 'hooks', f));
+    try { fs.copyFileSync(path.join(HERE, 'package.json'), path.join(仮, 'guardian', 'package.json')); } catch (_) {}
+    fs.writeFileSync(path.join(仮, 'worker', 'src', 'index.ts'), 'export const a = 1;\n');
+    /* 見本の宣言 ── **この現場の宣言は使わない**(現場ごとに中身が違うと、測る内容も変わってしまう) */
+    fs.writeFileSync(path.join(仮, 'guardian.config.json'), JSON.stringify({
+      map: 'docs/CODEMAP.md', watch: ['worker'],
+      reflex_gate: { files: ['worker/src/index.ts'] },
+      checks: [{ name: '見本', kind: 'onlyIn', max: 0, pattern: 'まぼろし社|phantomcorp', files: ['worker/src/index.ts'] }],
+    }, null, 1) + '\n');
+    const 的 = path.join(仮, 'worker', 'src', 'index.ts');
+    const 叩く = (フック, 本文) => {
+      const r = spawnSync(process.execPath, [path.join(仮, 'guardian', 'hooks', フック)], {
+        input: JSON.stringify({ tool_name: 'Edit', tool_input: { file_path: 的, new_string: 本文 } }),
+        encoding: 'utf8', windowsHide: true, cwd: 仮,
+      });
+      const 出 = String(r.stdout || '') + String(r.stderr || '');
+      if (/ReferenceError|SyntaxError/.test(出)) return '落ちた';
+      return r.status !== 0 ? '止める' : '通す';
+    };
+    const 例 = [
+      ['no-reflex.js', 'if (m === "まぼろし社") return 1;', '止める', '宣言に在る固有名(日本語)'],
+      ['no-reflex.js', 'if (m === "phantomcorp") return 1;', '止める', '宣言に在る固有名(英語)'],
+      ['no-reflex.js', 'if (m === "よそのなにか") return 1;', '通す', '宣言に無い語'],
+      ['no-reflex.js', 'try { x(); } catch (e) {}', '止める', '黙る catch(形で見る)'],
+      ['no-fixed-names.js', 'const s = "まぼろし社";', '止める', '固有名の門(日本語)'],
+      ['no-fixed-names.js', 'const s = "ふつうの語";', '通す', '固有名の門(通すべき)'],
+    ];
+    const 外れ = [];
+    for (const [f, 本文, 期待, 名] of 例) {
+      const r = 叩く(f, 本文);
+      if (r !== 期待) 外れ.push(名 + ': ' + r + '(期待=' + 期待 + ')');
+    }
+    if (外れ.length) {
+      ng.push('★門が期待どおりに働いていません: ' + 外れ.join(' / ')
+        + ' ── **止めるべきものを止めるか**を見本で測っています。'
+        + 'エンジンが固有名を持っていないか(宣言から読んでいるか)を疑ってください');
+    } else {
+      ok.push('門は見本で期待どおりに働く(固有名は宣言から読み、形は形で見る・' + 例.length + '通り)');
+    }
+  } catch (e) {
+    未測.push('門が生きているかは見ていません(見本を建てられませんでした: '
+      + String(e && e.message).slice(0, 120) + ')');
+  } finally {
+    fs.rmSync(仮, { recursive: true, force: true });
+  }
+}
+
 /* B8c. 【門が、クラスで書かれた現場でも鳴るか】(2026-08-30、9.18 の作業中に見つかった)。
  *
  * ★実際に起きた: `defsOfText` が拾うのは function と const / let だけで、**class が定義にならない**。
