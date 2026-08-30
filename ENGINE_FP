@@ -1,11 +1,11 @@
-9.61
+9.62
 METHOD.md 1ke4tnf-3589
 PROTOCOL.json aajo32-354
 README.md 1hdlq2t-7903
 RULES.md 1r0bq4s-10311
 SPEC.md 3ovt39-8098
 audit.md 78qkl6-2162
-check.mjs 1osh3fp-34131
+check.mjs t5mch6-34901
 githooks/pre-commit zijic4-1499
 hooks/clock.js 68yad4-2755
 hooks/codemap.js 2csawn-10496
@@ -17,7 +17,7 @@ hunch.md ukokyc-2956
 index.mjs xos40e-6741
 install.md 2i6pro-4191
 install.mjs 1ep6z78-25276
-neighbors.mjs 10wgxd-43267
+neighbors.mjs 1xxdkbd-43593
 package.json zx7jrx-416
 pull.mjs 1qbq7v3-24084
 selfcheck.mjs g2j47m-103472
