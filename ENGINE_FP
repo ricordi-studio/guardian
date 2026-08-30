@@ -7,7 +7,7 @@ audit.md 78qkl6-2162
 check.mjs 16wqv80-27539
 githooks/pre-commit zijic4-1499
 hooks/clock.js 68yad4-2755
-hooks/codemap.js 69kfkm-8894
+hooks/codemap.js 9lf49b-8904
 hooks/lib-root.js zlyc3l-1226
 hooks/no-fixed-names.js lm54ue-2920
 hooks/no-reflex.js nkm27-4799
