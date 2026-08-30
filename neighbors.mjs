@@ -65,7 +65,7 @@ import { spawnSync } from 'node:child_process';
  *   selfcheck の B11 が、SPEC.md の表と**この出力**を突き合わせる(44条の双子)。
  * ★穴として書く: これが証明するのは「その口を受け付ける」までで、
  *   **その口が仕事をする**ことではない。そこは各口の検査の仕事。 */
-const 知っている口 = ['--口一覧', '--list', '--gate', '--sweep', '--定義一覧', '--root', '--base', '--escaped'];
+const 知っている口 = ['--口一覧', '--list', '--gate', '--sweep', '--定義一覧', '--跨ぐ記号', '--root', '--base', '--escaped'];
 const 値を取る口 = { '--root': 1, '--base': 1, '--escaped': 2 };
 const 残りを全部取る口 = [];
 /* ★順番: **未知の口の走査が先、`--口一覧` は後**(2026-08-31、配布先の実測)。
@@ -129,6 +129,7 @@ const escArg = argv.indexOf('--escaped');
 const ESCAPED = escArg >= 0 ? [argv[escArg + 1], argv[escArg + 2]] : null;
 const SWEEP = argv.includes('--sweep');
 const 定義一覧 = argv.includes('--定義一覧');
+const 跨ぐ記号 = argv.includes('--跨ぐ記号');
 
 const read = (p) => { try { return fs.readFileSync(path.join(ROOT, p), 'utf8'); } catch (_) { return ''; } };
 /* ★失敗を空文字と区別する(2026-08-30、違和感の掘り出しで見つかった)。
@@ -223,7 +224,7 @@ const diff = git('diff','-U0',range);
  *   実測: 新しく建てた現場(seed の1コミットだけ)で --定義一覧 が出口2になり、
  *   A5 が「見ていません」になった ── 見られるはずのものが見られていなかった。
  * ★門そのものは残す(差分を使う口では、測れないことを黙って通さない)。 */
-const 差分が要らない = 定義一覧 || SWEEP;
+const 差分が要らない = 定義一覧 || 跨ぐ記号 || SWEEP;
 if (測れなかった.length && !差分が要らない) {
   不明で終わる('git が答えませんでした ── ' + 測れなかった.join(' / ')
     + '\n  (CI の浅いクローンなら fetch-depth を増やすか、--base で範囲を指定してください)');
@@ -460,6 +461,44 @@ const lineOfIndex = (f, idx) => {
  *   ★型かどうかは**ここでは分けない** ── 分けるなら defs に印を足すことになり、
  *     門の判定まで変わる。いまの利用者(地図との突き合わせ)は名前が要るだけである。
  * ★ネットに出ず、何も書き換えない ── 読んで出すだけ。 */
+/* ★【ファイルを跨ぐ記号】を出す(2026-08-31、第2の議題・配布先の実測から)。
+ *
+ * ★配布先の実測: 「参照が多い記号」で接点を探したら、**15件中6件が地図に無く、
+ *   そのうち5件は雑音**だった(span 190回 / mod 189回 / esc / top / WORKER ──
+ *   HTML を組み立てるローカル変数)。**回数は接点の大きさを測っていない。**
+ * ★残った1件(型 Env)だけ性質が違った ── **ファイルを跨いでいた**。
+ *   接点は「層をまたぐ所」なので、**跨ぐかどうか**なら機械が知っている。
+ * ★これは【検査ではなく物差し】である。赤にしない ── 測るための口。
+ *   「跨ぐ記号のうち地図に無いもの」が接点の入口になるかは、**まだ誰も測っていない**。
+ *   だから判定は作らず、**両方の現場が数えられる形**だけを置く。
+ * ★数え方: 定義された名前が、**定義したファイル以外にも語として現れるか**。
+ *   語の境界は門と同じ物差しを使う(WORDCHAR)── ここで別の物差しを使うと、
+ *   同じ塊の中で2つの「語」ができる(39条)。 */
+if (跨ぐ記号) {
+  const 出 = [];
+  for (const [home, cp] of corpus)
+    for (const d of cp.defs) {
+      if (IGNORE.has(d.name)) continue;
+      let 他所 = 0;
+      for (const [f, o] of corpus) {
+        if (f === home) continue;
+        let i = 0, 見た = false;
+        while ((i = o.text.indexOf(d.name, i)) !== -1) {
+          const 前 = o.text[i - 1], 後 = o.text[i + d.name.length];
+          i += d.name.length;
+          if (前 && WORDCHAR.test(前)) continue;
+          if (後 && WORDCHAR.test(後)) continue;
+          見た = true; break;
+        }
+        if (見た) 他所++;
+      }
+      if (他所) 出.push(d.name + String.fromCharCode(9) + (他所 + 1) + String.fromCharCode(9) + home);
+    }
+  出.sort();
+  if (出.length) process.stdout.write(出.join(String.fromCharCode(10)) + String.fromCharCode(10));
+  process.exit(0);        /* 0件は0行 */
+}
+
 if (定義一覧) {
   const 行 = [];
   for (const [f, c] of corpus)
