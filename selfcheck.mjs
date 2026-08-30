@@ -1427,6 +1427,46 @@ if (process.argv.includes("--why")) {
       const 出 = String(r.stdout || '') + String(r.stderr || '');
       if (/ReferenceError|SyntaxError|ERR_REQUIRE_ESM|Cannot use import statement/.test(出)) 落ちた.push(f);
     }
+    /* ★【起動する】と【仕事をする】は別(2026-08-30、配布先からの報告⑥)。
+     *   直す前の B8a は起動だけを見ていた。配布先で codemap が『起動はするが何も出さない』
+     *   状態になり、緑のまま通った ── main() の中の例外を catch が握り潰していた。
+     * ★最初の測り方は【健全なフックを赤にした】(同日、Stop の差戻で気づいた)。
+     *   この現場の地図からファイルを拾い、仮の現場のフックに食わせていた。
+     *   仮の現場には宣言も地図も無いので watch が既定(site|worker|gas|src|app|lib)に落ち、
+     *   hooks/ は見張りの外 ── **フックは設計どおり黙る**。それを「仕事をしていない」と読んでいた。
+     *   ★測る場所と食わせる物はセットである。片方だけ本物にすると、嘘の赤が出る。
+     * ★よって見本の現場に【宣言・地図・見張られるファイル】の3つを揃えてから食わせる。
+     *   合格の条件は本文まで出る強い一致(CODEMAP 該当項)── 「地図の外」や「項に載っている」だけの
+     *   弱い返事は、地図の本文を引けていなくても出せるので数えない。 */
+    const 中身が出ない = [];
+    try {
+      fs.writeFileSync(path.join(仮, 'guardian.config.json'),
+        JSON.stringify({ watch: ['src'], map: 'docs/CODEMAP.md' }, null, 2) + '\n');
+      fs.mkdirSync(path.join(仮, 'docs'), { recursive: true });
+      fs.writeFileSync(path.join(仮, 'docs', 'CODEMAP.md'),
+        '# 地図\n\n## 買い物かごの税\n\n- `src/cart.js` が `TAX_RATE` を掛ける\n');
+      fs.mkdirSync(path.join(仮, 'src'), { recursive: true });
+      fs.writeFileSync(path.join(仮, 'src', 'cart.js'), 'const TAX_RATE = 0.1;\n');
+
+      const 入力 = JSON.stringify({
+        tool_name: 'Edit',
+        tool_input: { file_path: path.join(仮, 'src', 'cart.js'), new_string: 'const TAX_RATE = 0.08;' },
+      });
+      const r = spawnSync(process.execPath, [path.join(仮, 'guardian', 'hooks', 'codemap.js')],
+        { input: 入力, encoding: 'utf8', windowsHide: true });
+      const 出 = String(r.stdout || '');
+      /* ★落ちたことを言う返事も additionalContext を持つ ── それを合格に数えない */
+      if (/このフックは落ちました/.test(出)) 中身が出ない.push('codemap.js(見本の現場で落ちている)');
+      else if (!/CODEMAP 該当項/.test(出)) 中身が出ない.push('codemap.js(地図に載せた src/cart.js を食わせても該当項の本文を出さない)');
+      else ok.push('フックは起動するだけでなく仕事をする(見本の現場で地図の該当項を引けている)');
+    } catch (e) {
+      未測.push('フックが中身を出すかは見ていません(見本を建てられませんでした: '
+        + String(e && e.message).slice(0, 120) + ')');
+    }
+    if (中身が出ない.length) {
+      ng.push('★フックは【起動するが、仕事をしていません】: ' + 中身が出ない.join(', ')
+        + ' ── 起動と中身は別です。main() の中で落ちて握り潰されている疑い');
+    }
     if (落ちた.length) {
       ng.push('★フックが【その現場では起動しません】: ' + 落ちた.join(', ')
         + ' ── 配布先の package.json に "type": "module" が在ると .js が ESM 扱いになります。'

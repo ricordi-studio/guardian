@@ -38,7 +38,22 @@ const MAX_BODY = 1800;    // 1項あたりの本文の上限文字数
 
 let raw = '';
 process.stdin.on('data', (d) => { raw += d; });
-process.stdin.on('end', () => { try { main(); } catch (_) { /* 壊れても開発は止めない */ } });
+/* ★握り潰したことは【言う】(2026-08-30、配布先からの報告⑥)。
+ *   直す前は `catch (_)` で完全に無音だった。配布先で「起動はするが何も出さない」が起き、
+ *   原因が main() の中の例外なのか、そもそも該当が無いのかを**外から区別できなかった**。
+ * ★開発は止めない(44条)。だが**黙るのと、黙って死ぬのは違う**。
+ *   何も出していないときだけ、落ちた事実を1行返す ── これで『無音=該当なし』の誤読が消える。 */
+process.stdin.on('end', () => {
+  try { main(); } catch (e) {
+    if (!出した) {
+      try {
+        emit('CODEMAP: このフックは落ちました(' + String(e && e.message).slice(0, 200) + ')。'
+          + '地図は差し込めていません ── **無音ではなく、失敗です**。'
+          + 'node ' + __filename.split(/[\\/]/).slice(-2).join('/') + ' に入力を流すと再現できます');
+      } catch (_) { /* 返し方まで壊れているときは、これ以上できることが無い */ }
+    }
+  }
+});
 
 /* PreToolUse の返し方(2026-08-10 公式ドキュメントで確認済み):
  *   hookSpecificOutput.permissionDecision = 'allow' | 'deny' | 'ask' | 'defer'
@@ -53,7 +68,9 @@ process.stdin.on('end', () => { try { main(); } catch (_) { /* 壊れても開�
  * 'defer' を明示していたが、この値を返すと Write/Edit が内部エラーで落ち、
  * 【書き込みが起きていないのにモデル側にはエラーだけが返る】状態になっていた
  * (gas/ 配下への書き込みが3回連続で消えて発覚。省略=通常の許可フローが正)。 */
+let 出した = false;
 function emit(msg, decision, reason) {
+  出した = true;
   const o = { hookEventName: 'PreToolUse' };
   if (decision && decision !== 'defer') o.permissionDecision = decision;
   if (msg) o.additionalContext = msg;
