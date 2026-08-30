@@ -84,10 +84,34 @@ function uniq(a) { return Array.from(new Set(a)); }
  * 単純な部分一致だと、地図にある `warn` が編集文の "warning" に誤ヒットして
  * 無関係な項が引かれる ── 誤ヒットは慣れを作るので、素の識別子は語境界で照合する。
  * スラッシュや引用符を含む語(APIルートや `op:'invite'` の形)は境界が定義できないので部分一致のまま。 */
+/* ★語境界を自前で持つ(2026-08-31、配布先の実測)。
+ *
+ *   直す前は `\b` と `^\w+$` を使っていた。**どちらも ASCII の物差し**である。
+ *   `名札` のような日本語の記号名は `\w` に入らないので、
+ *     ・`^\w+$` に落ちて部分一致へ流れる
+ *     ・`\b名札\b` は前後に境界が成立せず **常に false**
+ *   実測(配布先): 同じファイルで触る記号だけ変えると
+ *     `sbUser` → 強い一致・該当項の本文が出る
+ *     `名札`   → 強い一致ゼロ・**項目名が16個並ぶだけ**
+ *   ★症状が「黙る」ではなく「**鳴りすぎる**」ところが悪い。
+ *     無音は壊れていると分かるが、**鳴りすぎは効いていると誤解させる**
+ *     (このファイル自身が「出しすぎは慣れを作る」と書いている、その状態)。
+ *
+ * ★前後が【文字・数字・_】でないことを見る。英語も日本語も同じ規則で通る。
+ *   実測: sbUser/名札/本文に乗っているか は当たり、warning・記名札・出席者一覧 は当たらない(7/7)。
+ * ★スラッシュや引用符を含む語(APIルート・`op:'invite'` の形)は境界が定義できないので部分一致のまま。 */
+const 境界 = /[\p{L}\p{N}_]/u;
 function touched(sym, text) {
   if (!text) return false;
-  if (/^\w+$/.test(sym)) return new RegExp('\\b' + sym + '\\b').test(text);
-  return text.includes(sym);
+  if (!境界.test(sym[0]) || !境界.test(sym[sym.length - 1])) return text.includes(sym);
+  let i = 0;
+  while ((i = text.indexOf(sym, i)) !== -1) {
+    const 前 = text[i - 1], 後 = text[i + sym.length];
+    i += sym.length;
+    if ((前 && 境界.test(前)) || (後 && 境界.test(後))) continue;
+    return true;
+  }
+  return false;
 }
 
 /* 引き金になれる記号か。

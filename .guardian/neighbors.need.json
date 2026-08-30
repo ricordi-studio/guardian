@@ -6,8 +6,24 @@
    "記号": "main",
    "場所": "hooks/codemap.js",
    "環": 1,
-   "根": "raw",
-   "きっかけ": "「raw」を呼んでいる"
+   "根": "uniq",
+   "きっかけ": "「uniq」を呼んでいる"
+  },
+  {
+   "key": "hooks/codemap.js::parseMap",
+   "記号": "parseMap",
+   "場所": "hooks/codemap.js",
+   "環": 1,
+   "根": "uniq",
+   "きっかけ": "「uniq」を呼んでいる"
+  },
+  {
+   "key": "hooks/codemap.js::raw",
+   "記号": "raw",
+   "場所": "hooks/codemap.js",
+   "環": 2,
+   "根": "uniq",
+   "きっかけ": "「main」を呼んでいる"
   }
  ]
 }

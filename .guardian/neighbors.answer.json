@@ -3,8 +3,18 @@
  "answers": {
   "hooks/codemap.js::main": {
    "判定": "影響なし",
-   "理由": "9.30 の直しは、codemap フックの catch が落ちた事実を1行返すようにしたのと、selfcheck B8a が中身まで見るようにした2つ。この記号の中身も呼ばれ方も変えていない",
-   "印": "7ewnwt-1336"
+   "理由": "9.31 は hooks/codemap.js の touched() の語境界を ASCII の \b から p{L}/p{N} の自前判定に替えただけ。この記号の中身も呼ばれ方も変えていない",
+   "印": "fvjntg-835"
+  },
+  "hooks/codemap.js::parseMap": {
+   "判定": "影響なし",
+   "理由": "9.31 は hooks/codemap.js の touched() の語境界を ASCII の \b から p{L}/p{N} の自前判定に替えただけ。この記号の中身も呼ばれ方も変えていない",
+   "印": "fvjntg-835"
+  },
+  "hooks/codemap.js::raw": {
+   "判定": "影響なし",
+   "理由": "9.31 は hooks/codemap.js の touched() の語境界を ASCII の \b から p{L}/p{N} の自前判定に替えただけ。この記号の中身も呼ばれ方も変えていない",
+   "印": "fvjntg-835"
   }
  }
 }
