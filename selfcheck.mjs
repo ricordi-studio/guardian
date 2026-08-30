@@ -940,6 +940,20 @@ if (process.argv.includes("--why")) {
     /* ★「対策4層」と書いたまま5層になっていた(2026-08-22 実測)。
      * 層は増えるものなので、書いた数は必ず腐る ── 数えて突き合わせる。 */
     層: [...kit('METHOD.md').matchAll(/^### 第\d+層/gm)].length,
+    /* ★数えられる部品を増やす(2026-08-30、配布先からの報告③)。
+     *   どれも【1箇所から機械が数えられる】ものだけ ── 数えられないものは網に入れない。 */
+    要件: [...kit('SPEC.md').matchAll(/^\|\s*R\d+\s*\|/gm)].length,
+    フック: (() => {
+      /* install.mjs が実際に登録する本数(want の行数)。分類表と同じく、素直に切り出す */
+      const src = kit('install.mjs');
+      const h = src.indexOf('const want = [');
+      if (h < 0) return 0;
+      return [...src.slice(h, src.indexOf('];', h)).matchAll(/^\s*\['/gm)].length;
+    })(),
+    証拠: (() => {
+      try { const { 宣言 } = 宣言を読む(); return Array.isArray(宣言?.evidence) ? 宣言.evidence.length : 0; }
+      catch (_) { return 0; }
+    })(),
   };
   const DOCS = ['METHOD.md', 'README.md', 'RULES.md', 'WHY.md', 'audit.md', 'install.md'];
   const OUT = ['CLAUDE.md', 'STATUS.md', 'docs/CODEMAP.md'];                       // 塊の外だが、同じ数を書いている所
@@ -980,11 +994,26 @@ if (process.argv.includes("--why")) {
     if (!text) return;
     text.split('\n').forEach((line, i2) => {
       if (/guardian:ok/.test(line)) return;
+      /* ★網は【数えられる部品】に広げる(2026-08-30、配布先からの報告③)。
+       *
+       *   報告者の現場では、地図と STATUS の数が**6件**腐っていた。
+       *   その提案は「全 が付かない数は全部『照合していない』と言う」だったが、
+       *   **こちらで試したら 13箇所鳴って、13箇所とも騒音だった**
+       *   (「1本も入っていない」「39条」= 規則番号への参照、など)。
+       *   索引には「いまの主張」と「あのとき測った記録」が同居するので、**数の有無では割れない**。
+       * ★割れるのは【名詞】である ── 腐った6件は全部、この塊の**数えられる部品**を指していた:
+       *   証拠 / 要件(R番号) / フックの本数。だから名詞ごとに実数と突き合わせる。
+       * ★数えられないものは網に入れない(誤検出1件で検査ごと外される・配る約束の5)。 */
       const 対 = [
         [/事故\s*(\d+)\s*件/g, real.WHY, '事故の件数'],
         [/作法\s*(\d+)\s*条/g, real.RULES, '作法の条数'],
         [/規律\s*(\d+)\s*条/g, real.RULES, '規律の条数'],
         [/自己検査\s*(\d+)\s*件/g, null, '自己検査の件数'],
+        [/証拠\s*(\d+)\s*件/g, real.証拠, '合否が回す証拠の件数'],
+        [/要件\s*(\d+)\s*件/g, real.要件, '要件(R番号)の件数'],
+        [/フック\s*(\d+)\s*本/g, real.フック, 'install が登録するフックの本数'],
+        [/(\d+)\s*本(?:を)?登録/g, real.フック, 'install が登録するフックの本数'],
+        [/R1\s*[〜~-]\s*R?(\d+)/g, real.要件, '要件(R番号)の最後の番号'],
       ];
       for (const [re, 実, 名] of 対) {
         for (const m of line.matchAll(re)) {
@@ -996,12 +1025,34 @@ if (process.argv.includes("--why")) {
       }
     });
   };
-  for (const d of DOCS) 裸(d, kit(d));
+  for (const d of DOCS) { 裸(d, kit(d)); look(d, kit(d)); }
 
-  for (const d of DOCS) look(d, kit(d));
-  for (const d of OUT) { try { look(d, fs.readFileSync(path.join(HERE, '..', '..', d), 'utf8')); } catch (_) { /* 無ければ見ない */ } }
+  /* ★塊の外の3文書を【本当に読む】(2026-08-30、配布先からの報告③)。
+   *
+   *   直す前の経路は `HERE/../../<文書>` ── **1つ深く、プロジェクトの外**を指していた。
+   *     配布先: <proj>/guardian → HERE/../.. = <proj> の親
+   *     正本  : リポジトリそのもの → デスクトップの親
+   *   しかも `catch (_) { 無ければ見ない }` で握り潰していたので、
+   *   **この3文書は一度も読まれていない**のに、検査は緑を返し続けた。
+   *   実測(配布先の報告): 地図と STATUS に**腐った数が6件**在ったのに、1件も鳴らなかった。
+   *   ★報告者は「全 が付かない数は照合されない」と読んだ。それも本当だが、
+   *     **その手前で、文書そのものを開いていなかった。**
+   * ★根は ROOT_DIR を使わず、HERE から段数を数えたこと ── 段数は置き方で変わる。
+   * ★読めなかったものは**名前を出す**(無音を「見た」と読ませない)。 */
+  const 読めなかった = [];
+  for (const d of OUT) {
+    let t = null;
+    try { t = fs.readFileSync(path.join(ROOT_DIR, d), 'utf8'); } catch (_) {}
+    if (t === null) { 読めなかった.push(d); continue; }
+    look(d, t); 裸(d, t);
+  }
+  if (読めなかった.length) {
+    未測.push('この現場の文書のうち ' + 読めなかった.join(' / ') + ' は**在りません**(数の照合をしていません)');
+  }
+
   if (bad.length) ng.push('文書が書いている件数が実数と合っていません:\n      ' + bad.join('\n      '));
-  else ok.push(`文書の件数は実数と一致(RULES ${real.RULES}条 / WHY ${real.WHY}件)`);
+  else ok.push(`文書の件数は実数と一致(RULES ${real.RULES}条 / WHY ${real.WHY}件`
+    + ` / この現場の文書 ${OUT.length - 読めなかった.length}/${OUT.length} 件も見ました)`);
 }
 
 /* B3b. 事故が【どの層まで届いたか】── 文章で止まっている件数を数える

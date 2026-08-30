@@ -2,84 +2,68 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "pull.mjs::旧版",
-   "記号": "旧版",
-   "場所": "pull.mjs",
+   "key": "neighbors.mjs::callersOf",
+   "記号": "callersOf",
+   "場所": "neighbors.mjs",
    "環": 1,
-   "根": "読む",
-   "きっかけ": "「読む」を呼んでいる"
+   "根": "lineOfIndex",
+   "きっかけ": "「lineOfIndex」を呼んでいる"
   },
   {
-   "key": "pull.mjs::消える",
-   "記号": "消える",
-   "場所": "pull.mjs",
+   "key": "neighbors.mjs::frontier",
+   "記号": "frontier",
+   "場所": "neighbors.mjs",
    "環": 1,
-   "根": "配るもの",
-   "きっかけ": "「配るもの」を呼んでいる"
+   "根": "isExported",
+   "きっかけ": "「isExported」を呼んでいる"
   },
   {
-   "key": "pull.mjs::食い違い",
-   "記号": "食い違い",
-   "場所": "pull.mjs",
+   "key": "neighbors.mjs::walk",
+   "記号": "walk",
+   "場所": "neighbors.mjs",
    "環": 1,
-   "根": "走る",
-   "きっかけ": "「走る」を呼んでいる"
+   "根": "inSkipped",
+   "きっかけ": "「inSkipped」を呼んでいる"
   },
   {
-   "key": "pull.mjs::新しい",
-   "記号": "新しい",
-   "場所": "pull.mjs",
+   "key": "neighbors.mjs::外した件を言う",
+   "記号": "外した件を言う",
+   "場所": "neighbors.mjs",
    "環": 1,
-   "根": "一覧",
-   "きっかけ": "「一覧」を呼んでいる"
+   "根": "inSkipped",
+   "きっかけ": "「inSkipped」を呼んでいる"
   },
   {
-   "key": "pull.mjs::新版",
-   "記号": "新版",
-   "場所": "pull.mjs",
+   "key": "neighbors.mjs::欄名",
+   "記号": "欄名",
+   "場所": "neighbors.mjs",
    "環": 1,
-   "根": "配るもの",
-   "きっかけ": "「配るもの」を呼んでいる"
+   "根": "lineOfIndex",
+   "きっかけ": "「lineOfIndex」を呼んでいる"
   },
   {
-   "key": "pull.mjs::全消える",
-   "記号": "全消える",
-   "場所": "pull.mjs",
-   "環": 1,
-   "根": "仮",
-   "きっかけ": "「仮」を呼んでいる"
+   "key": "neighbors.mjs::corpusFiles",
+   "記号": "corpusFiles",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "inSkipped",
+   "きっかけ": "「walk」を呼んでいる"
   },
   {
-   "key": "pull.mjs::中の消える",
-   "記号": "中の消える",
-   "場所": "pull.mjs",
-   "環": 1,
-   "根": "配るもの",
-   "きっかけ": "「配るもの」を呼んでいる"
+   "key": "neighbors.mjs::一覧",
+   "記号": "一覧",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "inSkipped",
+   "きっかけ": "「外した件を言う」を呼んでいる"
   },
   {
-   "key": "pull.mjs::変わる",
-   "記号": "変わる",
-   "場所": "pull.mjs",
-   "環": 1,
-   "根": "仮",
-   "きっかけ": "「仮」を呼んでいる"
-  },
-  {
-   "key": "selfcheck.mjs::whyLoose",
-   "記号": "whyLoose",
-   "場所": "selfcheck.mjs",
-   "環": 1,
-   "根": "FP_SKIP",
-   "きっかけ": "「FP_SKIP」を呼んでいる"
-  },
-  {
-   "key": "selfcheck.mjs::個人情報の見張り",
-   "記号": "個人情報の見張り",
-   "場所": "selfcheck.mjs",
-   "環": 1,
-   "根": "ENGINE_FILES",
-   "きっかけ": "「ENGINE_FILES」を呼んでいる"
+   "key": "neighbors.mjs::報告",
+   "記号": "報告",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "inSkipped",
+   "きっかけ": "「外した件を言う」を呼んでいる"
   }
  ]
 }

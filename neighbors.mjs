@@ -132,6 +132,17 @@ const IGNORE = new Set(N.ignore_symbols || []);
  *   (README の約束6)。**どこを外すかは現場ごとに違うので、宣言が持つ。** */
 const SKIP_DIRS = (N.skip_dirs || []).map((s) => String(s).replace(/^\.\//, '').replace(/\/+$/, ''));
 const inSkipped = (p) => SKIP_DIRS.some((d) => p === d || p.startsWith(d + '/'));
+/* ★【全ファイルが同じ大域スコープを共有する現場】を宣言できるようにする
+ *   (2026-08-30、配布先からの報告③)。
+ *
+ *   報告者の実測: `--sweep` の死にコード候補に、実際は呼ばれているものが2件出た。
+ *     ・HTML から呼ぶ記号(theme.js)… **HTML の中の <script> から呼ぶ**古典スクリプト(export が無い)
+ *     ・GAS の記号(app.gs → main.gs)… **GAS は全ファイルが同じ大域スコープ**
+ *   どちらも「export の橋が無いから届かない」という前提が、その言語では成り立たない。
+ * ★形が決まっているので機械で拾える ── ただし**どの拡張子がそうかは現場ごとに違う**ので、宣言が持つ。
+ *   書かなければ何も変わらない(押し付けない)。 */
+const 大域スコープ = new RegExp('\\.(' + (N.global_scope || []).join('|') + ')$');
+const 大域か = (f) => (N.global_scope || []).length > 0 && 大域スコープ.test(f);
 
 /* ---------- 差分を読む(汚れた作業木があればそれ、無ければ直前のコミット) ---------- */
 const dirty = git('status','--porcelain').trim();
@@ -397,7 +408,9 @@ if (SWEEP) {
       見た.add(d.name);
       if (定義数.get(f + '::' + d.name) > 1) continue;
       if (entryRes.some((re) => re.test(d.name))) continue;   // 実行環境が名前で呼ぶ入口(doPost等)は死ではない
-      const refs = countRefs(d.name, f, d.exp) - 1;           // 定義行の1回ぶんを引く
+      /* ★大域スコープの現場では export が無くても届く(上の 大域か と同じ理由)。
+         *   ここを直さないと、死にコード候補の側だけ古い前提のまま残る。 */
+        const refs = countRefs(d.name, f, d.exp || 大域か(f)) - 1;           // 定義行の1回ぶんを引く
       参照.push({ name: d.name, file: f, refs });
       /* 同名が複数ファイルにあると参照の帰属が曖昧になるので、死の疑いは単独定義だけに言う */
       if (refs <= 0 && 同名.get(d.name).size === 1) 死候補.push({ name: d.name, file: f });
@@ -413,9 +426,16 @@ if (SWEEP) {
    *   4文字は「sh / argv のような道具の作法を落とす」ための値だが、日本語では4文字は長い語で、
    *   `走る` `読む` `歩く` のような写経は**全部この網を抜ける**。日本語は2文字から見る。 */
   const 名前が十分長い = (n) => n.length >= 4 || (日本語を含む(n) && n.length >= 2);
+  /* ★写経は【関数が2箇所以上】であって、関数1つと変数1つではない(2026-08-30、配布先からの報告③)。
+   *   直す前は「どれか1つが関数なら」だったので、
+   *   `function 名札()` と `let 名札 = null`(DOM 要素の入れ物)が**写経の疑い**に並んだ。
+   *   報告者の言葉:「**変数と関数を同じ列で数えている**」── そのとおりだった。
+   *   ★誤検出1件が検査全体の信用を殺す(配る約束の5)。数えるのは、写された側の形が揃うときだけ。 */
+  const 関数として定義した数 = (name, files) =>
+    [...files].filter((f) => corpus.get(f).defs.some((d) => d.name === name && d.fn)).length;
   const 写経疑い = [...同名.entries()]
     .filter(([name, files]) => files.size >= 2 && 名前が十分長い(name)
-      && [...files].some((f) => corpus.get(f).defs.some((d) => d.name === name && d.fn)))
+      && 関数として定義した数(name, files) >= 2)
     .sort((a, b) => b[1].size - a[1].size);
   console.log('■ 同名の関数が複数ファイルに(写経の疑い ' + 写経疑い.length + '件)── 観点3(重複)の材料');
   for (const [name, files] of 写経疑い.slice(0, 30))
@@ -591,6 +611,8 @@ function callersOf(name, homeFiles, exported, cap = MAX_CALLERS) {
 }
 const isExported = (name, files) => {
   for (const f of files) {
+    /* 大域スコープの現場では、export が無くても他のファイルから届く */
+    if (大域か(f)) return true;
     const c = corpus.get(f);
     if (c && c.defs.some((d) => d.name === name && d.exp)) return true;
   }
