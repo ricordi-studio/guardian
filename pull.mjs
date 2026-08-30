@@ -164,18 +164,34 @@ if (c.status !== 0) {
  * ★SHA なら**その中身そのもの**を指せる。配布先の「緑」が、どの中身の緑かが決まる。
  *   ★これは未 push を**検出**する仕組みではない ── 未 push は SHA を発行できないので、
  *     そもそも測定を依頼できない、という形で入口が閉まる(提案者の言葉)。
- * ★.git を消す前に読む(消したあとでは分からない)。読めなければ書かない ── 嘘の受領証は作らない。 */
-{
+ * ★.git を消す前に【読む】(消したあとでは分からない)。だが**書くのは取り直しが全部済んでから**
+ *   (2026-08-31、CodeX の指摘)── 途中で失敗した回の SHA を残すと、
+ *   **混在した状態を「正しく取得した」と名乗る**ことになる。
+ * ★読めなければ書かない ── 嘘の受領証は作らない。
+ * ★これだけでは「いまの中身がその SHA である」証明にはならない(取ったあとに壊れうる)。
+ *   そこは `selfcheck --receipt` が、合否と同じ回で digest ごと返す。 */
+const 取得SHA = (() => {
   const r = 走る('git', ['-C', 仮, 'rev-parse', 'HEAD']);
-  const sha = r.status === 0 ? String(r.stdout || '').trim() : '';
-  if (/^[0-9a-f]{40}$/.test(sha)) {
-    try {
-      const 置き場 = path.join(HERE, '.guardian');
-      fs.mkdirSync(置き場, { recursive: true });
-      fs.writeFileSync(path.join(置き場, 'pulled.json'),
-        JSON.stringify({ sha, 正本, at: new Date().toISOString() }, null, 1) + '\n');
-    } catch (_) { /* 受領証が書けなくても取り直しは止めない */ }
-  }
+  const v = r.status === 0 ? String(r.stdout || '').trim() : '';
+  return /^[0-9a-f]{40}$/.test(v) ? v : null;
+})();
+
+/* ★受領証は【中身が正本と一致したと言い切れる時だけ】書く(2026-08-31、CodeX の指摘)。
+ *   途中で落ちた回の SHA を残すと、混ざった中身を「正しく取得した」と名乗ることになる。
+ *   だから呼ぶのは ── ④の置き換えが済んだ後 / そもそも差が無かった時 ── の2箇所だけ。
+ *   一時ファイル → rename(原子的)。壊れかけの受領証が残らない。
+ * ★これだけでは「いまの中身がその SHA である」証明にはならない(取ったあと人が壊しうる)。
+ *   そこは selfcheck --receipt が、合否と現在の指紋を同じ1回で返して閉じる。 */
+function 受領証を書く() {
+  if (!取得SHA) return;
+  try {
+    const 置き場 = path.join(HERE, '.guardian');
+    fs.mkdirSync(置き場, { recursive: true });
+    const 先 = path.join(置き場, 'pulled.json');
+    fs.writeFileSync(先 + '.tmp',
+      JSON.stringify({ sha: 取得SHA, 正本, at: new Date().toISOString() }, null, 1) + String.fromCharCode(10));
+    fs.renameSync(先 + '.tmp', 先);
+  } catch (_) { /* 受領証が書けなくても取り直しは止めない */ }
 }
 try { fs.rmSync(path.join(仮, '.git'), { recursive: true, force: true }); } catch (_) {}
 
@@ -344,14 +360,14 @@ console.log('正本: ' + 正本);
 console.log('版: ' + 旧版 + ' → ' + 新版);
 /* ★取った中身そのものを1行出す(2026-08-31、配布先の提案)。
  *   版だけだと『同じ版で中身が違う』ときに配布先が何も言えない。 */
-{ try { const r = JSON.parse(fs.readFileSync(path.join(HERE, '.guardian', 'pulled.json'), 'utf8'));
-    if (r && r.sha) console.log('取得元: ' + r.sha); } catch (_) {} }
+if (取得SHA) console.log('取得元: ' + 取得SHA);
 console.log('変わるもの: ' + (変わる.length ? 変わる.join(', ') : 'なし')
   + (増える.length ? ' / 増えるもの: ' + 増える.join(', ') : ''));
 
 if (見るだけ) { fs.rmSync(仮, { recursive: true, force: true }); process.exit(0); }
 if (!変わる.length && !増える.length && !全消える.length) {
   fs.rmSync(仮, { recursive: true, force: true });
+  受領証を書く();
   console.log('✓ すでに正本と同じです(取り直す必要はありません)');
   process.exit(0);
 }
@@ -366,5 +382,6 @@ for (const 名 of 全消える) {
   try { fs.rmSync(path.join(HERE, 名), { recursive: true, force: true }); } catch (_) {}
 }
 fs.rmSync(仮, { recursive: true, force: true });
+受領証を書く();
 console.log('✓ 取り直しました(' + 新しい.length + 'ファイル' + (全消える.length ? ' / 撤去 ' + 全消える.length + '件' : '') + ')');
 console.log('  次にやること: node guardian/install.mjs   ← 冪等。宣言とフックを新しい形に揃えます');

@@ -93,6 +93,8 @@ const ng = [];
 /* ★この現場の索引(塊の外)。**数の照合と個人情報の見張りが、同じ一覧を見る**(39条)。
  *   2026-08-31: 見張りが塊しか歩いておらず、名前が乗るのはむしろこちらだと配布先が実測した。 */
 const OUT = ['CLAUDE.md', 'STATUS.md', 'docs/CODEMAP.md'];
+/* いまの中身の指紋(受領証が使う。B1b が埋める) */
+const 現在の指紋 = {};
 const 個人情報の見張り = { 状態: "見張っていない", 見つかった: [], 語数: 0 };
 /* ★正本のアドレスは【1箇所】から読む(2026-08-30、違和感の掘り出しで見つかった)。
  *
@@ -558,6 +560,10 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
   };
   const いま = {};
   for (const f of 対象) いま[f] = 指紋(読む(f));
+  /* ★受領証のために、いまの中身の指紋を外へ出す(2026-08-31、CodeX の指摘)。
+   *   「どの SHA から取ったか」だけでは、取ったあとに1本壊れても同じ値を返し続ける。
+   *   だから【いまの中身そのもの】の digest を、検査の結果と**同じ回で**出せるようにする。 */
+  for (const f of 対象) 現在の指紋[f] = いま[f];
 
   const 台帳 = path.join(HERE, "ENGINE_FP");
   const 記録 = {};
@@ -1727,6 +1733,27 @@ if (process.argv.includes('--tighten')) {
  *   未測は【止めない】が【緑に混ぜない】── verdict.mjs の「不明」と同じ扱い。
  *   ★出口は 0 のまま(未測は失敗ではない)。合否の側で拾いたい現場は、
  *     guardian.config.json の evidence に `"unknownIf": "未測 [1-9]"` を足すと【不明】になる。 */
+/* ★【受領証】── 取得元と、いまの中身と、合否を【同じ回で】返す(2026-08-31、CodeX の指摘)。
+ *
+ *   `--sha` が言えるのは『最後に pull が記録した SHA』までで、
+ *   **『いまの中身をその SHA として測った』ではない**。取ったあとに1本壊れても同じ値を返す。
+ *   SHA の読み取りと緑判定を**別のコマンド**でやると、別の時点の結果を結び付けられてしまう。
+ * ★だから1回で全部返す: 取得元 / いまの中身の digest / 合否。
+ *   ★赤や未測のときは【成功の受領証を出さない】── verdict を明記し、出口も 0 にしない。 */
+if (process.argv.includes('--receipt')) {
+  let 取得元 = null;
+  try { 取得元 = JSON.parse(fs.readFileSync(path.join(HERE, '.guardian', 'pulled.json'), 'utf8')).sha || null; } catch (_) {}
+  const 並び = Object.keys(現在の指紋).sort();
+  let h = 2166136261;
+  for (const f of 並び) { const t = f + '=' + 現在の指紋[f] + ';';
+    for (let k = 0; k < t.length; k++) { h ^= t.charCodeAt(k); h = Math.imul(h, 16777619); } }
+  const verdict = ng.length ? '外れ' : (未測.length ? '未測あり' : '通過');
+  process.stdout.write(JSON.stringify({
+    sourceSha: 取得元, verdict, currentDigest: (h >>> 0).toString(36) + '-' + 並び.length,
+    ng: ng.length, 未測: 未測.length, ok: ok.length,
+  }, null, 1) + NL2);
+  process.exit(ng.length ? 1 : (未測.length ? 2 : 0));
+}
 for (const s of ok) console.log('  ✓ ' + s);
 for (const s of 未測) console.log('  ? 未測 ' + s);
 if (ng.length) {

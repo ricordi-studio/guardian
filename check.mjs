@@ -106,11 +106,17 @@ if (!map) {
   {
     const bases = ['', ...(cfg.pathBases || [])];
     const miss = [];
+    const 生成物 = [];
     const mapBody2 = map.replace(/```[\s\S]*?```/g, '');
     /* 拡張子は白名簿。`chat.manner` のような【プロパティの道筋】をファイルと誤解しないため */
     const EXT = /\.(ts|tsx|js|mjs|cjs|html|htm|gs|json|jsonc|sql|md|css|webmanifest|yml|yaml|png|webp|jpg|svg|mp4)$/;
     for (const m of mapBody2.matchAll(/`([A-Za-z0-9_./-]+\/[A-Za-z0-9_.-]+|[A-Za-z0-9_-]+\.[a-z0-9]{2,12})`/g)) {
       if (!EXT.test(m[1])) continue;
+      /* ★`.guardian/` の下は【道具が走ると生まれる物】であって、原本ではない。
+       *   受領証(pulled.json)は取り直した現場にしか生まれず、正本には一生現れない。
+       *   在ることを求めると、正本が自分の地図で差し戻される(2026-08-31 に実際そうなった)。
+       * ★ただし黙って飛ばさない ── 何件飛ばしたかを下に出す(46条: 見えない例外は作らない)。 */
+      if (m[1].startsWith(String.fromCharCode(46) + "guardian/")) { 生成物.push(m[1]); continue; }
       const p = m[1];
       if (miss.includes(p)) continue;
       if (!bases.some((b) => fs.existsSync(path.join(ROOT, b, p)))) miss.push(p);
@@ -119,6 +125,7 @@ if (!map) {
       problems.push(`地図が名指しするファイルが在りません(${miss.length}件): ${miss.join(', ')}`);
       problems.push(`  → 撤去したなら ${MAP_PATH} からも消す(掟5)。置き場所を変えたなら地図も追従する。`);
     } else notes.push('地図が名指しするファイルは全て実在');
+    if (生成物.length) notes.push(`地図が名指す .guardian/ の ${生成物.length} 件は生成物なので実在を測っていません: ${生成物.join(', ')}`);
   }
 
   /* ---------- A3. 注釈が名指ししている記号は実在するか ----------
