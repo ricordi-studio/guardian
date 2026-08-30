@@ -2,68 +2,28 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "neighbors.mjs::callersOf",
-   "記号": "callersOf",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "lineOfIndex",
-   "きっかけ": "「lineOfIndex」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::frontier",
-   "記号": "frontier",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "isExported",
-   "きっかけ": "「isExported」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::walk",
-   "記号": "walk",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "inSkipped",
-   "きっかけ": "「inSkipped」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::外した件を言う",
-   "記号": "外した件を言う",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "inSkipped",
-   "きっかけ": "「inSkipped」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::欄名",
-   "記号": "欄名",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "lineOfIndex",
-   "きっかけ": "「lineOfIndex」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::corpusFiles",
-   "記号": "corpusFiles",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "inSkipped",
-   "きっかけ": "「walk」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::一覧",
+   "key": "pull.mjs::一覧",
    "記号": "一覧",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "inSkipped",
-   "きっかけ": "「外した件を言う」を呼んでいる"
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "現場のもの",
+   "きっかけ": "「現場のもの」を呼んでいる"
   },
   {
-   "key": "neighbors.mjs::報告",
-   "記号": "報告",
-   "場所": "neighbors.mjs",
+   "key": "pull.mjs::表を読む",
+   "記号": "表を読む",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "現場のもの",
+   "きっかけ": "「現場のもの」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::新しい",
+   "記号": "新しい",
+   "場所": "pull.mjs",
    "環": 2,
-   "根": "inSkipped",
-   "きっかけ": "「外した件を言う」を呼んでいる"
+   "根": "現場のもの",
+   "きっかけ": "「一覧」を呼んでいる"
   }
  ]
 }

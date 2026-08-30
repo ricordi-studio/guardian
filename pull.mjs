@@ -73,6 +73,8 @@ const 現場のもの = new Set([
    *   指紋(selfcheck)は改行を正規化して照合するので、配布先には要らない。
    *   むしろ配ると、他人のリポジトリの guardian/ 以下の扱いを黙って変えてしまう。 */
   '.gitattributes',
+  /* セッション間の会話(この現場だけの作業場)。配らない */
+  'talk', '.gitignore',
   '.git', '.github', 'node_modules',
 ]);
 
