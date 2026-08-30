@@ -43,14 +43,15 @@ const 正本 = 'https://github.com/ricordi-studio/guardian.git';
  *   届くのは『ここから先』だけである。それでも入れる理由は、口はこれからも増えるからである。 */
 {
   const 知っている口 = ['--口一覧', '--check', '--force', '--distributed', '--at'];
-  const 値を取る口 = ['--at'];
+  const 値を取る口 = { '--at': 1 };
+  const 残りを全部取る口 = [];
   const 渡されたもの = process.argv.slice(2);
   const 知らない = [];
   for (let i = 0; i < 渡されたもの.length; i++) {
     const v = 渡されたもの[i];
     if (!v.startsWith('--')) continue;             /* 口の値(SHA など)は飛ばす */
     if (!知っている口.includes(v)) { 知らない.push(v); continue; }
-    if (値を取る口.includes(v)) i++;               /* 次は値なので見ない */
+    i += (値を取る口[v] || 0);                    /* その口が取る数だけ飛ばす */
   }
   if (知らない.length) {
     let 版 = '?';
@@ -62,7 +63,14 @@ const 正本 = 'https://github.com/ricordi-studio/guardian.git';
     process.exit(1);
   }
   if (process.argv.includes('--口一覧')) {
-    process.stdout.write(知っている口.join(String.fromCharCode(10)) + String.fromCharCode(10));
+    /* ★口の名前と【いくつ値を取るか】を出す(2026-08-31、配布先の実測から)。
+     *   名前は先頭のままなので、名前だけ読む側は壊れない。
+     *   個数が在ると、検査の側が**叩き方を自分で組み立てられる** ──
+     *   0なら「次の未知の口は飲まないはず」、1なら「飲むはず」、* なら「全部飲むはず」。
+     *   ★これが無いと、検査は口の個数を**写経する**ことになる(39条)。 */
+    process.stdout.write(知っている口.map((口) => 口 + " "
+      + (残りを全部取る口.includes(口) ? "*" : String(値を取る口[口] || 0)))
+      .join(String.fromCharCode(10)) + String.fromCharCode(10));
     process.exit(0);
   }
 }

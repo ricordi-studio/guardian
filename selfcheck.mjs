@@ -62,7 +62,14 @@ const 残りを全部取る口 = [];
   }
 }
 if (process.argv.includes('--口一覧')) {
-  process.stdout.write(知っている口.join(String.fromCharCode(10)) + String.fromCharCode(10));
+  /* ★口の名前と【いくつ値を取るか】を出す(2026-08-31、配布先の実測から)。
+   *   名前は先頭のままなので、名前だけ読む側は壊れない。
+   *   個数が在ると、検査の側が**叩き方を自分で組み立てられる** ──
+   *   0なら「次の未知の口は飲まないはず」、1なら「飲むはず」、* なら「全部飲むはず」。
+   *   ★これが無いと、検査は口の個数を**写経する**ことになる(39条)。 */
+  process.stdout.write(知っている口.map((口) => 口 + " "
+    + (残りを全部取る口.includes(口) ? "*" : String(値を取る口[口] || 0)))
+    .join(String.fromCharCode(10)) + String.fromCharCode(10));
   process.exit(0);
 }
 
@@ -1909,7 +1916,30 @@ if (process.argv.includes("--why")) {
       const z = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧", "--この口は無い"],
         { encoding: "utf8", windowsHide: true, cwd: HERE });
       if (z.status !== 1) ずれ.push(t + ": 知らない口を拒みません(出口 " + z.status + ")");
-      const 実際 = new Set(String(r.stdout || "").split(NL2).map((x) => x.trim()).filter(Boolean));
+      /* 出力は「口 個数」の2列。名前だけを取り出す(個数は下の叩き方が使う) */
+      const 個数 = new Map();
+      for (const 行 of String(r.stdout || "").split(NL2)) {
+        const t = 行.trim(); if (!t) continue;
+        const [名, 数] = t.split(/\s+/);
+        個数.set(名, 数 === undefined ? "0" : 数);
+      }
+      const 実際 = new Set(個数.keys());
+      /* ★【値を何個飲むか】も測る(2026-08-31、配布先が手で叩いて出した6行をそのまま検査へ)。
+       *   叩き方は**個数の宣言から組み立てる** ── 検査の側に口の個数を写経しない(39条)。
+       *   値の位置には「未知の口に見えるもの」を置く ── 飲めば見えなくなり、飲み忘れれば見える。
+       *   ★期待が口ごとに逆になる: 0個の口は**出口1**(飲まないのが正しい)、
+       *     1個・2個・* の口は**出口0**(飲むのが正しい)。
+       *   ★本物の値(実在するパスや SHA)を渡さない ── 渡すとその道具が本当に走り出す。 */
+      for (const [名, 数] of 個数) {
+        if (名 === "--口一覧") continue;
+        const 餌 = 数 === "*" ? ["--餌1", "--餌2", "--餌3"]
+          : Array.from({ length: Math.max(1, Number(数) || 0) }, (_, n) => "--餌" + (n + 1));
+        const 期待 = (数 === "0") ? 1 : 0;   /* 飲まない口に未知を渡せば出口1 / 飲む口なら出口0 */
+        const w = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧", 名, ...餌],
+          { encoding: "utf8", windowsHide: true, cwd: HERE });
+        if (w.status !== 期待)
+          ずれ.push(t + ": " + 名 + " が値を " + 数 + " 個飲むと宣言していますが、振る舞いが違います(出口 " + w.status + " / 期待 " + 期待 + ")");
+      }
       const 書いてある = 宣言[t] || new Set();
       const 案内だけ = [...書いてある].filter((x) => !実際.has(x));
       const 実装だけ = [...実際].filter((x) => !書いてある.has(x));
