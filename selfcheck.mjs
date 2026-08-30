@@ -1148,6 +1148,60 @@ if (process.argv.includes("--why")) {
   }
 }
 
+/* B8c. 【門が、クラスで書かれた現場でも鳴るか】(2026-08-30、9.18 の作業中に見つかった)。
+ *
+ * ★実際に起きた: `defsOfText` が拾うのは function と const / let だけで、**class が定義にならない**。
+ *   クラスの中身は字下げされているので(行頭定義だけを上位の記号と数える)メソッドも拾えず、
+ *   **そのファイルは丸ごと持ち主なしになる。**
+ *   実測: `class Cart { total(){ … * (1 + tax) } }` から税の掛け算を落とす(本物の破壊)→
+ *   **「触れた記号: (器のコードに変更なし)」・近傍なし**。しかも何も言わない。
+ *   ★JS/TS の現場の多くはクラスで書かれている。**そこでは門が丸ごと盲目**だった。
+ *   この現場は関数と const だけなので、実測しないと一生出ない条件である。
+ * ★だから見本を建てて【実際に門を回す】。門が鳴らないことは、この塊では合格ではない。
+ * ★git が無い機械では測れない ── そのときは【未測】(緑にも赤にもしない)。 */
+{
+  const 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-class-'));
+  const g = (...a) => spawnSync('git', a, { cwd: 仮, encoding: 'utf8', windowsHide: true });
+  try {
+    fs.mkdirSync(path.join(仮, 'src'), { recursive: true });
+    const 書く = (p, s) => fs.writeFileSync(path.join(仮, p), s);
+    書く('src/tax.js', 'export const tax = 0.1;\n');
+    書く('src/cart.js', 'import { tax } from "./tax.js";\n\nexport class Cart {\n'
+      + '  #items = [];\n  add(i) { this.#items.push(i); }\n'
+      + '  total() { return this.#items.reduce((a, b) => a + b.price, 0) * (1 + tax); }\n}\n');
+    書く('src/checkout.js', 'import { Cart } from "./cart.js";\nexport class Checkout {\n'
+      + '  run(items) { const c = new Cart(); for (const i of items) c.add(i); return c.total(); }\n}\n');
+    書く('guardian.config.json', JSON.stringify({
+      neighbors: { rings: 2, code: ['src'], notes: [], ext: ['js'],
+        answer: '.guardian/a.json', need: '.guardian/n.json' } }, null, 1) + '\n');
+    if (g('init', '-q', '.').status !== 0) throw new Error('git init が失敗');
+    g('config', 'user.email', 'selfcheck@example.invalid');
+    g('config', 'user.name', 'selfcheck');
+    g('add', '-A');
+    if (g('commit', '-q', '-m', 'seed').status !== 0) throw new Error('git commit が失敗');
+    /* 本物の破壊: 税の掛け算を落とす(クラスのメソッドの中) */
+    書く('src/cart.js', fs.readFileSync(path.join(仮, 'src/cart.js'), 'utf8').replace(' * (1 + tax);', ';'));
+
+    const r = spawnSync(process.execPath, [path.join(HERE, 'neighbors.mjs'), '--list'],
+      { cwd: 仮, encoding: 'utf8', windowsHide: true });
+    const 出 = String(r.stdout || '') + String(r.stderr || '');
+    const 外れ = [];
+    if (!/触れた記号:[^\n]*\bCart\b/.test(出)) 外れ.push('クラス Cart を【触れた記号】と見なせていない');
+    if (!/\bCheckout\b/.test(出)) 外れ.push('Cart を使う Checkout が近傍に出ていない');
+    if (外れ.length) {
+      ng.push('門がクラスで書かれた現場で鳴りません: ' + 外れ.join(' / ')
+        + ' ── そこでは**門が丸ごと盲目**になります(出力: ' + 出.split('\n').slice(0, 3).join(' / ').slice(0, 200) + ')');
+    } else {
+      ok.push('門はクラスで書かれた現場でも鳴る(class の変更を捉え、それを使う側を近傍に出す)');
+    }
+  } catch (e) {
+    未測.push('門のクラス対応は見ていません(見本を建てられませんでした: '
+      + String(e && e.message).slice(0, 120) + ')── git が要ります');
+  } finally {
+    fs.rmSync(仮, { recursive: true, force: true });
+  }
+}
+
 /* B9. 運用の文脈が宣言されているか(2026-08-30、実験室での実測から)
  *   ★止めない。だが【見ていない】ことを黙らない ── B1c(個人情報の見張り)と同じ形。
  *

@@ -238,8 +238,24 @@ const isNote = (f) => inDirs(f, NOTE_DIRS) && /\.json$/.test(f);
 
 /* ---------- コードの全体(コーパス)を1回だけ読む ---------- */
 const IDENT = '[$A-Za-z0-9_\\u3040-\\u30FF\\u4E00-\\u9FFF]';
-const DEF_FN = new RegExp('^(?:export\\s+)?(?:async\\s+)?function\\s+(' + IDENT + '+)');
-const DEF_CONST = new RegExp('^(?:export\\s+)?(?:const|let)\\s+(' + IDENT + '+)\\s*[=:]');
+/* ★`class` を定義として数える(2026-08-30、9.18 の作業中に気づいた)。
+ *
+ *   直す前が拾ったのは `function` と `const` / `let` だけだった。**`class Foo {}` は定義にならない。**
+ *   クラスの中身は字下げされているので(コードのファイルは行頭定義だけを上位の記号と数える)
+ *   メソッドも拾えず、**そのファイルは丸ごと持ち主なしになる。**
+ *
+ *   実測: `class Cart { total(){ … * (1 + tax) } }` から税の掛け算を落とす(本物の破壊)→
+ *   **「触れた記号: (器のコードに変更なし)」・近傍なし**。しかも何も言わない。
+ *   ★JS/TS の現場の多くはクラスで書かれている。**そこでは門が丸ごと盲目**だった。
+ *   この現場は関数と const だけなので、一生出ない条件である(物差しの項と同じ形)。
+ *
+ * ★ついでに取りこぼしていた形: `export default`(既定書き出し)/ `var` / 生成器 `function*`。
+ *   function と名前の間には**空白か * が要る**ようにしてある(名前が地続きの綴りを拾わないため。
+ *   ここは実装の記号ではなく綴りの説明なので囲まない)。 */
+const DEF_FN = new RegExp('^(?:export\\s+)?(?:default\\s+)?(?:async\\s+)?function(?:\\s+|\\s*\\*\\s*)('
+  + IDENT + '+)');
+const DEF_CLASS = new RegExp('^(?:export\\s+)?(?:default\\s+)?class\\s+(' + IDENT + '+)');
+const DEF_CONST = new RegExp('^(?:export\\s+)?(?:const|let|var)\\s+(' + IDENT + '+)\\s*[=:]');
 const WORDCHAR = new RegExp(IDENT);
 /* ★長さの閾値は【ASCIIの物差し】である(2026-08-30、違和感の掘り出しで見つかった)。
  *
@@ -289,7 +305,10 @@ function defsOfText(text, html) {
      * コードのファイルは行頭定義だけを「上位の記号」と数える(入れ子の関数はその持ち主に含める)。 */
     const L = html ? lines[i].replace(/^\s+/, '') : lines[i];
     if (!html && /^\s/.test(lines[i])) continue;
-    const mf = L.match(DEF_FN);
+    /* ★class は【関数と同じ扱い】にする(fn: true)── --sweep の写経の疑いは
+     *   「同じ処理を複数ファイルに写した」を探すもので、同名のクラスが2箇所に在るのは
+     *   const の同名(道具の作法)とは違い、本当に疑うべき形だから。 */
+    const mf = L.match(DEF_FN) || L.match(DEF_CLASS);
     const m = mf || L.match(DEF_CONST);
     if (m && 語として十分(m[1])) defs.push({ name: m[1], line: i + 1, exp: /^export\s/.test(L), fn: !!mf });
   }
@@ -424,6 +443,15 @@ const touched = new Map();   // name -> Set(file)
  * ★見ないこと自体は宣言どおりで正しい。**見なかったと言わないこと**が間違い
  *   ── 何を見なかったか分からない計器は、計器ではない(この道具の既存の掟)。 */
 const 宣言で外した = [];
+const 持ち主なし = new Map();   // file -> 持ち主の記号が引けなかった行数
+const 持ち主なしを言う = () => {
+  if (!持ち主なし.size) return;
+  const 計 = [...持ち主なし.values()].reduce((a, b) => a + b, 0);
+  console.log('  (持ち主の記号が引けなかった変更 ' + 計 + '行は**問えていません**: '
+    + [...持ち主なし.keys()].slice(0, 6).join(', ')
+    + (持ち主なし.size > 6 ? ' ほか' + (持ち主なし.size - 6) + 'ファイル' : '')
+    + ')── 最初の定義より前(import・冒頭の定数)か、定義として拾えない書き方です');
+};
 const 外した件を言う = () => {
   if (!宣言で外した.length) return;
   const 一意 = [...new Set(宣言で外した)];
@@ -456,7 +484,25 @@ for (const [f, lines] of changed) {
   }
   for (const ln of lines) {
     const name = enclosing(f, ln);
-    if (!name || IGNORE.has(name) || 局所の癖(f, name)) continue;
+    /* ★持ち主の記号が引けなかった行を【黙って捨てない】(2026-08-30)。
+     *   いちばん多いのは「最初の定義より前」── import・冒頭の定数・HTML の <style> など。
+     *   そこは近傍の軸(呼び出し関係)に乗らないので**問えない**が、
+     *   問えないことと見ていないことは別で、**言わなければ後者に見える**。
+     *   ★class を定義に足すまでは、クラスで書かれたファイルが丸ごとここへ落ちていた。 */
+    if (!name) {
+      /* ★中身のある行だけ数える。文頭の解説(この塊の冒頭は50行を超える)まで数えると、
+       *   コメントを直すたびに鳴って読み飛ばされる(7条)。
+       * ★見た目で落とすのは【この報せだけ】── 門の判定(素にする)には使わない。
+       *   囲みコメントの途中の行は行だけ見ても判別できず、
+       *   `const x = a` / `  * b;` のような**続きの式**と区別がつかない。
+       *   報せなら数え落としても害は小さいが、門で落とすと見えない失敗になる。 */
+      const 行 = (corpus.get(f).lines || [])[ln - 1];
+      if (行 && !/^\s*(\*|\/\/|\/\*|<!--)/.test(行) && 素にする(行, f)) {
+        持ち主なし.set(f, (持ち主なし.get(f) || 0) + 1);
+      }
+      continue;
+    }
+    if (IGNORE.has(name) || 局所の癖(f, name)) continue;
     if (!touched.has(name)) touched.set(name, new Set());
     touched.get(name).add(f);
   }
@@ -740,7 +786,7 @@ if (!GATE) {
   console.log('比べた範囲: ' + range + (dirty ? '(作業木の未コミット分)' : ''));
   console.log('触れた記号: ' + ([...touched.keys()].join(', ') || '(器のコードに変更なし)'));
   if (数えなかった) console.log('  (コメントと空白だけの変更 ' + 数えなかった + '行は数えていません)');
-  外した件を言う();
+  外した件を言う(); 持ち主なしを言う();
   if (!一覧.length) { console.log('近傍: なし ── 答えるべき相手が居ません'); process.exit(0); }
   console.log('答えるべき近傍(' + 一覧.length + '件):');
   for (const x of 一覧) console.log('  [環' + x.環 + '] ' + x.記号 + '  @' + x.場所 + '  ← ' + x.きっかけ);
@@ -802,7 +848,7 @@ if (!GATE) {
 /* --gate */
 if (!一覧.length) {
   console.log('近傍照合: 近傍なし(答えるべき相手が居ません)── 通過');
-  外した件を言う();     /* ★「近傍なし」で終わる回こそ、見なかった場所を言う(無音を安全と読ませない) */
+  外した件を言う(); 持ち主なしを言う();     /* ★「近傍なし」で終わる回こそ、見なかった場所を言う(無音を安全と読ませない) */
   process.exit(0);
 }
 let answers = {};
@@ -844,11 +890,11 @@ if (報告.length) {
 }
 if (落ち.length) {
   console.log('近傍照合: 差戻 ── 修正の外側に、答えていない近傍があります');
-  外した件を言う();
+  外した件を言う(); 持ち主なしを言う();
   for (const m of 落ち) console.log('  ✗ ' + m);
   console.log('直し方: node guardian/neighbors.mjs --list で下書きを作り、' + ANSWER_PATH + ' の判定と理由を埋める');
   process.exit(1);
 }
-外した件を言う();
+外した件を言う(); 持ち主なしを言う();
 console.log('近傍照合: 通過(' + 一覧.length + '件すべてに回答あり' + (報告.length ? ' / うち報告 ' + 報告.length + '件' : '') + ')');
 process.exit(0);

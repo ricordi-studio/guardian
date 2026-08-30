@@ -2,156 +2,84 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "install.mjs::added",
-   "記号": "added",
-   "場所": "install.mjs",
-   "環": 1,
-   "根": "claude",
-   "きっかけ": "「claude」を呼んでいる"
-  },
-  {
-   "key": "install.mjs::findInstallRoot",
-   "記号": "findInstallRoot",
-   "場所": "install.mjs",
-   "環": 1,
-   "根": "claude",
-   "きっかけ": "「claude」を呼んでいる"
-  },
-  {
-   "key": "install.mjs::setPath",
-   "記号": "setPath",
-   "場所": "install.mjs",
-   "環": 1,
-   "根": "claude",
-   "きっかけ": "「claude」を呼んでいる"
-  },
-  {
-   "key": "install.mjs::中身",
-   "記号": "中身",
-   "場所": "install.mjs",
-   "環": 1,
-   "根": "始",
-   "きっかけ": "「始」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::answers",
-   "記号": "answers",
+   "key": "neighbors.mjs::corpus",
+   "記号": "corpus",
    "場所": "neighbors.mjs",
    "環": 1,
-   "根": "read",
-   "きっかけ": "「read」を呼んでいる"
+   "根": "defsOfText",
+   "きっかけ": "「defsOfText」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::isExported",
+   "記号": "isExported",
+   "場所": "neighbors.mjs",
+   "環": 1,
+   "根": "defsOfText",
+   "きっかけ": "「defsOfText」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::WORDCHAR",
+   "記号": "WORDCHAR",
+   "場所": "neighbors.mjs",
+   "環": 1,
+   "根": "IDENT",
+   "きっかけ": "「IDENT」を呼んでいる"
   },
   {
    "key": "neighbors.mjs::callersOf",
    "記号": "callersOf",
    "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "WORDCHAR",
+   "環": 2,
+   "根": "IDENT",
    "きっかけ": "「WORDCHAR」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::cfg",
-   "記号": "cfg",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "read",
-   "きっかけ": "「read」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::changed",
-   "記号": "changed",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "diff",
-   "きっかけ": "「diff」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::corpus",
-   "記号": "corpus",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "read",
-   "きっかけ": "「read」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::NEED_PATH",
-   "記号": "NEED_PATH",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "need",
-   "きっかけ": "「need」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::range",
-   "記号": "range",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "dirty",
-   "きっかけ": "「dirty」を呼んでいる"
-  },
-  {
-   "key": "selfcheck.mjs::CASES",
-   "記号": "CASES",
-   "場所": "selfcheck.mjs",
-   "環": 1,
-   "根": "NL2",
-   "きっかけ": "「NL2」を呼んでいる"
-  },
-  {
-   "key": "selfcheck.mjs::DECISIONS_MD",
-   "記号": "DECISIONS_MD",
-   "場所": "selfcheck.mjs",
-   "環": 1,
-   "根": "NL2",
-   "きっかけ": "「NL2」を呼んでいる"
-  },
-  {
-   "key": "selfcheck.mjs::RULES_MD",
-   "記号": "RULES_MD",
-   "場所": "selfcheck.mjs",
-   "環": 1,
-   "根": "NL2",
-   "きっかけ": "「NL2」を呼んでいる"
-  },
-  {
-   "key": "install.mjs::ROOT",
-   "記号": "ROOT",
-   "場所": "install.mjs",
-   "環": 2,
-   "根": "claude",
-   "きっかけ": "「findInstallRoot」を呼んでいる"
-  },
-  {
-   "key": "install.mjs::settings",
-   "記号": "settings",
-   "場所": "install.mjs",
-   "環": 2,
-   "根": "claude",
-   "きっかけ": "「setPath」を呼んでいる"
   },
   {
    "key": "neighbors.mjs::enclosing",
    "記号": "enclosing",
    "場所": "neighbors.mjs",
    "環": 2,
-   "根": "read",
+   "根": "defsOfText",
    "きっかけ": "「corpus」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::frontier",
+   "記号": "frontier",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "defsOfText",
+   "きっかけ": "「isExported」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::lineOfIndex",
+   "記号": "lineOfIndex",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "IDENT",
+   "きっかけ": "「WORDCHAR」を呼んでいる"
   },
   {
    "key": "neighbors.mjs::多重定義",
    "記号": "多重定義",
    "場所": "neighbors.mjs",
    "環": 2,
-   "根": "read",
+   "根": "defsOfText",
    "きっかけ": "「corpus」を呼んでいる"
   },
   {
-   "key": "selfcheck.mjs::BASE",
-   "記号": "BASE",
-   "場所": "selfcheck.mjs",
+   "key": "neighbors.mjs::本体",
+   "記号": "本体",
+   "場所": "neighbors.mjs",
    "環": 2,
-   "根": "NL2",
-   "きっかけ": "「DECISIONS_MD」を呼んでいる"
+   "根": "defsOfText",
+   "きっかけ": "「corpus」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::欄名",
+   "記号": "欄名",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "IDENT",
+   "きっかけ": "「WORDCHAR」を呼んでいる"
   }
  ]
 }
