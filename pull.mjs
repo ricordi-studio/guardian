@@ -170,6 +170,7 @@ try { fs.rmSync(path.join(仮, '.git'), { recursive: true, force: true }); } cat
     const この現場の直り = [];
     const 正本と同じ = [];
     const 手元に無い = [];
+    const 壊れている = [];
     for (const f of 食い違い) {
       const 手元 = 読む素(path.join(HERE, f));
       const 上流 = 読む素(path.join(仮, f));
@@ -178,9 +179,19 @@ try { fs.rmSync(path.join(仮, '.git'), { recursive: true, force: true }); } cat
        *   上書きしても失うものが無い ── ここを直り側に置くと、
        *   「消せば直る」という唯一の逃げ道まで塞いでしまう。 */
       if (手元 === null) { if (上流 !== null) 手元に無い.push(f); continue; }
+      /* ★【壊れている】は【直した】ではない(2026-08-31、配布先からの報告)。
+       *   構文が通らないものを「この現場の直り」と読むと、取り直しが止まり、
+       *   しかも --report が壊れた中身を正本へ還そうとする。 */
+      if (/.(mjs|js)$/.test(f) && 走る(process.execPath, ['--check', path.join(HERE, f)]).status !== 0) {
+        壊れている.push(f); continue;
+      }
       /* 上流に無いもの(この現場が足したもの)は、正本と比べようがない ── 直り側に置く */
       if (上流 !== null && 手元 === 上流) 正本と同じ.push(f);
       else この現場の直り.push(f);
+    }
+    if (壊れている.length) {
+      console.log('(構文が通らないので【壊れている】と見ます: ' + 壊れている.join(', ')
+        + ' ── 直りではないので上書きします)');
     }
     if (手元に無い.length) {
       console.log('(手元に無いので取り込みます: ' + 手元に無い.join(', ')
