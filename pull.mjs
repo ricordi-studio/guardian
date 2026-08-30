@@ -234,19 +234,40 @@ const 受領証の置き場 = path.join(HERE, ".guardian");
 const 受領証の先 = path.join(受領証の置き場, "pulled.json");
 let 受領証が書けなかった = false;
 
-/* ① 触る前に、古い受領証を無効にする */
+/* ① 触る前に、古い受領証を無効にする。**無効にできたかを返す**
+ *   (2026-08-31、配布先(CodeX)の指摘 ── 最初は best effort で、両方失敗しても進んでいた)。
+ * ★『やった』ではなく『消えた』を見る ── rename も削除も失敗したら、
+ *   古い受領証が残ったままコピーへ進み、9.38 の反例がそのまま再成立する。
+ * ★配布先の実測: rename 単独の失敗は実際に起きた(削除が救った)。
+ *   両方の失敗は再現できなかった ── **再現できないことは、起きないことではない**。 */
 function 受領証を無効にする() {
+  try { if (!fs.existsSync(受領証の先)) return true; } catch (_) { return false; }
   try {
-    if (fs.existsSync(受領証の先)) fs.renameSync(受領証の先, 受領証の先 + ".updating");
+    fs.renameSync(受領証の先, 受領証の先 + ".updating");
   } catch (_) {
     /* 退避できないなら消す ── 嘘を残すぐらいなら、分からない状態にする */
     try { fs.rmSync(受領証の先, { force: true }); } catch (_) {}
   }
+  try { return !fs.existsSync(受領証の先); } catch (_) { return false; }
+}
+function 無効にできなければ止める() {
+  if (受領証を無効にする()) return;
+  console.error('✗ 古い受領証を無効にできません: ' + 受領証の先);
+  console.error('  ここで進むと、中身は新しいのに**前回の SHA を取得した**という嘘が残ります。');
+  console.error('  **1文字も書き換えずに止めます。**そのファイルの権限やロックを外して、もう一度 pull を回してください');
+  try { fs.rmSync(仮, { recursive: true, force: true }); } catch (_) {}
+  process.exit(1);
 }
 
 /* ② 全部済んでから、新しい SHA を原子的に置く。③ 書けなければ黙らない */
 function 受領証を書く() {
-  if (!取得SHA) return;
+  /* ★SHA を読めなかった回も『どの中身から来たか名乗れない』── 黙って0で終わらない
+   *   (2026-08-31、配布先(CodeX)の指摘)。 */
+  if (!取得SHA) {
+    受領証が書けなかった = true;
+    console.log('★取得元の SHA が読めませんでした ── どの中身から来たかを名乗れません');
+    return;
+  }
   try {
     fs.mkdirSync(受領証の置き場, { recursive: true });
     fs.writeFileSync(受領証の先 + ".tmp",
@@ -437,7 +458,7 @@ if (!変わる.length && !増える.length && !全消える.length) {
   fs.rmSync(仮, { recursive: true, force: true });
   /* ★中身は正本と同じだが、受領証は古い SHA のままかもしれない ── 置き直す。
    *   先に無効にするのは、書けなかったときに古い SHA が居座らないようにするため。 */
-  受領証を無効にする();
+  無効にできなければ止める();
   受領証を書く();
   console.log('✓ すでに正本と同じです(取り直す必要はありません)');
   process.exit(受領証が書けなかった ? 1 : 0);
@@ -446,7 +467,7 @@ if (!変わる.length && !増える.length && !全消える.length) {
 /* ── ④ 置き換える ── */
 /* ★1文字でも書き換える前に、古い受領証を無効にする(2026-08-31、配布先の実走した反例)。
  *   ここで死んでも「前回の SHA を取得した」という嘘は残らない ── 残るのは .updating(=途中)。 */
-受領証を無効にする();
+無効にできなければ止める();
 for (const f of 新しい) {
   const 先 = path.join(HERE, f);
   fs.mkdirSync(path.dirname(先), { recursive: true });
