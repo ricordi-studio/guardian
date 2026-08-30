@@ -101,6 +101,14 @@ function uniq(a) { return Array.from(new Set(a)); }
  *   実測 9/9: 英語・日本語・助詞入りの長い名前・APIルート・引用符入りは当たり、部分語は当たらない。
  * ★スラッシュや引用符を含む語(APIルート・`op:'invite'` の形)は境界が定義できないので部分一致のまま。 */
 const 境界 = /[\p{L}\p{N}_]/u;
+/* ★実名として拾う長さ ── 3文字は ASCII の物差し(2026-08-31、配布先の実測)。
+ *   英語なら2文字の識別子は稀だが、**日本語は2文字が普通**である(名札 / 通話 / 記録)。
+ *   1文字も在る(顔 / 鍵 / 声)。地図は**バッククォートで囲んだ語だけ**を見るので、
+ *   1文字でも「囲んだ」時点で人が意図しており、拾ってよい。
+ *   実測(配布先): `名札` は length 2 でここに落ち、**syms に一度も入っていなかった**。
+ *   英語の記号だけが当たっていたのは、たまたま長かったから。 */
+const 日本語 = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u;
+function 実名として十分(t) { return 日本語.test(t) ? t.length >= 1 : t.length >= 3; }
 function touched(sym, text) {
   if (!text) return false;
   if (!境界.test(sym[0]) || !境界.test(sym[sym.length - 1])) return text.includes(sym);
@@ -148,7 +156,16 @@ function parseMap(md) {
     while ((m = re.exec(chunk))) {
       const t = m[1].trim();
       if (/^[\w.@-]+(\/[\w.@-]+)+$/.test(t) && /\.[a-z0-9]+$/i.test(t)) files.push(t.toLowerCase());
-      else if (t.length >= 3) syms.push(t);
+      else if (実名として十分(t)) {
+        syms.push(t);
+        /* ★呼び出しの形で書かれた実名から、名前だけも拾う(2026-08-31、配布先の実測)。
+         *   地図に「名札(env, user, slot)」と**呼び出しの形**で書くと、実名はその全体になり、
+         *   引数名が違う実コードには**永久に一致しない**。
+         *   配布先で英語の記号だけが当たっていたのは、地図の別の場所にたまたま
+         *   名前だけの項があったから ── **偶然に頼っていた**。 */
+        const 括弧の前 = t.split('(')[0].trim();
+        if (括弧の前 !== t && 実名として十分(括弧の前)) syms.push(括弧の前);
+      }
     }
     sections.push({
       title, body,

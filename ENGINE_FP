@@ -1,13 +1,13 @@
-9.32
+9.33
 METHOD.md 1r6lk6m-3589
 README.md 1hdlq2t-7903
 RULES.md 1vn3us-9855
 SPEC.md 1ewfjj8-6939
 audit.md 78qkl6-2162
-check.mjs 16wqv80-27539
+check.mjs 1ecuxiy-28854
 githooks/pre-commit zijic4-1499
 hooks/clock.js 68yad4-2755
-hooks/codemap.js 9lf49b-8904
+hooks/codemap.js g019hr-9711
 hooks/lib-root.js zlyc3l-1226
 hooks/no-fixed-names.js lm54ue-2920
 hooks/no-reflex.js nkm27-4799
