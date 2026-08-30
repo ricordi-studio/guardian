@@ -150,11 +150,44 @@ const 食い違い = (() => {
  *   この道具の冒頭には「guardian/ しか触らない」と書いてあった ── 宣言と実装が食い違っていた。 */
 const 仮 = path.join(HERE, '.guardian-pull-tmp');
 try { fs.rmSync(仮, { recursive: true, force: true }); } catch (_) {}
-const c = 走る('git', ['clone', '--depth', '1', '-q', 正本, 仮]);
+/* ★【依頼された中身を取り直す口】 --at <SHA>(2026-08-31、配布先(CodeX)の提案)。
+ *
+ * ★実際に起きた: 「425d… を測ってください」と依頼したのに、配布先が測ったのは ccdde… だった。
+ *   受領証は**違いを検出**したが、pull は常に最新 main を取るので、
+ *   配布先には**依頼された物を取り直す手段が無かった**。
+ *     「違う物を測った」と分かる ✅ / 「依頼された物を測り直す」 ❌
+ * ★これで測定依頼が【契約】になる ── 依頼後に main が進んでも、同じ物を再現できる。
+ * ★指定した SHA と実際に取れた SHA が違えば**配らない**(取り違えを黙って進めない)。
+ * ★穴(提案者が自分で書いた): 任意の古い SHA を許すと、**既知の危険版も配れる**。
+ *   いまは口を開けるだけにして、絞り込みは入れていない ── 使うのは測定依頼の場面で、
+ *   依頼された SHA を一時的に取るためだからである。日常の取り直しは今までどおり main。 */
+const 依頼SHA = (() => {
+  const i = process.argv.indexOf('--at');
+  if (i < 0) return null;
+  const v = String(process.argv[i + 1] || '').trim();
+  if (!/^[0-9a-f]{7,40}$/.test(v)) {
+    console.error('✗ --at には SHA を渡してください(7〜40桁の16進)。渡されたもの: ' + JSON.stringify(v));
+    process.exit(1);
+  }
+  return v;
+})();
+const c = 依頼SHA
+  ? 走る('git', ['clone', '-q', 正本, 仮])          /* SHA を指すので浅く取れない */
+  : 走る('git', ['clone', '--depth', '1', '-q', 正本, 仮]);
 if (c.status !== 0) {
   console.error('✗ 正本を取れませんでした: ' + String(c.stderr || '').slice(0, 300));
   console.error('  正本は公開なので認証は要りません。ネットに繋がっているか、git が入っているかを確かめてください。');
   process.exit(1);
+}
+if (依頼SHA) {
+  const k = 走る('git', ['-C', 仮, 'checkout', '-q', 依頼SHA]);
+  if (k.status !== 0) {
+    console.error('✗ その中身が正本にありません: ' + 依頼SHA);
+    console.error('  ' + String(k.stderr || '').slice(0, 200));
+    try { fs.rmSync(仮, { recursive: true, force: true }); } catch (_) {}
+    process.exit(1);
+  }
+  console.log('★依頼された中身を取ります: ' + 依頼SHA + '(main ではありません)');
 }
 /* ★【どこから取ったか】の受領証を残す(2026-08-31、配布先(CodeX)の提案)。
  *
@@ -175,6 +208,12 @@ const 取得SHA = (() => {
   const v = r.status === 0 ? String(r.stdout || '').trim() : '';
   return /^[0-9a-f]{40}$/.test(v) ? v : null;
 })();
+if (依頼SHA && 取得SHA && !取得SHA.startsWith(依頼SHA)) {
+  /* ★指定と実物が違うのに配ると、受領証だけが正しい顔をする(9.40 で直したのと同じ形) */
+  console.error('✗ 依頼された中身と、取れた中身が違います: 依頼 ' + 依頼SHA + ' / 実物 ' + 取得SHA);
+  try { fs.rmSync(仮, { recursive: true, force: true }); } catch (_) {}
+  process.exit(1);
+}
 
 /* ★受領証は【中身が正本と一致したと言い切れる時だけ】残す(2026-08-31、CodeX の指摘 → 配布先が実走で反例)。
  *
