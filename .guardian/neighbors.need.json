@@ -24,22 +24,6 @@
    "環": 1,
    "根": "map",
    "きっかけ": "「map」を呼んでいる"
-  },
-  {
-   "key": "hooks/codemap.js::main",
-   "記号": "main",
-   "場所": "hooks/codemap.js",
-   "環": 1,
-   "根": "clip",
-   "きっかけ": "「clip」を呼んでいる"
-  },
-  {
-   "key": "hooks/codemap.js::raw",
-   "記号": "raw",
-   "場所": "hooks/codemap.js",
-   "環": 2,
-   "根": "clip",
-   "きっかけ": "「main」を呼んでいる"
   }
  ]
 }

@@ -1,11 +1,11 @@
-9.60
+9.61
 METHOD.md 1ke4tnf-3589
 PROTOCOL.json aajo32-354
 README.md 1hdlq2t-7903
 RULES.md 1r0bq4s-10311
 SPEC.md 3ovt39-8098
 audit.md 78qkl6-2162
-check.mjs 159gusg-34013
+check.mjs 1osh3fp-34131
 githooks/pre-commit zijic4-1499
 hooks/clock.js 68yad4-2755
 hooks/codemap.js 2csawn-10496

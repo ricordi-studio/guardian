@@ -287,17 +287,19 @@ if (!map) {
      *   口を殺すと --定義一覧 は既定動作(--list)に落ち、**出口0で別のものを出す**。
      *   出口と「空でないこと」だけを見ていたので、**0個のうち0個(0%)**という
      *   もっともらしい嘘を出した ── 今夜の「無音より質が悪い」形そのもの。
-     * ★だから区切り(TAB)が在るかまで見る。形が違えば【見ていません】と言う。 */
-    const 形が違う = !出.includes(String.fromCharCode(9));
-    if (r.status !== 0 || !出 || 形が違う) {
+     * ★★配布先の指摘: **「その現場では正しく見える値」が返ったときこそ、形を疑う。**
+     *   まっさらな現場では 0% が正解でもあるので、**壊れた顔と正しい顔が同じ**になる。
+     * ★だから【名前が1つも取れないこと】を門にする ── 区切りの有無と別々に置くと、
+     *   片方が死にコードになる(39条)。名前が取れなければ、形が違っても空でも同じ扱い。 */
+    const 名前 = new Set();
+    for (const 行 of 出.split(NL)) {
+      const t = 行.split(String.fromCharCode(9));
+      if (t.length >= 2 && t[1]) 名前.add(t[1]);
+    }
+    if (r.status !== 0 || !名前.size) {
       notes.push("この現場の実装のうち、地図が名指ししている割合は**見ていません**"
-        + "(neighbors.mjs --定義一覧 が答えません)");
+        + "(neighbors.mjs --定義一覧 が定義を1つも答えません ── まだ何も書いていない現場か、口が答えていないかのどちらかです)");
     } else {
-      const 名前 = new Set();
-      for (const 行 of 出.split(NL)) {
-        const t = 行.split(String.fromCharCode(9));
-        if (t.length >= 2 && t[1]) 名前.add(t[1]);
-      }
       const 地図に在る = new Set();
       for (const m of 柵を落とす(map).matchAll(/`([^`\n]+)`/g)) {
         const t = m[1].trim();
@@ -305,7 +307,7 @@ if (!map) {
         const 括弧の前 = t.split("(")[0].trim();
         if (名前.has(括弧の前)) 地図に在る.add(括弧の前);
       }
-      const 割 = 名前.size ? Math.round((地図に在る.size / 名前.size) * 100) : 0;
+      const 割 = Math.round((地図に在る.size / 名前.size) * 100);
       notes.push("この現場の実装 " + 名前.size + " 個のうち、**地図が名指ししているのは "
         + 地図に在る.size + " 個**(" + 割 + "%)"
         + " ── 地図は索引なので全部を名指しする必要はありません。**この数が下がり続けるなら、"
