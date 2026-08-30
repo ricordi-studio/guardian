@@ -176,22 +176,51 @@ const 取得SHA = (() => {
   return /^[0-9a-f]{40}$/.test(v) ? v : null;
 })();
 
-/* ★受領証は【中身が正本と一致したと言い切れる時だけ】書く(2026-08-31、CodeX の指摘)。
- *   途中で落ちた回の SHA を残すと、混ざった中身を「正しく取得した」と名乗ることになる。
- *   だから呼ぶのは ── ④の置き換えが済んだ後 / そもそも差が無かった時 ── の2箇所だけ。
- *   一時ファイル → rename(原子的)。壊れかけの受領証が残らない。
- * ★これだけでは「いまの中身がその SHA である」証明にはならない(取ったあと人が壊しうる)。
+/* ★受領証は【中身が正本と一致したと言い切れる時だけ】残す(2026-08-31、CodeX の指摘 → 配布先が実走で反例)。
+ *
+ * ★経緯: 最初は「書くのを最後にすれば良い」と考えた。配布先が実走して反例を出した ──
+ *   **全部のコピーが成功し、最後の受領証の書込みだけが落ちる**と、catch が握り潰して
+ *   pull は正常終了し、**前回の(嘘の)SHA がそのまま残る**。
+ *   実測(配布先): `--receipt` が `{ sourceSha: 000…, verdict: "通過" }` を**出口0**で返した。
+ *   ★原子的に結合していても、片方が古ければ**結合したままの嘘**になる。
+ * ★だから3つ要る:
+ *   ① **1文字でも書き換える前に、古い受領証を無効にする**(途中で死んでも嘘は残らない)
+ *   ② 全部済んでから、新しい SHA を原子的に置く(一時ファイル → rename)
+ *   ③ **受領証が書けなかったら、pull を成功と言わない**(握り潰さない)
+ * ★無効の形は「消す」ではなく「`.updating` へ退避」── 何が起きたか読めるようにするため。
+ *   selfcheck はこれを見て **未測**(=途中で終わっている)と言う。分からないを緑に混ぜない。
+ * ★これでも「いまの中身がその SHA である」証明にはならない(取ったあと人が壊しうる)。
  *   そこは selfcheck --receipt が、合否と現在の指紋を同じ1回で返して閉じる。 */
+const 受領証の置き場 = path.join(HERE, ".guardian");
+const 受領証の先 = path.join(受領証の置き場, "pulled.json");
+let 受領証が書けなかった = false;
+
+/* ① 触る前に、古い受領証を無効にする */
+function 受領証を無効にする() {
+  try {
+    if (fs.existsSync(受領証の先)) fs.renameSync(受領証の先, 受領証の先 + ".updating");
+  } catch (_) {
+    /* 退避できないなら消す ── 嘘を残すぐらいなら、分からない状態にする */
+    try { fs.rmSync(受領証の先, { force: true }); } catch (_) {}
+  }
+}
+
+/* ② 全部済んでから、新しい SHA を原子的に置く。③ 書けなければ黙らない */
 function 受領証を書く() {
   if (!取得SHA) return;
   try {
-    const 置き場 = path.join(HERE, '.guardian');
-    fs.mkdirSync(置き場, { recursive: true });
-    const 先 = path.join(置き場, 'pulled.json');
-    fs.writeFileSync(先 + '.tmp',
+    fs.mkdirSync(受領証の置き場, { recursive: true });
+    fs.writeFileSync(受領証の先 + ".tmp",
       JSON.stringify({ sha: 取得SHA, 正本, at: new Date().toISOString() }, null, 1) + String.fromCharCode(10));
-    fs.renameSync(先 + '.tmp', 先);
-  } catch (_) { /* 受領証が書けなくても取り直しは止めない */ }
+    fs.renameSync(受領証の先 + ".tmp", 受領証の先);
+    try { fs.rmSync(受領証の先 + ".updating", { force: true }); } catch (_) {}
+  } catch (e) {
+    受領証が書けなかった = true;
+    console.log("★受領証が書けませんでした: " + String(e && e.message).slice(0, 160));
+    console.log("  中身は取り直せていますが、**どの中身から来たかを名乗れません**。");
+    console.log("  " + 受領証の先 + " の置き場を確かめて、もう一度 pull を回してください");
+    console.log("  (よくある原因: pulled.json.tmp と同じ名前のフォルダが在る)");
+  }
 }
 try { fs.rmSync(path.join(仮, '.git'), { recursive: true, force: true }); } catch (_) {}
 
@@ -367,12 +396,18 @@ console.log('変わるもの: ' + (変わる.length ? 変わる.join(', ') : '�
 if (見るだけ) { fs.rmSync(仮, { recursive: true, force: true }); process.exit(0); }
 if (!変わる.length && !増える.length && !全消える.length) {
   fs.rmSync(仮, { recursive: true, force: true });
+  /* ★中身は正本と同じだが、受領証は古い SHA のままかもしれない ── 置き直す。
+   *   先に無効にするのは、書けなかったときに古い SHA が居座らないようにするため。 */
+  受領証を無効にする();
   受領証を書く();
   console.log('✓ すでに正本と同じです(取り直す必要はありません)');
-  process.exit(0);
+  process.exit(受領証が書けなかった ? 1 : 0);
 }
 
 /* ── ④ 置き換える ── */
+/* ★1文字でも書き換える前に、古い受領証を無効にする(2026-08-31、配布先の実走した反例)。
+ *   ここで死んでも「前回の SHA を取得した」という嘘は残らない ── 残るのは .updating(=途中)。 */
+受領証を無効にする();
 for (const f of 新しい) {
   const 先 = path.join(HERE, f);
   fs.mkdirSync(path.dirname(先), { recursive: true });
@@ -385,3 +420,7 @@ fs.rmSync(仮, { recursive: true, force: true });
 受領証を書く();
 console.log('✓ 取り直しました(' + 新しい.length + 'ファイル' + (全消える.length ? ' / 撤去 ' + 全消える.length + '件' : '') + ')');
 console.log('  次にやること: node guardian/install.mjs   ← 冪等。宣言とフックを新しい形に揃えます');
+/* ★受領証が書けなかったら、成功と言わない(2026-08-31、配布先の反例)。
+ *   中身は入れ替わっているので取り直し自体は済んでいるが、**どの中身から来たかを名乗れない**。
+ *   ここで出口0を返すと、次に読む側が『前回の SHA を取得した』という嘘を受け取る。 */
+if (受領証が書けなかった) process.exit(1);
