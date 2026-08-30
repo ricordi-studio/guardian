@@ -1,8 +1,8 @@
-9.57
-METHOD.md 1r6lk6m-3589
+9.58
+METHOD.md 1ke4tnf-3589
 PROTOCOL.json aajo32-354
 README.md 1hdlq2t-7903
-RULES.md 1vn3us-9855
+RULES.md 1r0bq4s-10311
 SPEC.md 1seg562-7993
 audit.md 78qkl6-2162
 check.mjs 14sbjvl-31852
@@ -20,7 +20,7 @@ install.mjs 1ep6z78-25276
 neighbors.mjs 17sankm-42529
 package.json zx7jrx-416
 pull.mjs 1qbq7v3-24084
-selfcheck.mjs ur45cl-102551
+selfcheck.mjs 18uqi6u-103043
 templates/CLAUDE-snippet.md 1y7ghqv-1478
 templates/CODEMAP.md 1iwybyg-827
 templates/guardian-audit-command.md hyfuh-175

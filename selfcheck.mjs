@@ -1118,6 +1118,23 @@ if (process.argv.includes("--why")) {
     })(),
   };
   const DOCS = ['METHOD.md', 'README.md', 'RULES.md', 'WHY.md', 'audit.md', 'install.md'];
+  /* ★履歴の印は【塊の文書にも】効かせる(2026-08-31、48条を足したときに出た)。
+   *   直す前は、この現場の索引(OUT)だけが印を見ていて、塊の文書(DOCS)は見ていなかった。
+   *   ★`WHY.md` は**全部が履歴**である ── 過ぎた事故を、そのときの数字のまま残す文書なので、
+   *     「RULES 全47条」のような**当時の件数**が必ず出てくる。
+   *     48条を足した瞬間、**過去の記録2件が赤くなった** ── 直せば記録が嘘になる。
+   *   ★印の判定を2箇所に書かない(39条)── ここで1つ決めて、両方の走査が使う。
+   *   ★完全一致にしない: 人は必ず `<!-- guardian:history ここから下 -->` と理由を書き足す。 */
+  const 履歴印 = /<!--\s*guardian:history/;
+  const 履歴印の見本 = '<!-- guardian:history -->';
+  const 履歴を落とした = [];
+  const 履歴を落とす = (d, t) => {
+    if (typeof t !== "string") return t;
+    const h = t.search(履歴印);
+    if (h < 0) return t;
+    履歴を落とした.push(d + "(" + (t.slice(h).split(NL2).length - 1) + "行)");
+    return t.slice(0, h);
+  };
   /* OUT は上(module の頭)で宣言している ── 個人情報の見張りも同じ一覧を見るため(39条) */
   const bad = [];
   const look = (label, text) => {
@@ -1187,7 +1204,7 @@ if (process.argv.includes("--why")) {
       }
     });
   };
-  for (const d of DOCS) { 裸(d, kit(d)); look(d, kit(d)); }
+  for (const d of DOCS) { const t = 履歴を落とす(d, kit(d)); 裸(d, t); look(d, t); }
 
   /* ★塊の外の3文書を【本当に読む】(2026-08-30、配布先からの報告③)。
    *
@@ -1221,21 +1238,14 @@ if (process.argv.includes("--why")) {
   /* ★印は【前方一致】で探す(2026-08-30、配布先からの報告)。
    *   完全一致だと `<!-- guardian:history ここから下は履歴 -->` のように
    *   理由を書き足した瞬間に効かなくなる ── 人は必ず理由を書き足す。 */
-  const 履歴印 = /<!--\s*guardian:history/;
-  const 履歴印の見本 = '<!-- guardian:history -->';
   const 多すぎる上限 = 5;
   const 読めなかった = [];
-  const 履歴を落とした = [];
   const 測れない文書 = [];
   for (const d of OUT) {
     let t = null;
     try { t = fs.readFileSync(path.join(ROOT_DIR, d), 'utf8'); } catch (_) {}
     if (t === null) { 読めなかった.push(d); continue; }
-    const h = t.search(履歴印);
-    if (h >= 0) {
-      履歴を落とした.push(d + '(' + (t.slice(h).split('\n').length - 1) + '行)');
-      t = t.slice(0, h);
-    }
+    t = 履歴を落とす(d, t);
     const 前 = bad.length;
     look(d, t); 裸(d, t);
     const 出た = bad.length - 前;
