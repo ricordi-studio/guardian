@@ -41,8 +41,8 @@ const 柵を落とす = (t) => String(t || '').replace(/```[\s\S]*?```/g, '');
  *   selfcheck の B11 が、SPEC.md の表と**この出力**を突き合わせる(44条の双子)。
  * ★穴として書く: これが証明するのは「その口を受け付ける」までで、
  *   **その口が仕事をする**ことではない。そこは各口の検査の仕事。 */
-const 知っている口 = ['--口一覧', '--片方だけ', '--名指しされていない', '--宣言の外', '--呼び先が地図に無い', '--root', '--selectors', '--tighten'];
-const 値を取る口 = { '--root': 1 };
+const 知っている口 = ['--口一覧', '--片方だけ', '--名指しされていない', '--宣言の外', '--呼び先が地図に無い', '--予想', '--root', '--selectors', '--tighten'];
+const 値を取る口 = { '--root': 1, '--予想': 1 };
 const 残りを全部取る口 = ['--selectors'];
 /* ★順番: **未知の口の走査が先、`--口一覧` は後**(2026-08-31、配布先の実測)。
  *   検査は `--口一覧 --zzz` の形で叩く ── 門が生きていれば **出口1**、
@@ -1049,6 +1049,45 @@ if (argv.includes('--tighten')) {
   }
 }
 for (const n of notes) console.log('  ✓ ' + n);
+
+/* ★予想の欄(2026-08-31、配布先の実測 ── 6回書いて3回外れ、★外れた3回のうち2件から本物が出た。
+ *   当たった3回からは何も出ていない)。**予想は、外れたときにだけ材料になる。**
+ * ★★これは【1人になったときの、訂正の代わり】として置いている ── 今夜の19件は全部
+ *   もう1人の読み手が見つけたもので、検査が見つけたものは0件だった。人が居ないなら、
+ *   **自分の予想と数を衝突させる**しか残っていない(9.79 は条だったので、欄にした ── 条<数<欄)。
+ * ★落とさない・止めない。差分を出すだけ(7条)。予想を書いた人にしか意味が無いので、
+ *   ★**書いていなければ何も出ない**。 */
+{
+  const 予想の道 = path.join(ROOT, ".guardian", "予想.json");
+  const 数の行 = [...notes, ...problems].filter((l) => /[0-9]/.test(l));
+  const 予想を書く = argv.indexOf("--予想");
+  if (予想を書く >= 0) {
+    const 文 = argv[予想を書く + 1];
+    fs.mkdirSync(path.dirname(予想の道), { recursive: true });
+    fs.writeFileSync(予想の道, JSON.stringify({ 文, 数の行 }, null, 1) + "\n");
+    console.log("");
+    console.log("★予想を置きました: " + 文);
+    console.log("  次に " + "check.mjs" + " を素で走らせると、【そのときの数】と突き合わせて差分だけ出します");
+    console.log("  ★当たっても何も出ません。外れたときだけ、そこに材料が在ります");
+  } else if (fs.existsSync(予想の道)) {
+    let 前 = null;
+    try { 前 = JSON.parse(fs.readFileSync(予想の道, "utf8")); } catch (_) { 前 = null; }
+    if (前 && Array.isArray(前.数の行)) {
+      const 昔 = new Set(前.数の行), 今 = new Set(数の行);
+      const 消えた = 前.数の行.filter((l) => !今.has(l));
+      const 出た = 数の行.filter((l) => !昔.has(l));
+      console.log("");
+      console.log("★前に書いた予想: " + 前.文);
+      if (!消えた.length && !出た.length) {
+        console.log("  数はまだ1つも動いていません(予想が当たったかどうかは、まだ言えません)");
+      } else {
+        for (const l of 消えた) console.log("  － そのとき: " + l);
+        for (const l of 出た) console.log("  ＋ いま    : " + l);
+        console.log("  ★予想と違っていたら、そこを見ること。当たっていたら、何も出ません");
+      }
+    }
+  }
+}
 if (problems.length) {
 
   for (const p of problems) console.log('  ✗ ' + p);
