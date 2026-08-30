@@ -39,13 +39,17 @@ if (cmd === 'say') {
 if (cmd === 'log') { 読む().forEach(出す); process.exit(0); }
 
 if (cmd === 'wait') {
-  const 起点 = 読む().length;
+  /* ★新着は【自分が最後に言ったより後】── 起動後の差分ではない。
+   *   起動時点で相手の発言が既に置かれていると、差分は空になり、
+   *   **手番が自分なのに待ち続ける**(2026-08-30、両方が待機して止まった)。 */
   const 期限 = Date.now() + 30 * 60 * 1000;
   const 見る = () => {
     if (手番() === me) {
-      const 新着 = 読む().slice(起点);
-      if (新着.length) { 新着.forEach(出す); process.exit(0); }
-      if (起点 === 0) { console.log('(まだ何も無い。あなたの手番)'); process.exit(0); }
+      const 全 = 読む();
+      const 新着 = 全.slice(全.map((m) => m.from).lastIndexOf(me) + 1);
+      if (新着.length) 新着.forEach(出す);
+      else console.log('(新着なし。あなたの手番)');
+      process.exit(0);
     }
     if (Date.now() > 期限) { console.log('(30分待った。相手はまだ)'); process.exit(2); }
     setTimeout(見る, 3000);
