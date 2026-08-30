@@ -509,6 +509,20 @@ if (!map) {
       for (const e of 拡張.slice(1)) { const f = path.join(基, "index" + e); if (fs.existsSync(f)) return f; }
       return null;
     };
+    /* ★A7 の中で【見張っている場所】を作る ── A6 のものは A6 の中に在る(39条の裏)。
+     *   同じ形を2つ持つのは写経だが、**片方の中の変数を隣から読む方が危ない** ──
+     *   実際 9.76 でそれをやって、検査が黙って死んだ。ここは見える形で分けておく。 */
+    const 場所2 = new Set();
+    {
+      const 足す2 = (x) => { if (typeof x === "string" && x) 場所2.add(path.resolve(ROOT, x)); };
+      for (const x of (cfg.watch || [])) 足す2(x);
+      for (const x of ((cfg.neighbors && cfg.neighbors.code) || [])) 足す2(x);
+      for (const x of (cfg.selectors || [])) 足す2(x);
+    }
+    const 場所に在る = (f) => {
+      for (const d of 場所2) if (f === d || f.startsWith(d + path.sep)) return true;
+      return false;
+    };
     const 見た = new Set();
     for (const f of 地図のファイル) {
       let t = "";
@@ -520,7 +534,15 @@ if (!map) {
         const 鍵 = path.relative(ROOT, 先).split(path.sep).join("/");
         if (見た.has(鍵)) continue;
         見た.add(鍵);
-        呼び先.push(path.relative(ROOT, f).split(path.sep).join("/") + String.fromCharCode(9) + 鍵);
+        /* ★呼び先が【見張っている場所の中か外か】も出す(2026-08-31、見本で見つけた)。
+         *   形の違う見本(HTML と vendor が在る現場)に当てたら、
+         *   `src/main.js → vendor/lib.js`(外から持ってきた部品)が出た。
+         *   ★**それは地図に載せる対象ではない** ── だが「呼んでいる」のは事実なので消さない。
+         *   ★消すのではなく**印を付ける**: 場所の中なら直す対象、外なら見るだけ。
+         *   (消すと、その現場では「呼び先の穴が無い」に見える ── 今夜の「黙る」と同じ形) */
+        const 中か = 場所に在る(先) ? "場所内" : "場所外";
+        呼び先.push(path.relative(ROOT, f).split(path.sep).join("/") + String.fromCharCode(9) + 鍵
+          + String.fromCharCode(9) + 中か);
       }
     }
     呼び先.sort();
@@ -531,10 +553,13 @@ if (!map) {
     if (呼び先.length) process.stdout.write(呼び先.join(NL) + NL);
     process.exit(0);        /* 0件は0行 */
   }
+  const 呼び先の内 = 呼び先.filter((x) => x.endsWith("場所内"));
+  const 呼び先の外 = 呼び先.filter((x) => x.endsWith("場所外"));
   if (呼び先.length) {
     notes.push("**地図に載っているファイルが呼んでいるのに、地図に無いファイルが " + 呼び先.length + " 件**あります: "
-      + 呼び先.slice(0, 3).map((x) => x.split(String.fromCharCode(9)).join(" → ")).join(" / ")
+      + 呼び先.slice(0, 3).map((x) => { const t = x.split(String.fromCharCode(9)); return t[0] + " → " + t[1] + "(" + t[2] + ")"; }).join(" / ")
       + (呼び先.length > 3 ? " ほか" + (呼び先.length - 3) + "件" : "")
+      + (呼び先の外.length ? "(うち " + 呼び先の外.length + " 件は見張っている場所の外 ── 外から持ってきた部品なら、地図に載せる対象ではありません)" : "")
       + " ── ★**項も実名もファイルも在るのに、接点が足りない**形です"
       + "(A4 も A5 も出しません)。索引に全部は載らないので、落としません。中身は `--呼び先が地図に無い` で出せます");
   } else notes.push("地図に載っているファイルの呼び先は、全部どこかの項に載っている");
