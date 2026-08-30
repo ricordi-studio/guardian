@@ -1651,6 +1651,66 @@ if (process.argv.includes("--why")) {
     fs.rmSync(仮, { recursive: true, force: true });
   }
 }
+/* B8f. 【パスの書き方と改行で、判定が変わらないか】
+ *   (2026-08-31、配布先(CodeX)が挙げた不変条件の6番目)。
+ *
+ * ★これも症状を知らなくても言える性質である ── **同じ意味の書き方で、結果が変わってはいけない**。
+ *   変わる所は4つある: 地図の改行 / 編集文の改行 / パスの区切り( と /) / パスに空白を含む。
+ * ★配布先の現場は改行が混在している(最大のファイルだけ CRLF、他93本が LF)。
+ *   こちらは .gitattributes で eol=lf に揃えてあるので、**混在を作れない** ──
+ *   だから見本の中で作る。★測る場所と食わせる物はセットである(B8a の教訓)。
+ * ★合格は【強い一致】── 弱い返事(全見出しを並べる方)を数えない(B8e の教訓)。 */
+{
+  const 仮の親 = fs.mkdtempSync(path.join(os.tmpdir(), "guardian-path-"));
+  /* ★名前に空白を入れる ── 空白入りパスで壊れる道具は多い(この塊も一度やっている) */
+  const 仮 = path.join(仮の親, "見 本 の 現場");
+  try {
+    fs.mkdirSync(path.join(仮, "guardian", "hooks"), { recursive: true });
+    for (const f of fs.readdirSync(path.join(HERE, "hooks")))
+      fs.copyFileSync(path.join(HERE, "hooks", f), path.join(仮, "guardian", "hooks", f));
+    try { fs.copyFileSync(path.join(HERE, "package.json"), path.join(仮, "guardian", "package.json")); } catch (_) {}
+    fs.writeFileSync(path.join(仮, "guardian.config.json"),
+      JSON.stringify({ watch: ["src"], map: "docs/CODEMAP.md" }, null, 2) + NL2);
+    fs.mkdirSync(path.join(仮, "docs"), { recursive: true });
+    fs.mkdirSync(path.join(仮, "src"), { recursive: true });
+    fs.writeFileSync(path.join(仮, "src", "index.js"), "function 名札() {}" + NL2);
+    const 地図の中身 = ["# 地図", "", "## 名札の口", "", "- `名札` @`src/index.js`", ""];
+    const 書く地図 = (改行) => fs.writeFileSync(path.join(仮, "docs", "CODEMAP.md"), 地図の中身.join(改行) + 改行);
+    const CRLF = String.fromCharCode(13) + String.fromCharCode(10);
+    const 走らせる = (地図の改行, 編集文, パス) => {
+      書く地図(地図の改行);
+      const r = spawnSync(process.execPath, [path.join(仮, "guardian", "hooks", "codemap.js")],
+        { input: JSON.stringify({ tool_name: "Edit", tool_input: { file_path: パス, new_string: 編集文 } }),
+          encoding: "utf8", windowsHide: true, cwd: 仮 });
+      const 出 = String(r.stdout || "");
+      if (/このフックは落ちました/.test(出)) return "フックが落ちた";
+      const 強い = /CODEMAP 該当項/.test(出) && new RegExp("触れる実名: [^"+String.fromCharCode(92)+"n]*名札").test(出) && 出.includes("## 名札の口");
+      return 強い
+        ? "" : "該当項に強く届かない";
+    };
+    const 絶対 = path.join(仮, "src", "index.js");
+    const 場合 = [
+      { 名: "地図が LF・編集文が LF・絶対パス",        r: () => 走らせる(String.fromCharCode(10), "function 名札() { return 1; }", 絶対) },
+      { 名: "★地図が CRLF",                            r: () => 走らせる(CRLF, "function 名札() { return 1; }", 絶対) },
+      { 名: "★編集文が CRLF",                          r: () => 走らせる(String.fromCharCode(10), "function 名札() {" + CRLF + "  return 1;" + CRLF + "}", 絶対) },
+      { 名: "★パスが Windows 形式(バックスラッシュ)", r: () => 走らせる(String.fromCharCode(10), "function 名札() { return 1; }", 絶対.split("/").join("\\")) },
+      { 名: "★パスが相対",                             r: () => 走らせる(String.fromCharCode(10), "function 名札() { return 1; }", "src/index.js") },
+      { 名: "★地図も編集文も CRLF",                    r: () => 走らせる(CRLF, "function 名札() {" + CRLF + "  return 1;" + CRLF + "}", 絶対) },
+    ];
+    const 変わった = [];
+    for (const c of 場合) { const 訳 = c.r(); if (訳) 変わった.push(c.名 + "(" + 訳 + ")"); }
+    if (変わった.length)
+      ng.push("★パスの書き方や改行で、地図への到達が変わります: " + 変わった.join(" / ")
+        + " ── 同じ意味の書き方で結果が変わってはいけません"
+        + "(配布先は改行が混在した現場です: 最大のファイルだけ CRLF・他93本が LF)");
+    else ok.push("パスの書き方と改行で判定が変わらない(地図と編集文の LF・CRLF、パスの区切り2種、相対/絶対、空白入りパスの6通り)");
+  } catch (e) {
+    未測.push("パスと改行の不変条件は見ていません(見本を建てられませんでした: "
+      + String(e && e.message).slice(0, 120) + ")");
+  } finally {
+    fs.rmSync(仮の親, { recursive: true, force: true });
+  }
+}
 /* B0. 【この塊は、どの中身から来たか】(2026-08-31、配布先(CodeX)の提案)。
  *
  * ★版は**人が上げる番号**なので、同じ版のまま中身が変わることも、

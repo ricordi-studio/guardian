@@ -1,4 +1,4 @@
-9.44
+9.45
 METHOD.md 1r6lk6m-3589
 README.md 1hdlq2t-7903
 RULES.md 1vn3us-9855
@@ -7,7 +7,7 @@ audit.md 78qkl6-2162
 check.mjs ayfyg3-29303
 githooks/pre-commit zijic4-1499
 hooks/clock.js 68yad4-2755
-hooks/codemap.js g019hr-9711
+hooks/codemap.js ds9u3z-10024
 hooks/lib-root.js zlyc3l-1226
 hooks/no-fixed-names.js lm54ue-2920
 hooks/no-reflex.js p57kz8-5456
@@ -19,7 +19,7 @@ install.mjs fc4zk7-22757
 neighbors.mjs suhv99-39314
 package.json zx7jrx-416
 pull.mjs fr69k-22017
-selfcheck.mjs 4gbs77-82148
+selfcheck.mjs 41kwuh-85646
 templates/CLAUDE-snippet.md 1y7ghqv-1478
 templates/CODEMAP.md 1iwybyg-827
 templates/guardian-audit-command.md hyfuh-175

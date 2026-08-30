@@ -2,28 +2,20 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "pull.mjs::取得SHA",
-   "記号": "取得SHA",
-   "場所": "pull.mjs",
+   "key": "hooks/codemap.js::main",
+   "記号": "main",
+   "場所": "hooks/codemap.js",
    "環": 1,
-   "根": "依頼SHA",
-   "きっかけ": "「依頼SHA」を呼んでいる"
+   "根": "MAP_PATH",
+   "きっかけ": "「MAP_PATH」を呼んでいる"
   },
   {
-   "key": "pull.mjs::受領証を書く",
-   "記号": "受領証を書く",
-   "場所": "pull.mjs",
+   "key": "hooks/codemap.js::raw",
+   "記号": "raw",
+   "場所": "hooks/codemap.js",
    "環": 2,
-   "根": "依頼SHA",
-   "きっかけ": "「取得SHA」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::全消える",
-   "記号": "全消える",
-   "場所": "pull.mjs",
-   "環": 2,
-   "根": "依頼SHA",
-   "きっかけ": "「取得SHA」を呼んでいる"
+   "根": "MAP_PATH",
+   "きっかけ": "「main」を呼んでいる"
   }
  ]
 }
