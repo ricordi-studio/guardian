@@ -2,36 +2,36 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "check.mjs::MAP_PATH",
-   "記号": "MAP_PATH",
-   "場所": "check.mjs",
+   "key": "neighbors.mjs::callersOf",
+   "記号": "callersOf",
+   "場所": "neighbors.mjs",
    "環": 1,
-   "根": "map",
-   "きっかけ": "「map」を呼んでいる"
+   "根": "lineOfIndex",
+   "きっかけ": "「lineOfIndex」を呼んでいる"
   },
   {
-   "key": "check.mjs::pickBlock",
-   "記号": "pickBlock",
-   "場所": "check.mjs",
+   "key": "neighbors.mjs::欄名",
+   "記号": "欄名",
+   "場所": "neighbors.mjs",
    "環": 1,
-   "根": "map",
-   "きっかけ": "「map」を呼んでいる"
+   "根": "lineOfIndex",
+   "きっかけ": "「lineOfIndex」を呼んでいる"
   },
   {
-   "key": "check.mjs::selFiles",
-   "記号": "selFiles",
-   "場所": "check.mjs",
-   "環": 1,
-   "根": "map",
-   "きっかけ": "「map」を呼んでいる"
+   "key": "neighbors.mjs::frontier",
+   "記号": "frontier",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "lineOfIndex",
+   "きっかけ": "「callersOf」を呼んでいる"
   },
   {
-   "key": "check.mjs::残りを全部取る口",
-   "記号": "残りを全部取る口",
-   "場所": "check.mjs",
-   "環": 1,
-   "根": "map",
-   "きっかけ": "「map」を呼んでいる"
+   "key": "neighbors.mjs::isExported",
+   "記号": "isExported",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "lineOfIndex",
+   "きっかけ": "「callersOf」を呼んでいる"
   }
  ]
 }

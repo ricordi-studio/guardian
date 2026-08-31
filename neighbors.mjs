@@ -584,9 +584,24 @@ if (SWEEP) {
     .filter(([name, files]) => files.size >= 2 && 名前が十分長い(name)
       && 関数として定義した数(name, files) >= 2)
     .sort((a, b) => b[1].size - a[1].size);
+  /* ★【包み】を分ける(2026-08-31、配布先の実測)。
+   *   配布先で ある暗号化の関数が ×5 で写経の疑いに並んだが、★本物の写経は 0件だった:
+   *   3件は、正本を import した直後に同じ名前で包み直したもの
+   *   (引数を1つ減らすためだけの薄い皮)。
+   *   ★偽陽性 4/5(80%)── 報告者は1分これに乗って自分を疑った。
+   * ★消さない・落とさない。★★印を付けて分けるだけ(黙って消すと、本物の写経も消える)。 */
+  const 包みか = (name, f) => {
+    const c = corpus.get(f);
+    if (!c) return false;
+    return c.lines.some((L) => /\bimport\b|\brequire\b/.test(L) && L.includes(name));
+  };
   console.log('■ 同名の関数が複数ファイルに(写経の疑い ' + 写経疑い.length + '件)── 観点3(重複)の材料');
-  for (const [name, files] of 写経疑い.slice(0, 30))
-    console.log('  ' + name + '  ×' + files.size + '  ' + [...files].join(' / '));
+  for (const [name, files] of 写経疑い.slice(0, 30)) {
+    const 包み = [...files].filter((f) => 包みか(name, f));
+    console.log('  ' + name + '  ×' + files.size
+      + (包み.length ? '  (★包み ' + 包み.length + ' ── その名前を import か require している側)' : '')
+      + '  ' + [...files].map((f) => f + (包みか(name, f) ? '(包み)' : '')).join(' / '));
+  }
   /* 参照の集中点: 変更の爆風が最も広い場所 = 正本・棚として最も守るべき場所(観点4の材料) */
   const 集中 = 参照.sort((a, b) => b.refs - a.refs).slice(0, 15);
   console.log('■ 参照の多い記号(構造の集中点 ── 観点4=メタ化・正本化の材料)');
