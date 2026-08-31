@@ -1934,6 +1934,14 @@ if (process.argv.includes("--why")) {
     }
     const ずれ = [];
     const 測れた = [];
+    /* ★【口は在るのに、合否では回らない】を数える(2026-08-31、配布先の実測)。
+     *   配布先は今日、--sweep と --跨ぐ記号 を★初めて回した ── ★★3週間前から在ったのに。
+     *   そして回した1回目に、本物が3件出た(緑の嘘 / 三つ子 / 公開口の穴)。
+     * ★★「当てに行くこと自体が入口」で、★★★当てに行く費用は道具が在る限りほぼ0だった。
+     *   ★足りなかったのは道具ではなく【回す機会】である。
+     * ★判定にはしない ── 全部の口を合否で回すのは間違い(取り出す口は人が読むためのもの)。
+     *   ★★数だけ出す。消せない数として残り、次に見た人が「今日はどれを回すか」を決める。 */
+    const 口の一覧 = [];
     for (const t of 道具) {
       const r = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧"],
         { encoding: "utf8", windowsHide: true, cwd: HERE });
@@ -1957,6 +1965,7 @@ if (process.argv.includes("--why")) {
         個数.set(名, 数 === undefined ? "0" : 数);
       }
       const 実際 = new Set(個数.keys());
+      for (const 名 of 実際) 口の一覧.push({ 道具: t, 口: 名 });
       /* ★【値を何個飲むか】も測る(2026-08-31、配布先が手で叩いて出した6行をそのまま検査へ)。
        *   叩き方は**個数の宣言から組み立てる** ── 検査の側に口の個数を写経しない(39条)。
        *   値の位置には「未知の口に見えるもの」を置く ── 飲めば見えなくなり、飲み忘れれば見える。
@@ -2005,6 +2014,22 @@ if (process.argv.includes("--why")) {
       if (実装だけ.length) ずれ.push(t + ": 口として在るが SPEC に無い ── " + 実装だけ.join(", "));
       if (!案内だけ.length && !実装だけ.length) 測れた.push(t + "(" + 実際.size + ")");
     }
+  {
+    /* ★合否(evidence)で実際に打たれている口を数える。★★宣言を読む ── 綴りで当てない(39条)。 */
+    let 走る文 = [];
+    try {
+      const c = JSON.parse(fs.readFileSync(path.join(HERE, "guardian.config.json"), "utf8"));
+      走る文 = (c.evidence || []).map((e) => String((e && e.run) || e || ""));
+    } catch (_) { 走る文 = []; }
+    if (走る文.length && 口の一覧.length) {
+      const 回る = 口の一覧.filter((x) => 走る文.some((r) => r.includes(x.道具) && r.includes(x.口)));
+      const 回らない = 口の一覧.filter((x) => !回る.includes(x));
+      const 割 = Math.round((回る.length / 口の一覧.length) * 100);
+      ok.push("道具の口は全部で " + 口の一覧.length + " 本。そのうち【合否で回る】のは " + 回る.length
+        + " 本(" + 割 + "%)── 残り " + 回らない.length + " 本は、**人が思い出したときしか回りません**"
+        + "(実測: 配布先は `--sweep` を3週間回さず、初めて回した日に本物が3件出ました)。落としません");
+    }
+  }
     if (ずれ.length) {
       ng.push("★案内と口が食い違っています: " + ずれ.join(" / ")
         + " ── **案内された口が存在しないのは、黙る事故より質が悪い**"
