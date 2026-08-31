@@ -388,6 +388,7 @@ if (!map) {
  * ★配布先では**塊(guardian/)を数えない** ── 道具は道具の都合で増えるので(A5 と同じ理由)。 */
 {
   let 管理下 = null;   /* try の外に置く ── 締めの1行がここを読む */
+  let 落とした宣言外 = 0, 落とした無視 = 0;   /* ★この検査だけのもの(検査どうしで変数を借りない) */
   const 場所の外 = [];
   const 一覧の外 = [];
   try {
@@ -423,19 +424,41 @@ if (!map) {
     for (const x of (cfg.selectors || [])) 足す(x);
     足す(cfg.map);
     const 読む一覧 = new Set((cfg.sources || []).map((x) => path.resolve(ROOT, x)));
+    /* ★落とした側も数える(2026-08-31、配布先の実測)。
+     *   向こうの器は「相手が名乗った」も「実測で落ちた」も出していたのに、
+     *   ★【実測は通ったのに、器が棚を持っていないので出さなかった】だけを出していなかった。
+     *   ★★名乗らせるだけでは足りない ── ★落とした側も出さないと、落ちたことが見えない。
+     *   この検査も同じで、分母から黙って外していた(⑥の3段目=母数)。 */
     const 場所に在る = (f) => {
       for (const d of 場所) if (f === d || f.startsWith(d + path.sep)) return true;
       return false;
+    };
+    const 中のコードを数える = (dir) => {
+      let n = 0;
+      let es = [];
+      try { es = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return 0; }
+      for (const en of es) {
+        const full = path.join(dir, en.name);
+        if (要らない.test(full)) continue;
+        if (en.isDirectory()) { n += 中のコードを数える(full); continue; }
+        if (コード.test(en.name)) n++;
+      }
+      return n;
     };
     const 歩く = (dir) => {
       for (const en of fs.readdirSync(dir, { withFileTypes: true })) {
         const full = path.join(dir, en.name);
         if (要らない.test(full)) continue;
-        if (外した場所.some((d) => full === d || full.startsWith(d + path.sep))) continue;
+        if (外した場所.some((d) => full === d || full.startsWith(d + path.sep))) {
+          /* ★ここが【落とした側】── 外すのが場所(ディレクトリ)なら、中まで数えないと 0 になる */
+          if (en.isDirectory()) 落とした宣言外 += 中のコードを数える(full);
+          else if (コード.test(en.name)) 落とした宣言外++;
+          continue;
+        }
         if (塊は別 && (full === path.resolve(KIT) || full.startsWith(path.resolve(KIT) + path.sep))) continue;
         if (en.isDirectory()) { 歩く(full); continue; }
         if (!コード.test(en.name)) continue;
-        if (管理下 && !管理下.has(full)) continue;   /* git が無視しているもの */
+        if (管理下 && !管理下.has(full)) { 落とした無視++; continue; }   /* git が無視しているもの */
         const 相対 = path.relative(ROOT, full).split(path.sep).join("/");
         if (!場所に在る(full)) 場所の外.push(相対);
         else if (読む一覧.size && !読む一覧.has(full)) 一覧の外.push(相対);
@@ -462,6 +485,13 @@ if (!map) {
     "★**宣言に無いものは、どの検査にも掛かりません**(全部が緑でも、そこは見ていません)");
   言う("見張っている場所に在るのに `sources` に無いコード", 一覧の外,
     "★**B の検査(不変条件・固有名・重複)は `sources` しか読みません** ── そこは一度も開かれていません");
+  if (落とした宣言外 || 落とした無視) {
+    const 内訳 = [];
+    if (落とした宣言外) 内訳.push("宣言(neighbors.skip_dirs)で外した " + 落とした宣言外 + " ファイル");
+    if (落とした無視) 内訳.push("git が無視している " + 落とした無視 + " ファイル");
+    notes.push("★この数は、" + 内訳.join(" / ") + " を**分母から外して**出しています ── "
+      + "**外したものは、どの検査にも掛かりません**(落としません。外す先を変えたいなら宣言を直すこと)");
+  }
   if (管理下 === null) notes.push("★git が答えないので、**無視されているファイルも数えています**"
     + "(一時領域や生成物が混ざります ── 本物がそこに埋もれます)");
   if (!場所の外.length && !一覧の外.length) notes.push("この現場のコードは、全部どこかの宣言に入っている");
