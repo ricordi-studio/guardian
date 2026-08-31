@@ -1201,6 +1201,21 @@ if (argv.includes('--tighten')) {
       const 頭 = t.includes("/") ? t.slice(0, t.indexOf("/")) : ".";
       if (!場所.has(頭)) 場所.set(頭, 0);
     }
+    /* ★いま触っている場所(未コミット)に印を付ける(2026-08-31、配布先の案)。
+     *   ★★②遅すぎる と ③直した直後 が重なった所に、今夜の本物が居た。
+     *   ★判定にはしない ──「冷たい所を触るな」ではない。★★印を付けるだけ。
+     *   ★★★この検査だけの変数にする(隣から借りない ── 今夜4回踏んだ)。 */
+    const いま触っている = new Set();
+    {
+      const d = spawnSync("git", ["-C", ROOT, "diff", "--name-only", "HEAD"],
+        { encoding: "utf8", windowsHide: true });
+      if (d.status === 0) {
+        for (const f of String(d.stdout || "").split(/\r?\n/)) {
+          const t = f.trim(); if (!t) continue;
+          いま触っている.add(t.includes("/") ? t.slice(0, t.indexOf("/")) : ".");
+        }
+      }
+    }
     const 並び = [];
     for (const 頭 of 場所.keys()) {
       const d = spawnSync("git", ["-C", ROOT, "log", "-1", "--format=%ct", "--", 頭],
@@ -1211,15 +1226,17 @@ if (argv.includes('--tighten')) {
     }
     並び.sort((a, b) => b.日 - a.日);
     if (出すか) {
-      for (const x of 並び) console.log(x.日 + String.fromCharCode(9) + x.場所);
+      for (const x of 並び) console.log(x.日 + String.fromCharCode(9) + x.場所 + (いま触っている.has(x.場所) ? String.fromCharCode(9) + "いま触っている" : ""));
       process.exit(0);        /* 0件は0行 */
     }
     if (並び.length > 1) {
-      const 冷 = 並び.slice(0, 3).map((x) => x.場所 + "(" + x.日 + "日)").join(" / ");
+      const 冷 = 並び.slice(0, 3).map((x) => x.場所 + "(" + x.日 + "日"
+        + (いま触っている.has(x.場所) ? "・★いま触っている" : "") + ")").join(" / ");
       const 熱 = 並び[並び.length - 1];
       notes.push("最後に触った日で並べると ── ★冷たい順: " + 冷
         + " / ★★いちばん熱い: " + 熱.場所 + "(" + 熱.日 + "日)"
         + " ── ★**冷たい=悪いではありません**(触る必要が無い所も在ります)。"
+        + "★**「冷たい」と「いま触っている」が重なった所**は、今夜の本物が居た形です。"
         + "★★**ただし今夜の実測では、★本物は【冷たい所】と【直した直後】から出ました**"
         + "(落としません。全部は `--冷たい順` で出せます)");
     }
