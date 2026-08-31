@@ -595,7 +595,10 @@ if (SWEEP) {
     if (!c) return false;
     return c.lines.some((L) => /\bimport\b|\brequire\b/.test(L) && L.includes(name));
   };
-  console.log('■ 同名の関数が複数ファイルに(写経の疑い ' + 写経疑い.length + '件)── 観点3(重複)の材料');
+  console.log('■ 同名の関数が複数ファイルに(写経の疑い ' + 写経疑い.length + '件)── 観点3(重複)の材料'
+    + String.fromCharCode(10) + '  ★数えているのは【関数として定義しているファイル】です'
+    + '(--跨ぐ記号 は【名前が現れるファイル】を数えるので、★★2つは食い違います ── 食い違いは、'
+    + '★★★別の書き方で同じことをしている所の手掛かりになります)');
   for (const [name, files] of 写経疑い.slice(0, 30)) {
     const 包み = [...files].filter((f) => 包みか(name, f));
     console.log('  ' + name + '  ×' + files.size
