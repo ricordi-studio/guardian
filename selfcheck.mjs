@@ -22,6 +22,26 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+
+/* ★【自分が出したゴミを数える】(2026-09-01、配布先 外の会議 の事故報告)。
+ *
+ * ★実際に起きた: 配布先で ★guardian-* が 202,086個(推定 61.5GB)まで溜まり、
+ *   ★★依頼主の機械の空きが 5GB になった。★★★自己検査は【通過】で緑のままだった。
+ * ★見本を建てる9箇所は、全部 finally で rmSync している ── ★★設計は正しい。
+ *   だが ★★★rmSync が失敗しても、誰も気づかない(Windows では、子が掴んでいると失敗する)。
+ * ★この事故は【壊して赤くなるか】では見つからない ── ★★壊れていないから。
+ *   ★★★正常動作の副作用であり、この塊が持っていなかった種類の検査である:
+ *     これまで: 「壊したら赤くなるか」/ ★今回: 「★★後始末をしたか」
+ * ★分けて数える: ★★走る前から在ったもの=数 / ★★★この走行が出したもの=赤。
+ *   (前から在る分まで赤にすると、他人のゴミで止まる ── 母数の段・⑥)
+ * ★プロセスは数えていない ── 数え方が現場ごとに違うので(報告者の「6日前のプロセス」は、
+ *   実測したら ★Adobe の node.exe だった)。**ここでは測れない**と書いておく。 */
+const 一時の親 = os.tmpdir();
+const 見本の名 = /^guardian-/;
+const 走る前の見本 = (() => {
+  try { return new Set(fs.readdirSync(一時の親).filter((n) => 見本の名.test(n))); }
+  catch (_) { return null; }
+})();
 import { fileURLToPath } from 'node:url';
 
 /* ★【この道具が知っている口】── 宣言ではなく、ここが実装そのものである
@@ -426,7 +446,7 @@ function runTool(tool, files, args = []) {
     const r = spawnSync(process.execPath, [path.join(HERE, tool), '--root', dir, ...args], { encoding: 'utf8' });
     return { code: r.status, out: (r.stdout || '') + (r.stderr || '') };
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) { /* ★残ったことは、走り終わりの検査が赤で言う(黙らせていない) */ }
   }
 }
 const run = (files) => runTool('check.mjs', files);
@@ -1453,7 +1473,7 @@ if (process.argv.includes("--why")) {
         + 'フックと導入が【配布先ではない場所】を見ます ── 報告は成功と出るので気づけません');
     }
   } finally {
-    fs.rmSync(仮, { recursive: true, force: true });
+    try { fs.rmSync(仮, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) { /* ★残ったことは、走り終わりの検査が赤で言う(黙らせていない) */ }
   }
 }
 
@@ -1564,7 +1584,7 @@ if (process.argv.includes("--why")) {
     未測.push('install の Claude Code 判定は見ていません(見本を建てられませんでした: '
       + String(e && e.message).slice(0, 120) + ')');
   } finally {
-    fs.rmSync(仮, { recursive: true, force: true });
+    try { fs.rmSync(仮, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) { /* ★残ったことは、走り終わりの検査が赤で言う(黙らせていない) */ }
   }
 }
 
@@ -1650,7 +1670,7 @@ if (process.argv.includes("--why")) {
   } catch (e) {
     未測.push('フックの起動は見ていません(見本を建てられませんでした: ' + String(e && e.message).slice(0, 120) + ')');
   } finally {
-    fs.rmSync(仮, { recursive: true, force: true });
+    try { fs.rmSync(仮, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) { /* ★残ったことは、走り終わりの検査が赤で言う(黙らせていない) */ }
   }
 }
 
@@ -1744,7 +1764,7 @@ if (process.argv.includes("--why")) {
     未測.push("長さと言語の不変条件は見ていません(見本を建てられませんでした: "
       + String(e && e.message).slice(0, 120) + ")");
   } finally {
-    fs.rmSync(仮, { recursive: true, force: true });
+    try { fs.rmSync(仮, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) { /* ★残ったことは、走り終わりの検査が赤で言う(黙らせていない) */ }
   }
 }
 /* B8f. 【パスの書き方と改行で、判定が変わらないか】
@@ -1804,7 +1824,7 @@ if (process.argv.includes("--why")) {
     未測.push("パスと改行の不変条件は見ていません(見本を建てられませんでした: "
       + String(e && e.message).slice(0, 120) + ")");
   } finally {
-    fs.rmSync(仮の親, { recursive: true, force: true });
+    try { fs.rmSync(仮の親, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) { /* ★残ったことは、走り終わりの検査が赤で言う(黙らせていない) */ }
   }
 }
 /* B8g. 【約束の宣言(PROTOCOL.json)が、実際の振る舞いと合っているか】
@@ -2087,7 +2107,7 @@ if (process.argv.includes("--why")) {
     未測.push('門の型対応は見ていません(見本を建てられませんでした: '
       + String(e && e.message).slice(0, 120) + ')── git が要ります');
   } finally {
-    fs.rmSync(仮, { recursive: true, force: true });
+    try { fs.rmSync(仮, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) { /* ★残ったことは、走り終わりの検査が赤で言う(黙らせていない) */ }
   }
 }
 /* B0. 【この塊は、どの中身から来たか】(2026-08-31、配布先(CodeX)の提案)。
@@ -2216,7 +2236,7 @@ if (process.argv.includes("--why")) {
     未測.push('門が生きているかは見ていません(見本を建てられませんでした: '
       + String(e && e.message).slice(0, 120) + ')');
   } finally {
-    fs.rmSync(仮, { recursive: true, force: true });
+    try { fs.rmSync(仮, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) { /* ★残ったことは、走り終わりの検査が赤で言う(黙らせていない) */ }
   }
 }
 
@@ -2315,7 +2335,7 @@ if (process.argv.includes("--why")) {
     未測.push('門のクラス対応は見ていません(見本を建てられませんでした: '
       + String(e && e.message).slice(0, 120) + ')── git が要ります');
   } finally {
-    fs.rmSync(仮, { recursive: true, force: true });
+    try { fs.rmSync(仮, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) { /* ★残ったことは、走り終わりの検査が赤で言う(黙らせていない) */ }
   }
 }
 
@@ -2376,6 +2396,34 @@ if (process.argv.includes('--tighten')) {
  *     案内された逃げ道が実装に無い、という形だった(9.49 で verdict 側も直した)。
  *   ★人に見せる語彙と、機械に返す符号は、同じ数だけ持つ。
  *     語彙が4つで符号が3つなら、どれか2つが同じ符号に潰れ、潰れた方は必ず緑に化ける。 */
+/* ★後始末をしたか(上の宣言の続き)。★★ここは【最後】に置く ── 見本を建てる検査が全部済んだ後。 */
+{
+  if (走る前の見本 === null) {
+    測れない.push("自分が出した一時領域は見ていません(一時の置き場が読めません)");
+  } else {
+    let いま = null;
+    try { いま = fs.readdirSync(一時の親).filter((n) => 見本の名.test(n)); } catch (_) { いま = null; }
+    if (いま === null) {
+      測れない.push("自分が出した一時領域は見ていません(一時の置き場が読めなくなりました)");
+    } else {
+      const 出した = いま.filter((n) => !走る前の見本.has(n));
+      const 前から = いま.length - 出した.length;
+      if (出した.length) {
+        ng.push("★この走行が出した一時領域が " + 出した.length + " 個 残っています: "
+          + 出した.slice(0, 5).join(" / ") + (出した.length > 5 ? " ほか" + (出した.length - 5) + "件" : "")
+          + " ── **見本を建てた検査が、後始末をしていません**。"
+          + "★配布先で 202,086個(推定61.5GB)まで溜まった実績があります(2026-09-01)。"
+          + "★★手で消す前に、どの検査が残したかを見てください");
+      } else if (前から) {
+        ok.push("この走行が出した一時領域は 0 個(★前から在るものが " + 前から + " 個 ── "
+          + "**この走行のものではないので赤にしません**。要らなければ手で消せます)");
+      } else {
+        ok.push("この走行が出した一時領域は 0 個(後始末できています)");
+      }
+    }
+  }
+}
+
 /* ★【受領証】── 取得元と、いまの中身と、合否を【同じ回で】返す(2026-08-31、CodeX の指摘)。
  *
  *   `--sha` が言えるのは『最後に pull が記録した SHA』までで、
