@@ -478,7 +478,12 @@ todo.push(`検査を回す: node ${KIT}/check.mjs`);
  * 「わざと壊して落ちることを確かめる」は、これまで導入した人の judgment 任せだった。
  * 機械にできる部分(エンジンが壊れたら赤くなるか)は、その場で機械に言わせる。 */
 if (!DRY) {
-  const r = spawnSync(process.execPath, [path.join(HERE, 'selfcheck.mjs')], { encoding: 'utf8', timeout: 60000 });
+  /* ★締め切りは【宣言に合わせる】(2026-09-01)。60秒にしたら短すぎた ──
+   *   実測: この機械で selfcheck は ★43秒。宣言(guardian.config.json)は ★★180秒。
+   *   ★★★60秒だと、少し遅い機械で【子を殺してしまう】── 殺された子の見本は、
+   *   親の台帳に無いので ★誰も片づけない。★★締め切りを足したせいで、漏れが増える所だった。
+   * ★2箇所に別々の数を書くと、必ず食い違う(⑥)。ここは宣言より長く取る。 */
+  const r = spawnSync(process.execPath, [path.join(HERE, 'selfcheck.mjs')], { encoding: 'utf8', timeout: 300000 });
   if (r.status === 0) did.push('塊そのものの自己検査が通りました(エンジンは生きています)');
   else todo.push('⚠ 塊の自己検査が赤いです。まず `node ' + KIT + '/selfcheck.mjs` を見てください'
     + '(この状態の check.mjs の「ずれなし」は信用できません)');
