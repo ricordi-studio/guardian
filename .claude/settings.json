@@ -35,6 +35,11 @@
             "type": "command",
             "command": "node ./hooks/stop.js",
             "timeout": 900
+          },
+          {
+            "type": "command",
+            "command": "node ./hooks/in-loop.js",
+            "timeout": 15
           }
         ]
       }
