@@ -6,24 +6,32 @@
    "記号": "added",
    "場所": "install.mjs",
    "環": 1,
-   "根": "claude",
-   "きっかけ": "「claude」を呼んでいる"
+   "根": "ROOT",
+   "きっかけ": "「ROOT」を呼んでいる"
   },
   {
    "key": "install.mjs::CC",
    "記号": "CC",
    "場所": "install.mjs",
    "環": 1,
-   "根": "claude",
-   "きっかけ": "「claude」を呼んでいる"
+   "根": "ROOT",
+   "きっかけ": "「ROOT」を呼んでいる"
   },
   {
    "key": "install.mjs::cfgPath",
    "記号": "cfgPath",
    "場所": "install.mjs",
    "環": 1,
-   "根": "claude",
-   "きっかけ": "「claude」を呼んでいる"
+   "根": "ROOT",
+   "きっかけ": "「ROOT」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::claudePath",
+   "記号": "claudePath",
+   "場所": "install.mjs",
+   "環": 1,
+   "根": "ROOT",
+   "きっかけ": "「ROOT」を呼んでいる"
   },
   {
    "key": "install.mjs::findInstallRoot",
@@ -34,27 +42,43 @@
    "きっかけ": "「claude」を呼んでいる"
   },
   {
+   "key": "install.mjs::mapPath",
+   "記号": "mapPath",
+   "場所": "install.mjs",
+   "環": 1,
+   "根": "ROOT",
+   "きっかけ": "「ROOT」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::rel",
+   "記号": "rel",
+   "場所": "install.mjs",
+   "環": 1,
+   "根": "ROOT",
+   "きっかけ": "「ROOT」を呼んでいる"
+  },
+  {
    "key": "install.mjs::setPath",
    "記号": "setPath",
    "場所": "install.mjs",
    "環": 1,
-   "根": "claude",
-   "きっかけ": "「claude」を呼んでいる"
+   "根": "ROOT",
+   "きっかけ": "「ROOT」を呼んでいる"
   },
   {
-   "key": "install.mjs::ROOT",
-   "記号": "ROOT",
+   "key": "install.mjs::人が書いた開発規範",
+   "記号": "人が書いた開発規範",
    "場所": "install.mjs",
-   "環": 2,
-   "根": "claude",
-   "きっかけ": "「findInstallRoot」を呼んでいる"
+   "環": 1,
+   "根": "ROOT",
+   "きっかけ": "「ROOT」を呼んでいる"
   },
   {
    "key": "install.mjs::settings",
    "記号": "settings",
    "場所": "install.mjs",
    "環": 2,
-   "根": "claude",
+   "根": "ROOT",
    "きっかけ": "「setPath」を呼んでいる"
   },
   {
@@ -62,8 +86,16 @@
    "記号": "snippet",
    "場所": "install.mjs",
    "環": 2,
-   "根": "claude",
+   "根": "ROOT",
    "きっかけ": "「CC」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::write",
+   "記号": "write",
+   "場所": "install.mjs",
+   "環": 2,
+   "根": "ROOT",
+   "きっかけ": "「rel」を呼んでいる"
   }
  ]
 }

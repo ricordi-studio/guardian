@@ -122,6 +122,38 @@ function findInstallRoot(start) {
   return process.cwd();
 }
 const ROOT = findInstallRoot(HERE);
+
+/* ★【立っている現場】と【入れる先】が食い違ったら、止める(2026-09-01、実走で見つかった)。
+ *
+ * ★★根は塊の場所(HERE)から上へ辿って決める。作法どおり塊が現場の中に在れば、これで当たる。
+ *   ところが塊を【別の場所に1つ置いて、そこを指して】入れる使い方をすると、
+ *   ★★★上へ辿った先は【塊自身のリポジトリ】になる ── 人が立っている現場には辿り着かない。
+ *
+ * ★実測(2026-09-01): 空のプロジェクトで node <塊>/install.mjs を回したら ──
+ *     【導入しました】/ 「guardian.config.json は既にあるので触っていません」
+ *   と出て、★★その現場には1つもファイルが増えなかった。
+ *   「既にある」のは【塊の中】の話で、現場の話ではなかった。
+ *   ★★★成功と名乗って、何もしていない ── この塊がいちばん嫌う形(見えない失敗)である。
+ *
+ * ★止め方: 立っている場所が根の【外】なら、入れずに終わる。
+ *   (根の中に立っているとき ── 作法どおりの使い方 ── は、これまでどおり通る) */
+{
+  const 立つ = process.cwd();
+  const r = path.relative(ROOT, 立つ);
+  if (r.startsWith('..') || path.isAbsolute(r)) {
+    const nl = String.fromCharCode(10);
+    process.stdout.write(
+      '★入れていません(立っている場所と、入れる先が食い違っています)' + nl + nl
+      + '  立っている場所: ' + 立つ + nl
+      + '  入れる先と判定: ' + ROOT + '  ← ★これは塊自身の場所です' + nl + nl
+      + '★塊は【入れたい現場の中】に置いてから回してください:' + nl
+      + '     npx degit ricordi-studio/guardian guardian' + nl
+      + '     node guardian/install.mjs' + nl + nl
+      + '★★別の場所に置いた塊を指すと、根が塊自身になり、' + nl
+      + '  「導入しました」と出たまま現場に1つも入りません(2026-09-01 実測)。' + nl);
+    process.exit(1);
+  }
+}
 const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
 const did = [];
 const skipped = [];
@@ -522,11 +554,30 @@ if (!DRY) {
      * ★★同じ名前が、正本では【正本の現場のもの】、配布先では【受領証の置き場】を指していた ── ⑥。
      * ★★★だから除外に .guardian を足し、★断言をやめた(消したあとの合否は測っていないので)。 */
     const 消してはいけない = ['.guardian'];
+    /* ★塊が【この現場の中】に在るときだけ、消す1行を渡す(2026-09-01、実走で見つかった)。
+     *   ★★この案内は「degit/clone で現場の中に丸ごと落ちてきた写し」を前提にしていた。
+     *   ところが塊を【共有の置き場】に1つ置いて、そこを指して入れる使い方が在る。
+     *   そのとき HERE は正本(または他の現場も使っている写し)を指すので、
+     *   ★★★渡す1行が「正本の docs / CLAUDE.md / .claude を消せ」になる。
+     *   実測(2026-09-01): 別フォルダに入れたら、Desktop/Guardian を消す rm -rf が出た。
+     *   ★消すのは人だが、渡したのは機械である ── 渡してはいけない1行だった。 */
+    const 外に在る = (() => {
+      try {
+        const r = path.relative(ROOT, HERE);
+        return r.startsWith('..') || path.isAbsolute(r);
+      } catch (_) { return true; }   /* ★測れなければ、渡さない側に倒す */
+    })();
     const 混入 = 現場のもの
       .filter((n) => !n.startsWith('.git') && n !== 'node_modules' && n !== '.guardian-pull-tmp')
       .filter((n) => !消してはいけない.includes(n))
       .filter((n) => fs.existsSync(path.join(HERE, n)));
-    if (混入.length) {
+    if (混入.length && 外に在る) {
+      /* ★消す1行は渡さない ── その塊は他の現場も使っているかもしれない */
+      todo.push('★塊(' + KIT + ')は**この現場の外**に在ります。中に正本のものが在ります: '
+        + 混入.join(', ') + ' ── ★**消す1行は渡しません**。'
+        + 'その塊は他の現場も使っている可能性があり、消すと**そちらが壊れます**。'
+        + '現場ごとに写しを持つなら、写した先で入れ直してください');
+    } else if (混入.length) {
       todo.push('★塊の中に**正本の現場のもの**が混ざっています: ' + 混入.join(', ')
         + ' ── `npx degit` / `git clone` は Guardian の宣言を読まないので丸ごと落ちてきます。'
         + '要らないので消せます ── ★**消す前後で `node ' + KIT + '/verdict.mjs` を1回ずつ走らせて、'
