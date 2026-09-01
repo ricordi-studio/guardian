@@ -735,6 +735,9 @@ const 根の印 = (根) => {
   if (印の控え.has(根)) return 印の控え.get(根);
   let v;
   if (根.startsWith('note:')) v = 印を取る(read(根.slice(5)));
+  /* ★子として回す辺の印は【その子ファイルの本体】から取る(2026-09-01)。
+   *   ★★子の中身が変われば、前の回答は無効になる ── 出口の意味が変わるのは、そこなので。 */
+  else if (根.startsWith('proc:')) v = 印を取る(read(根.slice(5)));
   else {
     const files = touched.get(根);
     v = files ? 印を取る([...files].sort().map((f) => 本体(f, 根)).join('\n----\n')) : '';
@@ -985,6 +988,52 @@ for (const [f, lines] of changed) {
           きっかけ: 'ノート ' + f + ' の「' + k + '」を読んでいる' });
       }
     }
+  }
+}
+
+/* ---------- ④.5 子として回す関係 → その相手も近傍(2026-09-01) ----------
+ *
+ * ★なぜ在るか: 2026-09-01、配布先(外の会議)で【出口コードの意味】を 0/1 から 0/1/2 に変えたとき、
+ *   その出口を読んでいる3箇所を、★★3人が3回とも見落とした。
+ *   ★★★そのうち2箇所は、記号の参照が1つも無い ── 子プロセスとして回し、出口だけを読む形。
+ *
+ * ★この門は【記号の定義→参照】しか辺を張っていなかったので、この関係が最初から見えていない。
+ *   実測: この塊にも同じ形が在る(install.mjs が selfcheck.mjs を子として回している)。
+ *   ★★つまり私も、同じ穴を持ったまま今日ずっと使っていた。
+ *
+ * ★★★張る辺: spawn で回している .mjs を、呼んだ側 ↔ 呼ばれた側 の両向きで近傍にする。
+ *   出口の意味を変えたら、読んでいる側が必ず問われる。 */
+{
+  const 呼ぶ = new Map();          /* 呼ぶ側 -> Set(回される .mjs) */
+  const 回される = new Map();      /* 回される .mjs -> Set(呼ぶ側) */
+  const 足す = (m, k, v) => { if (!m.has(k)) m.set(k, new Set()); m.get(k).add(v); };
+  const 起動 = /spawn(?:Sync)?\s*\(/g;
+  const 名 = /['"`]([\w.\-]+\.mjs)['"`]/g;
+  for (const [cf, c] of corpus) {
+    const t = c.text;
+    for (const m of t.matchAll(起動)) {
+      const 窓 = t.slice(m.index, m.index + 400);
+      for (const g of 窓.matchAll(名)) {
+        const 相手 = g[1];
+        if (相手 === cf.split('/').pop()) continue;          /* 自分自身には張らない */
+        const 実 = [...corpus.keys()].find((x) => x === 相手 || x.endsWith('/' + 相手));
+        if (!実) continue;                                    /* この現場に無い名は張らない */
+        足す(呼ぶ, cf, 実); 足す(回される, 実, cf);
+      }
+    }
+  }
+  const 出す = (相手, 自分, 向き) => {
+    const key = 相手 + '::子として回す:' + 自分;
+    if (need.has(key)) return;
+    need.set(key, {
+      記号: '子として回す:' + 自分, 場所: 相手, 環: 1, 根: 'proc:' + 自分,
+      きっかけ: 向き === '親' ? (自分 + ' を子として回し、その出口を読んでいる')
+                              : (自分 + ' から子として回されている') });
+  };
+  for (const [cf] of changed) {
+    if (!corpus.has(cf)) continue;
+    for (const 親 of (回される.get(cf) || [])) 出す(親, cf, '親');
+    for (const 子 of (呼ぶ.get(cf) || [])) 出す(子, cf, '子');
   }
 }
 

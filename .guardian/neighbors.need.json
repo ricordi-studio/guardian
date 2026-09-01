@@ -2,12 +2,36 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "hooks/in-loop.js::pass",
-   "記号": "pass",
-   "場所": "hooks/in-loop.js",
+   "key": "check.mjs::子として回す:neighbors.mjs",
+   "記号": "子として回す:neighbors.mjs",
+   "場所": "check.mjs",
    "環": 1,
-   "根": "残す",
-   "きっかけ": "「残す」を呼んでいる"
+   "根": "proc:neighbors.mjs",
+   "きっかけ": "neighbors.mjs を子として回し、その出口を読んでいる"
+  },
+  {
+   "key": "neighbors.mjs::一覧",
+   "記号": "一覧",
+   "場所": "neighbors.mjs",
+   "環": 1,
+   "根": "根の印",
+   "きっかけ": "「根の印」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::報告",
+   "記号": "報告",
+   "場所": "neighbors.mjs",
+   "環": 1,
+   "根": "根の印",
+   "きっかけ": "「根の印」を呼んでいる"
+  },
+  {
+   "key": "selfcheck.mjs::子として回す:neighbors.mjs",
+   "記号": "子として回す:neighbors.mjs",
+   "場所": "selfcheck.mjs",
+   "環": 1,
+   "根": "proc:neighbors.mjs",
+   "きっかけ": "neighbors.mjs を子として回し、その出口を読んでいる"
   }
  ]
 }
