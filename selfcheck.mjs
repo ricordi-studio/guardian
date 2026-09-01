@@ -38,10 +38,22 @@ import { spawnSync } from 'node:child_process';
  *   実測したら ★Adobe の node.exe だった)。**ここでは測れない**と書いておく。 */
 const 一時の親 = os.tmpdir();
 const 見本の名 = /^guardian-/;
-const 走る前の見本 = (() => {
-  try { return new Set(fs.readdirSync(一時の親).filter((n) => 見本の名.test(n))); }
-  catch (_) { return null; }
-})();
+/* ★【所有台帳】── 自分が作った見本だけを覚える(2026-09-01、@codex の指摘)。
+ *
+ * ★直す前は【一時領域の全体差分】で数えていた: 走る前の一覧と、走った後の一覧を引き算する。
+ *   ★★これは所有ではない。★★★2本 並走すると壊れる:
+ *     ・相手が作った物を【自分が出した】と数える
+ *     ・★もっと悪い: 拾い直しの段で、★★相手が使っている最中の見本を消しに行く
+ *   実測(2026-09-01): 2本 並走させたら、後から始めた方は「0個・後始末できています」、
+ *   ★先に始めた方は「1個 残っています(拾い直しで0個)」── ★★互いの結果を汚していた。
+ * ★だから【自分が mkdtempSync で作った道】だけを台帳に持ち、そこしか見ない・そこしか消さない。
+ * ★★他人の見本は【数えるだけ】── 消さないし、赤にもしない。 */
+const 私が建てた = new Set();
+const 見本を建てる = (接頭) => {
+  const 道 = fs.mkdtempSync(path.join(一時の親, 接頭));
+  私が建てた.add(道);
+  return 道;
+};
 import { fileURLToPath } from 'node:url';
 
 /* ★【この道具が知っている口】── 宣言ではなく、ここが実装そのものである
@@ -435,7 +447,7 @@ const BASE = () => ({
 
 /* ---------- 見本を一時領域に建てて、道具を回す ---------- */
 function runTool(tool, files, args = []) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-selfcheck-'));
+  const dir = 見本を建てる('guardian-selfcheck-');
   try {
     for (const [p, body] of Object.entries(files)) {
       if (body == null) continue;                       // null = そのファイルを置かない
@@ -443,7 +455,7 @@ function runTool(tool, files, args = []) {
       fs.mkdirSync(path.dirname(full), { recursive: true });
       fs.writeFileSync(full, body, 'utf8');
     }
-    const r = spawnSync(process.execPath, [path.join(HERE, tool), '--root', dir, ...args], { encoding: 'utf8' });
+    const r = spawnSync(process.execPath, [path.join(HERE, tool), '--root', dir, ...args], { encoding: 'utf8', timeout: 60000 });
     return { code: r.status, out: (r.stdout || '') + (r.stderr || '') };
   } finally {
     try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) { /* ★残ったことは、走り終わりの検査が赤で言う(黙らせていない) */ }
@@ -800,7 +812,7 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
       const 壊れている = 違う.filter((f) => {
         if (!/\.(mjs|js)$/.test(f)) return false;
         const r = spawnSync(process.execPath, ["--check", path.join(HERE, f)],
-          { encoding: "utf8", windowsHide: true });
+          { encoding: "utf8", windowsHide: true, timeout: 60000 });
         return r.status !== 0;
       });
       if (壊れている.length) {
@@ -1082,7 +1094,7 @@ if (process.argv.includes("--why")) {
         } else if (process.argv.includes("--send")) {
           /* 何を・どこへ出すのかを必ず先に出す(黙って外へ出す道具を作らない) */
           見せる();
-          const r = spawnSync(送る, { shell: true, encoding: "utf8" });
+          const r = spawnSync(送る, { shell: true, encoding: "utf8", timeout: 60000 });
           if (r.status === 0) ok.push("事故レポートを送りました: " + String(r.stdout || "").trim());
           else ng.push("送れませんでした(gh が要ります / gh auth login で認証): "
             + String(r.stderr || "").slice(0, 200) + " ── 1枚は " + 先 + " に在ります");
@@ -1447,7 +1459,7 @@ if (process.argv.includes("--why")) {
  *   ★実際に見本を建てて確かめる(理屈ではなく実測) ── 塊らしいフォルダの中に目印を置き、
  *     根がその1つ上を指すことを確認する。 */
 {
-  const 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-root-'));
+  const 仮 = 見本を建てる('guardian-root-');
   try {
     const 塊 = path.join(仮, 'guardian');
     fs.mkdirSync(塊, { recursive: true });
@@ -1496,7 +1508,7 @@ if (process.argv.includes("--why")) {
    *   ── 実際、最初はそう書いて、直す前の形に戻しても緑のままだった。
    *   検査が当たらないまま緑を返すのは、この塊が生まれた事故そのものである。 */
   const r = spawnSync(process.execPath, [path.join(HERE, 'pull.mjs'), '--distributed'],
-    { encoding: "utf8", windowsHide: true });
+    { encoding: "utf8", windowsHide: true, timeout: 60000 });
   const 配られる = new Set(String(r.stdout || "").split(String.fromCharCode(10)).map((x) => x.trim()).filter(Boolean));
   if (r.status !== 0 || !配られる.size) {
     未測.push("配布の網羅は見ていません(pull.mjs --distributed が答えません)");
@@ -1526,7 +1538,7 @@ if (process.argv.includes("--why")) {
  *   ついでに、判定が効くべき現場(人が書いた CLAUDE.md / .claude)でも入ることを見る
  *   ── 片側だけ見る検査は「何も入れない」に退化しても緑になる。 */
 {
-  const 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-cc-'));
+  const 仮 = 見本を建てる('guardian-cc-');
   try {
     /* 見本を建てる: 塊は <根>/guardian/ に置き、install が読むものだけ用意する */
     const 建てる = (名, 仕込み) => {
@@ -1548,7 +1560,7 @@ if (process.argv.includes("--why")) {
     };
     const 回す = ({ 根, 塊 }, ...引数) => {
       const r = spawnSync(process.execPath, [path.join(塊, 'install.mjs'), ...引数],
-        { cwd: 根, encoding: 'utf8', windowsHide: true });
+        { cwd: 根, encoding: 'utf8', windowsHide: true, timeout: 60000 });
       return String(r.stdout || '') + String(r.stderr || '');
     };
     const 入った = (出) => /フックを \d+ 本足しました|フックは登録済み/.test(出);
@@ -1601,7 +1613,7 @@ if (process.argv.includes("--why")) {
  *   だが**直したことを測らないと、次に誰かが消したときにまた静かに死ぬ**。だからここで起動を測る。
  * ★測るのは【起動するか】だけ ── 中身の判断は各フックの仕事で、ここでは見ない。 */
 {
-  const 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-hook-'));
+  const 仮 = 見本を建てる('guardian-hook-');
   try {
     /* 見本: その現場が ESM だと宣言している状態を作る */
     fs.mkdirSync(path.join(仮, 'guardian', 'hooks'), { recursive: true });
@@ -1645,7 +1657,7 @@ if (process.argv.includes("--why")) {
         tool_input: { file_path: path.join(仮, 'src', 'cart.js'), new_string: 'const TAX_RATE = 0.08;' },
       });
       const r = spawnSync(process.execPath, [path.join(仮, 'guardian', 'hooks', 'codemap.js')],
-        { input: 入力, encoding: 'utf8', windowsHide: true });
+        { input: 入力, encoding: 'utf8', windowsHide: true, timeout: 60000 });
       const 出 = String(r.stdout || '');
       /* ★落ちたことを言う返事も additionalContext を持つ ── それを合格に数えない */
       if (/このフックは落ちました/.test(出)) 中身が出ない.push('codemap.js(見本の現場で落ちている)');
@@ -1693,7 +1705,7 @@ if (process.argv.includes("--why")) {
     { 名: "名札",     項: "日本語2字の口", 書き: "`名札`" },
     { 名: "出席者",   項: "日本語3字の口", 書き: "`出席者`" },
   ];
-  const 仮 = fs.mkdtempSync(path.join(os.tmpdir(), "guardian-fuhen-"));
+  const 仮 = 見本を建てる("guardian-fuhen-");
   try {
     fs.mkdirSync(path.join(仮, "guardian", "hooks"), { recursive: true });
     for (const f of fs.readdirSync(path.join(HERE, "hooks")))
@@ -1722,7 +1734,7 @@ if (process.argv.includes("--why")) {
         tool_input: { file_path: path.join(仮, "src", "index.js"), new_string: "function " + m.名 + "() { return 1; }" },
       });
       const r = spawnSync(process.execPath, [path.join(仮, "guardian", "hooks", "codemap.js")],
-        { input: 入力, encoding: "utf8", windowsHide: true });
+        { input: 入力, encoding: "utf8", windowsHide: true, timeout: 60000 });
       const 出 = String(r.stdout || "");
       if (/このフックは落ちました/.test(出)) { 届かない.push(m.名 + "(フックが落ちた)"); continue; }
       /* ★【弱い返事を合格に数えない】(2026-08-31、この検査を書いている最中に自分で踏んだ)。
@@ -1747,7 +1759,7 @@ if (process.argv.includes("--why")) {
         tool_input: { file_path: path.join(仮, "src", "index.js"), new_string: "const 記名札束 = 1;" },
       });
       const r = spawnSync(process.execPath, [path.join(仮, "guardian", "hooks", "codemap.js")],
-        { input: 入力, encoding: "utf8", windowsHide: true });
+        { input: 入力, encoding: "utf8", windowsHide: true, timeout: 60000 });
       const 出 = String(r.stdout || "");
       if (/CODEMAP 該当項/.test(出)) 誤って当たる = "記名札束 → 『名札』の項に当たった";
     }
@@ -1777,7 +1789,7 @@ if (process.argv.includes("--why")) {
  *   だから見本の中で作る。★測る場所と食わせる物はセットである(B8a の教訓)。
  * ★合格は【強い一致】── 弱い返事(全見出しを並べる方)を数えない(B8e の教訓)。 */
 {
-  const 仮の親 = fs.mkdtempSync(path.join(os.tmpdir(), "guardian-path-"));
+  const 仮の親 = 見本を建てる("guardian-path-");
   /* ★名前に空白を入れる ── 空白入りパスで壊れる道具は多い(この塊も一度やっている) */
   const 仮 = path.join(仮の親, "見 本 の 現場");
   try {
@@ -1840,7 +1852,7 @@ if (process.argv.includes("--why")) {
 {
   const 走らせて = (args) => {
     const r = spawnSync(process.execPath, [path.join(HERE, "pull.mjs"), ...args],
-      { encoding: "utf8", windowsHide: true, cwd: HERE });
+      { encoding: "utf8", windowsHide: true, cwd: HERE, timeout: 60000 });
     return { code: r.status, 出: String(r.stdout || "") + String(r.stderr || "") };
   };
   let 宣言 = null;
@@ -1887,7 +1899,7 @@ if (process.argv.includes("--why")) {
  * ★これは push を止める仕組みではない。**push する前に気づく**ための計器である。 */
 {
   const 正本か = fs.existsSync(path.join(HERE, ".git"));
-  const g = (...a) => spawnSync("git", a, { cwd: HERE, encoding: "utf8", windowsHide: true });
+  const g = (...a) => spawnSync("git", a, { cwd: HERE, encoding: "utf8", windowsHide: true, timeout: 60000 });
   if (!正本か) {
     測れない.push("版と中身が1対1かは見ていません(ここは配布先で、正本の履歴が読めません)");
   } else {
@@ -1964,7 +1976,7 @@ if (process.argv.includes("--why")) {
     const 口の一覧 = [];
     for (const t of 道具) {
       const r = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧"],
-        { encoding: "utf8", windowsHide: true, cwd: HERE });
+        { encoding: "utf8", windowsHide: true, cwd: HERE, timeout: 60000 });
       if (r.status !== 0) { ずれ.push(t + "(--口一覧 が答えません)"); continue; }
       /* ★【名前だけでなく、拒むかも測る】(2026-08-31、配布先の実測)。
        *   直す前の B11 は `--口一覧` の**答え**しか見ていなかった。配布先が門の拒否だけを壊すと、
@@ -1975,7 +1987,7 @@ if (process.argv.includes("--why")) {
        *   **門が壊れている道具は本物の仕事を始める**(壊れた verdict は合否を回し始め、検査が検査を呼ぶ)。
        *   この形なら、門が壊れていても**口一覧が出て終わる**だけで済む。 */
       const z = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧", "--この口は無い"],
-        { encoding: "utf8", windowsHide: true, cwd: HERE });
+        { encoding: "utf8", windowsHide: true, cwd: HERE, timeout: 60000 });
       if (z.status !== 1) ずれ.push(t + ": 知らない口を拒みません(出口 " + z.status + ")");
       /* 出力は「口 個数」の2列。名前だけを取り出す(個数は下の叩き方が使う) */
       const 個数 = new Map();
@@ -1998,7 +2010,7 @@ if (process.argv.includes("--why")) {
           : Array.from({ length: Math.max(1, Number(数) || 0) }, (_, n) => "--餌" + (n + 1));
         const 期待 = (数 === "0") ? 1 : 0;   /* 飲まない口に未知を渡せば出口1 / 飲む口なら出口0 */
         const w = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧", 名, ...餌],
-          { encoding: "utf8", windowsHide: true, cwd: HERE });
+          { encoding: "utf8", windowsHide: true, cwd: HERE, timeout: 60000 });
         if (w.status !== 期待)
           ずれ.push(t + ": " + 名 + " が値を " + 数 + " 個飲むと宣言していますが、振る舞いが違います(出口 " + w.status + " / 期待 " + 期待 + ")");
         /* ★【足りない側】も測る(2026-08-31、配布先が境界を叩いて見つけた)。
@@ -2009,7 +2021,7 @@ if (process.argv.includes("--why")) {
         if (数 !== "*" && Number(数) >= 1) {
           const 短い = 餌.slice(0, Number(数) - 1);
           const v2 = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧", 名, ...短い],
-            { encoding: "utf8", windowsHide: true, cwd: HERE });
+            { encoding: "utf8", windowsHide: true, cwd: HERE, timeout: 60000 });
           if (v2.status !== 1)
             ずれ.push(t + ": " + 名 + " に値を " + 短い.length + " 個しか渡していないのに止まりません(出口 " + v2.status + ")");
         }
@@ -2022,7 +2034,7 @@ if (process.argv.includes("--why")) {
         if (数 !== "*" && Number(数) >= 1) {
           const v3 = spawnSync(process.execPath,
             [path.join(HERE, t), "--口一覧", 名, ...餌, "--この口は無い"],
-            { encoding: "utf8", windowsHide: true, cwd: HERE });
+            { encoding: "utf8", windowsHide: true, cwd: HERE, timeout: 60000 });
           if (v3.status !== 1)
             ずれ.push(t + ": " + 名 + " が値の後ろの未知の口まで飲んでいます(出口 " + v3.status + ")");
         }
@@ -2070,8 +2082,8 @@ if (process.argv.includes("--why")) {
  * ★この現場(正本)は .mjs しか無いので、**実測しないと一生出ない条件**である ── これで5件目。
  * ★git が無い機械では測れない ── そのときは【未測】。 */
 {
-  const 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-type-'));
-  const g = (...a) => spawnSync('git', a, { cwd: 仮, encoding: 'utf8', windowsHide: true });
+  const 仮 = 見本を建てる('guardian-type-');
+  const g = (...a) => spawnSync('git', a, { cwd: 仮, encoding: 'utf8', windowsHide: true, timeout: 60000 });
   try {
     fs.mkdirSync(path.join(仮, 'src'), { recursive: true });
     const 書く = (q, t) => fs.writeFileSync(path.join(仮, q), t);
@@ -2091,7 +2103,7 @@ if (process.argv.includes("--why")) {
     書く('src/model.ts', 'export interface 名札 { id: string }' + NL2 + 'export type 呼び名 = string;' + NL2);
 
     const r = spawnSync(process.execPath, [path.join(HERE, 'neighbors.mjs'), '--list'],
-      { cwd: 仮, encoding: 'utf8', windowsHide: true });
+      { cwd: 仮, encoding: 'utf8', windowsHide: true, timeout: 60000 });
     const 出 = String(r.stdout || '') + String(r.stderr || '');
     const 外れ = [];
     if (!/触れた記号:[^\n]*名札/.test(出)) 外れ.push('interface を【触れた記号】と見なせていない');
@@ -2173,7 +2185,7 @@ if (process.argv.includes("--why")) {
  * ★実測(2026-08-31): 9.32 の `no-reflex` は、社名がエンジンにべた書きされていたため
  *   **一覧に無い会社(新しい会社・日本語の社名)を素通し**していた。この検査があれば出た。 */
 {
-  const 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-gate-'));
+  const 仮 = 見本を建てる('guardian-gate-');
   try {
     fs.mkdirSync(path.join(仮, 'guardian', 'hooks'), { recursive: true });
     fs.mkdirSync(path.join(仮, 'worker', 'src'), { recursive: true });
@@ -2252,7 +2264,7 @@ if (process.argv.includes("--why")) {
  * ★git が無ければ【ここでは測れない】── 正本の履歴が要る。 */
 {
   const 版 = (v) => { const m = String(v).match(/^(\d+)\.(\d+)/); return m ? { 大: +m[1], 小: +m[2] } : null; };
-  const g = (...a) => spawnSync("git", a, { cwd: HERE, encoding: "utf8", windowsHide: true });
+  const g = (...a) => spawnSync("git", a, { cwd: HERE, encoding: "utf8", windowsHide: true, timeout: 60000 });
   /* ★【いま】は作業木の値、【前】は それと違う いちばん新しい committed 値。
    *   ★★こう取らないと、コミット前は1つずれる(実測: 12.9 を 12.7 と比べた)。 */
   const 履歴 = g("log", "--format=%H", "-8", "--", "KIT_VERSION");
@@ -2297,8 +2309,8 @@ if (process.argv.includes("--why")) {
  * ★だから見本を建てて【実際に門を回す】。門が鳴らないことは、この塊では合格ではない。
  * ★git が無い機械では測れない ── そのときは【未測】(緑にも赤にもしない)。 */
 {
-  const 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-class-'));
-  const g = (...a) => spawnSync('git', a, { cwd: 仮, encoding: 'utf8', windowsHide: true });
+  const 仮 = 見本を建てる('guardian-class-');
+  const g = (...a) => spawnSync('git', a, { cwd: 仮, encoding: 'utf8', windowsHide: true, timeout: 60000 });
   try {
     fs.mkdirSync(path.join(仮, 'src'), { recursive: true });
     const 書く = (p, s) => fs.writeFileSync(path.join(仮, p), s);
@@ -2320,7 +2332,7 @@ if (process.argv.includes("--why")) {
     書く('src/cart.js', fs.readFileSync(path.join(仮, 'src/cart.js'), 'utf8').replace(' * (1 + tax);', ';'));
 
     const r = spawnSync(process.execPath, [path.join(HERE, 'neighbors.mjs'), '--list'],
-      { cwd: 仮, encoding: 'utf8', windowsHide: true });
+      { cwd: 仮, encoding: 'utf8', windowsHide: true, timeout: 60000 });
     const 出 = String(r.stdout || '') + String(r.stderr || '');
     const 外れ = [];
     if (!/触れた記号:[^\n]*\bCart\b/.test(出)) 外れ.push('クラス Cart を【触れた記号】と見なせていない');
@@ -2398,44 +2410,36 @@ if (process.argv.includes('--tighten')) {
  *     語彙が4つで符号が3つなら、どれか2つが同じ符号に潰れ、潰れた方は必ず緑に化ける。 */
 /* ★後始末をしたか(上の宣言の続き)。★★ここは【最後】に置く ── 見本を建てる検査が全部済んだ後。 */
 {
-  if (走る前の見本 === null) {
-    測れない.push("自分が出した一時領域は見ていません(一時の置き場が読めません)");
+  /* ★台帳に在るものだけを見る(全体差分ではない ── @codex の指摘・2026-09-01) */
+  const 建てた = [...私が建てた];
+  const 残っている = 建てた.filter((道) => { try { return fs.existsSync(道); } catch (_) { return false; } });
+  /* ★1段目(見本ごとの finally)で消えなかったものだけ、ここで拾い直す。
+   *   ★★台帳に在る道しか触らない ── ★★★他の走行の見本には、絶対に手を出さない。 */
+  let 拾えた = 0;
+  for (const 道 of 残っている) {
+    try { fs.rmSync(道, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); } catch (_) {}
+    try { if (!fs.existsSync(道)) 拾えた++; } catch (_) {}
+  }
+  const 残り = 残っている.length - 拾えた;
+  /* ★他人の見本は【数えるだけ】── 消さない・赤にしない・自分の数に混ぜない */
+  let 他所 = null;
+  try {
+    他所 = fs.readdirSync(一時の親).filter((n) => 見本の名.test(n))
+      .map((n) => path.join(一時の親, n)).filter((道) => !私が建てた.has(道)).length;
+  } catch (_) { 他所 = null; }
+  const 但し = 他所 ? "(★別に " + 他所 + " 個ありますが、★★この走行の台帳に無いので触っていません ── 他の走行のものか、前から在るものです)" : "";
+  if (残り) {
+    ng.push("★この走行が建てた見本が " + 残り + " 個 残っています"
+      + "(建てた " + 建てた.length + " 個 / 1段目で消えなかった " + 残っている.length
+      + " 個のうち、拾い直しで " + 拾えた + " 個は消せました)"
+      + " ── **見本を建てた検査が、後始末をしていません**。"
+      + "★配布先で 202,086個(推定61.5GB)まで溜まった実績があります(2026-09-01)" + 但し);
+  } else if (残っている.length) {
+    ok.push("この走行が建てた見本 " + 建てた.length + " 個は、全部 片づきました ── ★ただし "
+      + 残っている.length + " 個は【1段目では消えず、拾い直しで消えました】。"
+      + "**混み合うと rmSync が落ちます**。これが続くなら、見本の建て方を疑うこと" + 但し);
   } else {
-    let いま = null;
-    try { いま = fs.readdirSync(一時の親).filter((n) => 見本の名.test(n)); } catch (_) { いま = null; }
-    if (いま === null) {
-      測れない.push("自分が出した一時領域は見ていません(一時の置き場が読めなくなりました)");
-    } else {
-      const 出した = いま.filter((n) => !走る前の見本.has(n));
-      const 前から = いま.length - 出した.length;
-      /* ★後始末を【2段】にする(2026-09-01、配布先で実際に1個 残ったので)。
-       *   ★★漏れは【たまに】起きる ── 同じ機械で、直後に走らせると出ない。
-       *   実測: 取り直した直後の1回だけ残り、次の2回は0個(混み合うと rmSync が落ちる)。
-       * ★★★だから最後にもう一度だけ拾いに行く ── ★この走行が出したものだけ。
-       *   ★前から在るものには触らない(他人のゴミを黙って消さない)。
-       * ★★そして【拾い直した数】も出す ── 消せたからといって黙ると、
-       *   ★★★「たまに漏れている」ことが誰にも見えなくなる(この事故そのものの形)。 */
-      let 拾えた = 0;
-      for (const n of 出した) {
-        try { fs.rmSync(path.join(一時の親, n), { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); }
-        catch (_) { /* ★消えなければ、下で赤にする */ }
-        if (!fs.existsSync(path.join(一時の親, n))) 拾えた++;
-      }
-      const 残り = 出した.length - 拾えた;
-      const 但し = 前から ? "(★前から在るものが " + 前から + " 個 ── **この走行のものではないので触っていません**)" : "";
-      if (残り) {
-        ng.push("★この走行が出した一時領域が " + 残り + " 個 残っています"
-          + "(出した " + 出した.length + " 個のうち、拾い直しで " + 拾えた + " 個は消せました)"
-          + " ── **見本を建てた検査が、後始末をしていません**。"
-          + "★配布先で 202,086個(推定61.5GB)まで溜まった実績があります(2026-09-01)" + 但し);
-      } else if (出した.length) {
-        ok.push("この走行が出した一時領域は 0 個 ── ★ただし " + 出した.length
-          + " 個は【1段目の後始末では消えず、拾い直しで消えました】。"
-          + "**混み合うと rmSync が落ちます**。これが続くなら、見本の建て方を疑うこと" + 但し);
-      } else {
-        ok.push("この走行が出した一時領域は 0 個(後始末できています)" + 但し);
-      }
-    }
+    ok.push("この走行が建てた見本 " + 建てた.length + " 個は、全部 片づきました" + 但し);
   }
 }
 

@@ -2,6 +2,110 @@
  "range": "HEAD",
  "need": [
   {
+   "key": "check.mjs::MAP_PATH",
+   "記号": "MAP_PATH",
+   "場所": "check.mjs",
+   "環": 1,
+   "根": "map",
+   "きっかけ": "「map」を呼んでいる"
+  },
+  {
+   "key": "check.mjs::pickBlock",
+   "記号": "pickBlock",
+   "場所": "check.mjs",
+   "環": 1,
+   "根": "map",
+   "きっかけ": "「map」を呼んでいる"
+  },
+  {
+   "key": "check.mjs::残りを全部取る口",
+   "記号": "残りを全部取る口",
+   "場所": "check.mjs",
+   "環": 1,
+   "根": "map",
+   "きっかけ": "「map」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::added",
+   "記号": "added",
+   "場所": "install.mjs",
+   "環": 1,
+   "根": "claude",
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::CC",
+   "記号": "CC",
+   "場所": "install.mjs",
+   "環": 1,
+   "根": "claude",
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::cfgPath",
+   "記号": "cfgPath",
+   "場所": "install.mjs",
+   "環": 1,
+   "根": "claude",
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::findInstallRoot",
+   "記号": "findInstallRoot",
+   "場所": "install.mjs",
+   "環": 1,
+   "根": "claude",
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::setPath",
+   "記号": "setPath",
+   "場所": "install.mjs",
+   "環": 1,
+   "根": "claude",
+   "きっかけ": "「claude」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::git",
+   "記号": "git",
+   "場所": "neighbors.mjs",
+   "環": 1,
+   "根": "gitRaw",
+   "きっかけ": "「gitRaw」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::依頼SHA",
+   "記号": "依頼SHA",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "走る",
+   "きっかけ": "「走る」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::取得SHA",
+   "記号": "取得SHA",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "走る",
+   "きっかけ": "「走る」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::受領証を書く",
+   "記号": "受領証を書く",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "走る",
+   "きっかけ": "「走る」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::食い違い",
+   "記号": "食い違い",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "走る",
+   "きっかけ": "「走る」を呼んでいる"
+  },
+  {
    "key": "selfcheck.mjs::CASES",
    "記号": "CASES",
    "場所": "selfcheck.mjs",
@@ -16,6 +120,126 @@
    "環": 1,
    "根": "runTool",
    "きっかけ": "「runTool」を呼んでいる"
+  },
+  {
+   "key": "verdict.mjs::残りを全部取る口",
+   "記号": "残りを全部取る口",
+   "場所": "verdict.mjs",
+   "環": 1,
+   "根": "push",
+   "きっかけ": "「push」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::ROOT",
+   "記号": "ROOT",
+   "場所": "install.mjs",
+   "環": 2,
+   "根": "claude",
+   "きっかけ": "「findInstallRoot」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::settings",
+   "記号": "settings",
+   "場所": "install.mjs",
+   "環": 2,
+   "根": "claude",
+   "きっかけ": "「setPath」を呼んでいる"
+  },
+  {
+   "key": "install.mjs::snippet",
+   "記号": "snippet",
+   "場所": "install.mjs",
+   "環": 2,
+   "根": "claude",
+   "きっかけ": "「CC」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::diff",
+   "記号": "diff",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "gitRaw",
+   "きっかけ": "「git」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::dirty",
+   "記号": "dirty",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "gitRaw",
+   "きっかけ": "「git」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::isExported",
+   "記号": "isExported",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "gitRaw",
+   "きっかけ": "「git」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::parseDiff",
+   "記号": "parseDiff",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "gitRaw",
+   "きっかけ": "「git」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::read",
+   "記号": "read",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "gitRaw",
+   "きっかけ": "「git」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::touched",
+   "記号": "touched",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "gitRaw",
+   "きっかけ": "「git」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::一覧",
+   "記号": "一覧",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "gitRaw",
+   "きっかけ": "「git」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::外した件を言う",
+   "記号": "外した件を言う",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "gitRaw",
+   "きっかけ": "「git」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::差分が要らない",
+   "記号": "差分が要らない",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "gitRaw",
+   "きっかけ": "「git」を呼んでいる"
+  },
+  {
+   "key": "neighbors.mjs::欄名",
+   "記号": "欄名",
+   "場所": "neighbors.mjs",
+   "環": 2,
+   "根": "gitRaw",
+   "きっかけ": "「git」を呼んでいる"
+  },
+  {
+   "key": "pull.mjs::全消える",
+   "記号": "全消える",
+   "場所": "pull.mjs",
+   "環": 2,
+   "根": "走る",
+   "きっかけ": "「取得SHA」を呼んでいる"
   }
  ]
 }

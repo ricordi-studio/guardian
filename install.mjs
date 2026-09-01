@@ -478,7 +478,7 @@ todo.push(`検査を回す: node ${KIT}/check.mjs`);
  * 「わざと壊して落ちることを確かめる」は、これまで導入した人の judgment 任せだった。
  * 機械にできる部分(エンジンが壊れたら赤くなるか)は、その場で機械に言わせる。 */
 if (!DRY) {
-  const r = spawnSync(process.execPath, [path.join(HERE, 'selfcheck.mjs')], { encoding: 'utf8' });
+  const r = spawnSync(process.execPath, [path.join(HERE, 'selfcheck.mjs')], { encoding: 'utf8', timeout: 60000 });
   if (r.status === 0) did.push('塊そのものの自己検査が通りました(エンジンは生きています)');
   else todo.push('⚠ 塊の自己検査が赤いです。まず `node ' + KIT + '/selfcheck.mjs` を見てください'
     + '(この状態の check.mjs の「ずれなし」は信用できません)');

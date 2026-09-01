@@ -142,7 +142,7 @@ if (!cfg) {
      * 当てにならない判定を「不明」の根拠にすると、不明が静かに差戻へ化ける。 */
     if (e.needsCmd) {
       const look = process.platform === 'win32' ? `where ${e.needsCmd}` : `command -v ${e.needsCmd}`;
-      const w = spawnSync(look, { cwd, shell: true, encoding: 'utf8', windowsHide: true });
+      const w = spawnSync(look, { cwd, shell: true, encoding: 'utf8', windowsHide: true, timeout: 60000 });
       if (w.status !== 0) { push('不明', name, `道具がありません(${e.needsCmd})`); continue; }
     }
 

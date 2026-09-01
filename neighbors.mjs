@@ -148,7 +148,7 @@ const read = (p) => { try { return fs.readFileSync(path.join(ROOT, p), 'utf8'); 
  * ★引数の配列で渡せば、括る作法そのものが要らなくなる(括り忘れが起きる場所を消す)。
  *   9.16 まで居た sh / shRaw(名前を囲まない ── もう実装に無いので)は、同じ仕事をシェル経由でやっていた。 */
 const gitRaw = (...args) => {
-  const r = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8', windowsHide: true, maxBuffer: 128 * 1024 * 1024 });
+  const r = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8', windowsHide: true, maxBuffer: 128 * 1024 * 1024, timeout: 60000 });
   return { ok: r.status === 0, out: r.stdout || '', err: String(r.stderr || '').trim(), code: r.status };
 };
 const 測れなかった = [];

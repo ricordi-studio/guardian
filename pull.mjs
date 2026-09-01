@@ -99,7 +99,7 @@ const 見るだけ = process.argv.includes('--check');
  * ★引数の配列をそのまま渡せば、括る作法ごと要らなくなる ── 括り忘れる場所を消す。
  *   neighbors.mjs で同じ形の実害(空白入りの経路で git が落ち、嘘の理由が出た)を踏んでいる。 */
 const 走る = (cmd, args, opts = {}) =>
-  spawnSync(cmd, args, { encoding: 'utf8', windowsHide: true, ...opts });
+  spawnSync(cmd, args, { encoding: 'utf8', windowsHide: true, ...opts, timeout: 60000 });
 
 /* ★【配るもの】と【配らないもの】を**両方**宣言する(2026-08-29 依頼主の判断)。
  *
