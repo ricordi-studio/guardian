@@ -17,16 +17,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import os from 'node:os';
-import crypto from 'node:crypto';
+import { createRequire } from 'node:module';
 
 const ここ = path.dirname(fileURLToPath(import.meta.url));
-/* ★印は塊の【外】に置く ── 中に置くと現場の絶対路が配り物に混ざる(自分の検査が拾った) */
-const 印の場所 = () => {
-  const 根 = path.resolve(ここ, '..');
-  const 印 = crypto.createHash('md5').update(根).digest('hex').slice(0, 12);
-  return path.join(os.tmpdir(), 'kit-loop-' + 印 + '.json');
-};
-const 印 = 印の場所();
+const 共有 = createRequire(import.meta.url)('./印の場所.cjs');
+const 根 = path.resolve(ここ, '..');
+const 印 = 共有.印の場所(根);
 
 const argv = process.argv.slice(2);
 const 取る = (名, 既定 = null) => {

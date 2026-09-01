@@ -1,4 +1,4 @@
-13.20
+13.21
 METHOD.md 1kv4bye-22912
 PROTOCOL.json aajo32-354
 README.md 1hdlq2t-7903
@@ -9,7 +9,7 @@ check.mjs 1lid37i-56023
 githooks/pre-commit zijic4-1499
 hooks/clock.js 1ejybp4-3513
 hooks/codemap.js 2csawn-10496
-hooks/in-loop.js efu8cn-2871
+hooks/in-loop.js 44gj58-2826
 hooks/lib-root.js zlyc3l-1226
 hooks/no-fixed-names.js lm54ue-2920
 hooks/no-reflex.js p57kz8-5456

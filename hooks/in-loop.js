@@ -23,7 +23,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const crypto = require('crypto');
+const { 印の場所, 帳の場所 } = require(path.join(__dirname, '..', '.guardian', '印の場所.cjs'));
 
 /* ★この門が【本当に呼ばれているか】を残す(見本 probe。2026-09-01)。
  *   ★★台本を叩いて block が出ることは測れるが、
@@ -32,10 +32,11 @@ const crypto = require('crypto');
  *   (2026-09-01、会議で @claude に「在る ではなく 止まった を測れ」と言われた) */
 const 残す = (何) => {
   try {
-    const 帳 = path.join(os.tmpdir(), 'kit-loop-log.txt');
+    const 帳 = 帳の場所();
     fs.appendFileSync(帳, new Date().toISOString() + '  ' + 何 + String.fromCharCode(10));
   } catch (_) {}
 };
+
 
 const pass = (印 = '通した') => { 残す(印); process.exit(0); };
 
@@ -45,9 +46,8 @@ process.stdin.on('end', () => {
   try {
     /* ★印は塊の【外】── 中に置くと現場の絶対路が配り物に混ざる(2026-09-01) */
     const 根 = path.resolve(__dirname, '..');
-    const 印 = path.join(os.tmpdir(),
-      'kit-loop-' + crypto.createHash('md5').update(根).digest('hex').slice(0, 12) + '.json');
-    if (!fs.existsSync(印)) return pass('通した(輪に入っていない)');
+    const 印 = 印の場所(根);
+    if (!fs.existsSync(印)) return pass('通した(輪に入っていない) 見た印=' + 印 + ' 根=' + 根 + ' cwd=' + process.cwd());
 
     let payload = {};
     try { payload = JSON.parse(input || '{}'); } catch (_) {}

@@ -17,14 +17,14 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import crypto from 'node:crypto';
+import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ここ = path.dirname(fileURLToPath(import.meta.url));
+const 共有 = createRequire(import.meta.url)('./印の場所.cjs');
 const 根 = path.resolve(ここ, '..');
-const 印 = path.join(os.tmpdir(),
-  'kit-loop-' + crypto.createHash('md5').update(根).digest('hex').slice(0, 12) + '.json');
+const 印 = 共有.印の場所(根);
 
 if (!fs.existsSync(印)) {
   console.error('輪に入っていません(先に 輪.mjs --入る してください)');
