@@ -55,12 +55,17 @@ if (!fs.existsSync(印)) {
   process.exit(1);
 }
 const 輪 = JSON.parse(fs.readFileSync(印, 'utf8'));
+const 下書き = 取る('--出す', null);   /* ★出す物が在れば、同じ1本で出す */
 const 道具 = path.join(輪.場, 輪.道具 || 'tsugite.mjs');
 
 /* ★締め切りは wait の待ち時間より長く取る(自分の締め切りで子を殺さない ── 13.16 の失敗) */
 const 締め切り = (Number(輪.待ち) + 120) * 1000;
-const r = spawnSync(process.execPath, [道具, 'wait', 輪.名, '--timeout', String(輪.待ち)],
-  { encoding: 'utf8', timeout: 締め切り });
+/* ★出口を1本にする ── 相手の道具の【終い】を使う(2026-09-01)。
+ *   ★★終い = 下書きが在れば出し、そのまま輪に戻る。無ければ待つだけ。
+ *   ★★★こちらで publish と wait を2本に分けていたのを、1本にした。
+ *   実測(写しの部屋): 下書き有り→出して待つ / 無し→「出す物はありません」で待つ。どちらも出口0。 */
+const 引数 = ['終い', 輪.名, ...(下書き ? [下書き] : []), '--timeout', String(輪.待ち)];
+const r = spawnSync(process.execPath, [道具, ...引数], { encoding: 'utf8', timeout: 締め切り });
 
 if (r.stdout) process.stdout.write(r.stdout);
 if (有る('--試す')) console.log(String.fromCharCode(10)
