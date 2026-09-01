@@ -25,7 +25,19 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 
-const pass = () => process.exit(0);
+/* ★この門が【本当に呼ばれているか】を残す(見本 probe。2026-09-01)。
+ *   ★★台本を叩いて block が出ることは測れるが、
+ *   【道具がその block を守って止まるか】は、台本の側からは測れない。
+ *   ★★★だから「呼ばれた/何を返した」を1行 残し、次のターンで読む。
+ *   (2026-09-01、会議で @claude に「在る ではなく 止まった を測れ」と言われた) */
+const 残す = (何) => {
+  try {
+    const 帳 = path.join(os.tmpdir(), 'kit-loop-log.txt');
+    fs.appendFileSync(帳, new Date().toISOString() + '  ' + 何 + String.fromCharCode(10));
+  } catch (_) {}
+};
+
+const pass = (印 = '通した') => { 残す(印); process.exit(0); };
 
 let input = '';
 process.stdin.on('data', (c) => { input += c; });
@@ -35,18 +47,18 @@ process.stdin.on('end', () => {
     const 根 = path.resolve(__dirname, '..');
     const 印 = path.join(os.tmpdir(),
       'kit-loop-' + crypto.createHash('md5').update(根).digest('hex').slice(0, 12) + '.json');
-    if (!fs.existsSync(印)) return pass();          /* 会議に入っていない */
+    if (!fs.existsSync(印)) return pass('通した(輪に入っていない)');
 
     let payload = {};
     try { payload = JSON.parse(input || '{}'); } catch (_) {}
-    if (payload.stop_hook_active) return pass();     /* 二度は止めない */
+    if (payload.stop_hook_active) return pass('通した(二度は止めない)');
 
     const 輪 = JSON.parse(fs.readFileSync(印, 'utf8'));
-    if (!輪 || !輪.終了) return pass();               /* まだ一度も待っていない ── 測れない */
+    if (!輪 || !輪.終了) return pass('通した(まだ一度も待っていない)');
 
     const 経過 = Math.round((Date.now() - Number(輪.終了)) / 1000);
-    if (!Number.isFinite(経過)) return pass();
-    if (経過 <= 60) return pass();                    /* 直前に wait から戻ってきた */
+    if (!Number.isFinite(経過)) return pass('通した(経過が測れない)');
+    if (経過 <= 60) return pass('通した(' + 経過 + '秒前に wait から戻った)');
 
     const reason =
       '★輪の中に居るのに、wait を呼ばずにターンを終えようとしています。\n' +
@@ -63,9 +75,10 @@ process.stdin.on('end', () => {
       '★★会議が終わったなら(出口2 または 出口4)、印を消してください:\n' +
       '  node .guardian/輪.mjs --抜ける';
 
+    残す('★止めた(' + 経過 + '秒 経っている)');
     process.stdout.write(JSON.stringify({ decision: 'block', reason }));
     process.exit(0);
   } catch (_) {
-    pass();                                          /* 黙って通す */
+    pass('通した(門の中で失敗した)');                 /* 黙って通す */
   }
 });
