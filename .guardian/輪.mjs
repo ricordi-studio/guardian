@@ -63,11 +63,16 @@ const r = spawnSync(process.execPath, [道具, 'wait', 輪.名, '--timeout', Str
   { encoding: 'utf8', timeout: 締め切り });
 
 if (r.stdout) process.stdout.write(r.stdout);
+if (有る('--試す')) console.log(String.fromCharCode(10)
+  + '★【試験】印を61分 前に戻しました ── このターンが止まれば、門は効いています');
 if (r.stderr) process.stderr.write(r.stderr);
 
-/* ★戻った時刻を残す ── フックはこれを見る */
+/* ★戻った時刻を残す ── フックはこれを見る。
+ *   ★★--試す を付けると【わざと61分 前に戻す】── 門が本当に止めるかを測るため。
+ *   ★★★wait は普通に呼んでいるので、輪は切れていない(最後の行為はこの1本のまま)。
+ *   2026-09-01、@codex の「wait 無しでターン終了を試み、block されたことを確認」の代わり。 */
 try {
-  輪.終了 = Date.now();
+  輪.終了 = 有る('--試す') ? Date.now() - 3660000 : Date.now();
   fs.writeFileSync(印, JSON.stringify(輪, null, 2));
 } catch (_) {}
 
