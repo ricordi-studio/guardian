@@ -42,4 +42,24 @@ function loadConfig(root) {
   return {};
 }
 
-module.exports = { findRoot, loadConfig };
+/* ★設定が壊れていたら【一度だけ言う】(24.4、2026-09-03、会議で @kozo が「測っていない」と挙げた)。
+ *
+ *   ★★実測: 現場が watch:["packages"] と宣言していても、カンマを1つ落とすと
+ *   宣言が黙って既定値([site worker gas src app lib])に差し替わる ──
+ *   ★★★codemap は src/a.js に 0バイト → 308バイト。**見る範囲が変わるのに、誰も言わない。**
+ *
+ *   ★門(stop.js)は これで【止める】。★★合図のフック(clock / codemap)は【続ける】── 
+ *   止めると人が作業できなくなるだけで、合図は合図でしかない。
+ *   ★★★だが 24.3 の掟と同じ: **続けるなら、続けたと言う。**
+ *
+ *   文言は1箇所に置く(呼ぶ側が2つ在るので、写経すると片方が古くなる)。 */
+function 設定が壊れていたら言う(cfg, 誰) {
+  if (!cfg || !cfg.壊れている) return false;
+  console.error('★Guardian(' + 誰 + '): ' + cfg.壊れている + ' が読めません。'
+    + String.fromCharCode(10) + '★★宣言は使えないので【組み込みの既定値】で続けます ── '
+    + '見る範囲が、あなたが宣言した物と違います。'
+    + String.fromCharCode(10) + '  訳: ' + cfg.壊れた訳);
+  return true;
+}
+
+module.exports = { findRoot, loadConfig, 設定が壊れていたら言う };

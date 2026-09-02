@@ -13,10 +13,12 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { findRoot, loadConfig } = require('./lib-root');
+const { findRoot, loadConfig, 設定が壊れていたら言う } = require('./lib-root');
 
 const ROOT = findRoot(__dirname);
 const CFG = loadConfig(ROOT);
+/* ★続けるなら【続けたと言う】(24.4)── 壊れた設定で既定値に落ちた事を、踏んだ人に見せる */
+設定が壊れていたら言う(CFG, path.basename(__filename));  /* ★名は自分に答えさせる(写経しない) */
 
 function stamp(d) {
   const p = (n) => String(n).padStart(2, '0');
