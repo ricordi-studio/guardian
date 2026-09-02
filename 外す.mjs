@@ -63,6 +63,69 @@ if (!台帳 || !Array.isArray(台帳.走行)) {
   process.exit(2);
 }
 
+/* ---------- ①' 保持一覧(塊の既定 ∪ 現場の追加)── 2026-09-03、会議で @kozo と @codex が寄せた ----------
+ *
+ * ★何のために在るか: 塊が【名指しするが書かない】物は、書き手が無いので台帳に載らない。
+ *   ★★だから「所有未確定」に落ち、判定は永久に UNKNOWN になる。
+ *   ★★★だが これらは【機械で導けないから残す】のであって、分からないから残すのではない。
+ *   その区別を、この一覧が持つ。
+ *
+ * ★合併の規則は【要らない】(@kozo)── 両方が「残す」としか言わないので、衝突が起きない。
+ *   ★★聞く問いは1つ: 「この道は、どちらかの一覧に載っているか」= 和集合。
+ *
+ * ★★★現場が既定から【引く】ことは、できない(@kozo)──
+ *   引けるようにすると、間違いが【消える】側に落ちる(不可逆)。
+ *   足すだけなら、間違えても【残りすぎる】側に落ちる(可逆)。
+ *
+ * ★壊れた形・予約された道・広すぎる指定は【黙って無視しない】(@codex)── 設定の誤りとして出す。 */
+const 保持 = new Map();          /* rel → { 理由, 根拠, 出どころ[] } */
+const 保持の訴え = [];
+{
+  const 予約 = new Set([書き手.台帳の相対]);   /* ★台帳は保持できない ── 外す側が自分で消す物 */
+  const 広すぎる = (rel) => !rel || rel === "." || rel === "./" || rel === "/"
+    || rel.includes("*") || rel.includes("?") || rel.endsWith("/");
+  const 足す = (件, 出どころ) => {
+    const rel = 件 && typeof 件.rel === "string" ? 件.rel.trim() : null;
+    if (!rel) { 保持の訴え.push(出どころ + ": rel が無い項が在ります"); return; }
+    if (広すぎる(rel)) { 保持の訴え.push(出どころ + ": 広すぎる指定は受け付けません(" + rel + ")── ★exact path だけです"); return; }
+    if (予約.has(rel)) { 保持の訴え.push(出どころ + ": 予約された道は保持できません(" + rel + ")── ★外す側が自分で消す物です"); return; }
+    if (!件.理由) { 保持の訴え.push(出どころ + ": 理由の無い項は受け付けません(" + rel + ")── ★★理由が無い保持は、ただの見逃しと区別がつきません"); return; }
+    /* ★引こうとする指定は【黙って通さない】(2026-09-03、@codex の線)。
+     *   ★★足すだけなら間違いは「残りすぎる」側(可逆)。★★★引けるようにすると「消える」側(不可逆)。
+     *   だから欄そのものを受け付けず、書かれていたら言う。 */
+    for (const 欄 of ['削除可', '消してよい', 'delete', 'remove', '除く'])
+      if (件[欄] !== undefined) 保持の訴え.push(出どころ + ": 【引く】指定は受け付けません(" + rel
+        + " の " + 欄 + ")── ★保持一覧は足すだけです。引けるようにすると、間違いが【消える】側に落ちます");
+    const 前 = 保持.get(rel);
+    if (!前) 保持.set(rel, { 理由: [件.理由], 根拠: [件.根拠 || "(根拠なし)"], 出どころ: [出どころ] });
+    else { 前.理由.push(件.理由); 前.根拠.push(件.根拠 || "(根拠なし)"); 前.出どころ.push(出どころ); }
+  };
+  /* ★塊の既定 */
+  {
+    const 先 = path.join(HERE, "保持一覧.json");
+    const t = 読む(先);
+    if (t == null) 保持の訴え.push("塊の既定(保持一覧.json)が読めません ── ★既定は無いものとして進みます");
+    else {
+      let j = null;
+      try { j = JSON.parse(t); } catch (_) { j = null; }
+      if (!j || !Array.isArray(j.既定)) 保持の訴え.push("塊の既定(保持一覧.json)の形が壊れています ── ★黙って0件にはしません");
+      else for (const 件 of j.既定) 足す(件, "塊の既定");
+    }
+  }
+  /* ★★現場の追加(guardian.config.json の retain 欄) */
+  {
+    const t = 読む(path.join(ROOT, "guardian.config.json"));
+    if (t != null) {
+      let c = null;
+      try { c = JSON.parse(t); } catch (_) { c = null; }
+      if (c && c.retain !== undefined) {
+        if (!Array.isArray(c.retain)) 保持の訴え.push("現場の追加(guardian.config.json の retain)が配列ではありません");
+        else for (const 件 of c.retain) 足す(件, "現場の追加");
+      }
+    }
+  }
+}
+
 /* ---------- ② 全走行を合併する(★最初に置いた回を基準にする) ---------- */
 const 基準 = new Map();
 for (const 走 of 台帳.走行) {
@@ -81,6 +144,19 @@ const 消す = [];
 const 衝突 = [];
 const 触らない = [];
 const フォルダ = [];  /* ★塊が作ったフォルダ(2026-09-03) */
+/* ★育つ物 ── ★★install が【種】を置き、現場が育てることを案内が求めている物(2026-09-03)。
+ *
+ *   ★★★実測: 案内どおりに宣言と地図を埋めた現場で外すと、判定は CONFLICT だった。
+ *   出た言葉は「入れたときから変わっています(この現場が育てた物なので、消しません)」──
+ *   ★**育ったと分かっているのに、CONFLICT と呼んでいた。**
+ *
+ *   ★★CONFLICT は「何かが おかしい / 進めない」であって、
+ *   ★★★「この道具を、案内どおりに使った」ではない。
+ *
+ *   ★育っていれば【期待保持】── 現場の物になったので、残すのが正しい。
+ *   ★★育っていなければ(種のまま)消す ── 現場は何も書いていないので、塊の物である。 */
+const 育つ物 = new Set(['guardian.config.json', 'docs/CODEMAP.md']);
+const 育った = [];
 const 所有未確定 = [];  /* ★今回の導入は作っていないが、いま在る物(2026-09-03) */
 const 戻す = [];    /* ★入れる前の中身を持っている物(2026-09-03) */
 const 戻した = [];
@@ -131,7 +207,9 @@ for (const x of 項) {
     const 中 = 読む(先);
     if (中 == null) { 触らない.push(x.rel + '(もう在りません)'); continue; }
     if (x.hash && 指紋(中) !== x.hash) {
-      衝突.push(x.rel + ' ── 入れたときから変わっています(この現場が育てた物なので、消しません)');
+      /* ★育つ物は【CONFLICT ではない】(2026-09-03)── 案内が「埋めてください」と言っている物である */
+      if (育つ物.has(x.rel)) 育った.push(x.rel);
+      else 衝突.push(x.rel + ' ── 入れたときから変わっています(この現場が育てた物なので、消しません)');
     } else {
       消す.push({ 種類: 'ファイル', 道: 先, rel: x.rel });
     }
@@ -275,7 +353,43 @@ for (const x of 項) {
 }
 
 const 依存 = [];
-const 依存の網 = { 見た: 0, 飛ばした: [], 上限: 4000, 大きさの上限: 512 * 1024 };
+/* ★実行する物 ── ★★ここに載る形だけが「束が消えたら壊れる」相手になる */
+/* ★依存として数えるのは【実行される位置に在る綴り】だけ(2026-09-03、実測で2回 直した)。
+ *
+ *   ★★1回目の直し: 文書(.md)を外した ── 地図が guardian/METHOD.md を名指しするのは説明である。
+ *   ★★★2回目(ここ): それでも足りなかった ── guardian.config.json の【説明の欄】が
+ *   guardian/check.mjs を名指ししていて、依存と読まれた。
+ *   実測: 案内どおりに宣言を埋めた現場で「依存切れ 5件」→ 何も消せない。
+ *
+ *   ★だから【形】ではなく【位置】で取る:
+ *     .claude/settings.json … hooks[…].hooks[].command だけ
+ *     package.json          … scripts の値だけ
+ *     .yml / .yaml          … run: の行だけ
+ *     コード                … 本文ぜんぶ(require / spawn の道が散らばるので)
+ *     ★★それ以外の .json / 文書 … 見ない(説明が入るため)
+ *
+ *   ★★★見なかった分は【言う】── 下の「依存の網」の行に、形ごとの数が出る。 */
+const 実行される綴り = (rel, t) => {
+  if (/\.(([cm]?js)|ts|sh|ps1|cmd|bat)$/i.test(rel)) return t;
+  if (/\.ya?ml$/i.test(rel)) {
+    return t.split(String.fromCharCode(10)).filter((l) => /(^|\s)-?\s*run\s*:/.test(l)).join(String.fromCharCode(10));
+  }
+  if (rel === '.claude/settings.json') {
+    let j = null; try { j = JSON.parse(t); } catch (_) { return null; }
+    const 出 = [];
+    for (const ev of Object.keys((j && j.hooks) || {}))
+      for (const g of (j.hooks[ev] || []))
+        for (const h of ((g && g.hooks) || []))
+          if (h && typeof h.command === 'string') 出.push(h.command);
+    return 出.join(String.fromCharCode(10));
+  }
+  if (rel === 'package.json' || rel.endsWith('/package.json')) {
+    let j = null; try { j = JSON.parse(t); } catch (_) { return null; }
+    return Object.values((j && j.scripts) || {}).filter((v) => typeof v === "string").join(String.fromCharCode(10));
+  }
+  return null;   /* ★それ以外は【実行されない】── 説明が入る所なので見ない */
+};
+const 依存の網 = { 見た: 0, 飛ばした: [], 見ない形: [], 上限: 4000, 大きさの上限: 512 * 1024 };
 {
   /* ★消えるとどうなるかを聞く相手 = 塊の束 と、この回で消すファイル */
   const 消える = new Set(['guardian']);
@@ -303,6 +417,10 @@ const 依存の網 = { 見た: 0, 飛ばした: [], 上限: 4000, 大きさの�
       if (予定.has(rel)) { t = 予定.get(rel); if (t == null) continue; }   /* ★外したあとの中身 */
       else { try { t = fs.readFileSync(path.join(ROOT, rel), 'utf8'); } catch (_) { continue; } }
       if (t.indexOf(String.fromCharCode(0)) >= 0) continue;   /* 文字の入れ物ではない */
+      /* ★見るのは【実行される位置に在る綴り】だけ(上の 実行される綴り を見ること) */
+      const 実行部 = 実行される綴り(rel, t);
+      if (実行部 == null) { 依存の網.見ない形.push(rel); continue; }
+      t = 実行部;
       依存の網.見た++;
       /* ★束の中の道を名指ししているか ── ★★綴りで所有は決めないが、【依存】は綴りで見るしかない。
        *   ★★★所有(誰の物か)と依存(消えたら壊れるか)は別の問いである。 */
@@ -453,7 +571,7 @@ if (依存の網.飛ばした.length) {
   console.log(String.fromCharCode(10) + "★依存の網から外れた物 " + 依存の網.飛ばした.length + "件(★★見ていません):");
   for (const s of 依存の網.飛ばした.slice(0, 5)) console.log('  ・' + s);
 }
-console.log(String.fromCharCode(10) + "(依存の網: " + 依存の網.見た + "ファイルを読みました。★.git / node_modules / guardian/ は見ていません)");
+console.log(String.fromCharCode(10) + "(依存の網: " + 依存の網.見た + "ファイルを読みました。★.git / node_modules / guardian/ は見ていません。★★実行しない形(文書など)" + 依存の網.見ない形.length + "件も見ていません ── 文書が道を名指しするのは説明であって依存ではないため)");
 for (const c of 消す) console.log('  ・' + c.rel + '(' + c.種類 + ')');
 if (戻した.length) {
   console.log(String.fromCharCode(10) + "★入れる前の中身に戻したファイル " + 戻した.length + "件(バイトで一致):");
@@ -495,6 +613,14 @@ const 盲点 = retained.filter((r) => {
 /* ★所有未確定も【盲点】に入れる(2026-09-03)── ★★UNKNOWN の材料を1つにまとめる。
  *   ★★★別の箱にすると、判定を組むとき片方を忘れる(16.5 で一度そうなった)。 */
 for (const r of 所有未確定) if (retained.includes(r) && !盲点.includes(r)) 盲点.push(r);
+/* ★保持一覧に載っている物は【期待保持】へ上げる(2026-09-03、会議で寄せた形)。
+ *   ★★「機械で導けないから残す」と、人が理由付きで宣言した物 ── ★★★分からないのではない。 */
+const 保持で上げた = [];
+for (let i = 盲点.length - 1; i >= 0; i--) {
+  if (!保持.has(盲点[i])) continue;
+  保持で上げた.push(盲点[i]);
+  盲点.splice(i, 1);
+}
 const 現場の物 = retained.filter((r) => !束.includes(r) && !盲点.includes(r));
 
 console.log('\n★retained(★★走査で在った物 − 消した物) ' + retained.length + '件 ── 3つに分けます:');
@@ -508,6 +634,27 @@ console.log('\n  ② ★★塊のコードが名指ししている物(★★★�
 for (const r of 盲点) console.log('     ・' + r
   + '  ← 台帳に載っていません。★消してよいかは、書き手が在るかを見てから決めてください');
 if (!盲点.length) console.log('     (なし)');
+/* ★保持一覧で上げた物を、③の【手前】に別に出す(2026-09-03)──
+ *   ★★「現場の物」と混ぜない。★★★こちらは【塊が名指しするが書かない物】で、
+ *   人が理由付きで「機械で導けないから残す」と宣言した物である。 */
+/* ★育った物を、別の箱で出す(2026-09-03)── ★★CONFLICT でも、誰の物か分からないのでもない */
+if (育った.length) {
+  console.log(String.fromCharCode(10) + "  ②\" 現場が【育てた】物 " + 育った.length + "件(★入れたときの種から変わっています):");
+  for (const r of 育った) console.log("     ・" + r + " ── ★★案内が「埋めてください」と言っている物なので、残します");
+}
+if (保持で上げた.length) {
+  console.log(String.fromCharCode(10) + "  ②' 保持一覧で【残す】と宣言された物 " + 保持で上げた.length + "件:");
+  for (const r of 保持で上げた) {
+    const h = 保持.get(r);
+    console.log("     ・" + r);
+    console.log("        理由: " + h.理由.join(" / "));
+    console.log("        根拠: " + h.根拠.join(" / ") + "(出どころ: " + h.出どころ.join(" + ") + ")");
+  }
+}
+if (保持の訴え.length) {
+  console.log(String.fromCharCode(10) + "  ★保持一覧の読み取りで言うこと " + 保持の訴え.length + "件:");
+  for (const t of 保持の訴え) console.log("     ・" + t);
+}
 console.log('\n  ③ 現場の物(★期待どおり残す) ' + 現場の物.length + '件:');
 for (const r of 現場の物) console.log('     ・' + r);
 if (!現場の物.length) console.log('     (なし)');
@@ -519,13 +666,20 @@ if (!現場の物.length) console.log('     (なし)');
  * ★直す前は、未分類が在っても PASS と出していた ── 測っていない物を、緑に数えていた。 */
 /* ★依存切れも CONFLICT である(2026-09-03)── ★★残滓は無くても【壊れている】から。
  *   ★★★実測(直す前): 現場のフックが guardian/hooks/no-reflex.js を呼ぶ現場で、判定は PASS だった。 */
-const 判定 = (衝突.length || 依存衝突.length) ? 'CONFLICT' : (盲点.length ? 'UNKNOWN' : 'PASS');
+/* ★保持一覧の読み取りで言うことが在るなら、それは【不明】である(2026-09-03、@codex の線)。
+ *   ★★人が「残したい」と書いた物を、こちらが受け付けなかった ──
+ *   ★★★その物が守られているかどうか、こちらには分からない。
+ *   実測(直す前): 広すぎる指定・予約された道・理由の無い項の3通りとも、
+ *   言うだけ言って【判定は PASS】だった ── 16.5 で直したのと同じ形を、また作っていた。 */
+const 判定 = (衝突.length || 依存衝突.length) ? 'CONFLICT'
+  : ((盲点.length || 保持の訴え.length) ? 'UNKNOWN' : 'PASS');
 console.log('\n判定: ★' + 判定);
 if (判定 === 'CONFLICT') {
   console.log('  ★★塊の物のうち、人が触った物が在ります ── 消していません。人が見てください。');
 } else if (判定 === 'UNKNOWN') {
   console.log('  ★★【台帳が知る】塊の持ち物は、★残り 0 件です(' + 消す.length + '件 外しました)。');
   console.log('  ★★★ですが、誰の物か決まっていない物が ' + 盲点.length + '件 在ります(上の②)。');
+  if (保持の訴え.length) console.log('  ★保持一覧で受け付けなかった指定が ' + 保持の訴え.length + '件 在ります ── ★★人が「残したい」と書いた物が守られているか、こちらには分かりません。');
   console.log('  ★だから「残滓ゼロ」とは言いません ── ★★不明は合格ではありません。');
   console.log('  ★★★②の各件に書き手が在るかを見て、塊の物なら消し、人の物なら③へ移してください。');
 } else {

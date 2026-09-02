@@ -1617,6 +1617,12 @@ if (process.argv.includes("--why")) {
  *
  * ★2回 読み込む ── ★★「初回だけ何か作る」形を落とさないため(@kozo が測っていないと書いた所)。
  *
+ *   ★★★ただし【同じ子の中で 2回 require しても、2回目は Node の module cache に当たる】
+ *   (2026-09-03、会議で @codex が指摘し、実測で確かめた:
+ *    同じ process で2回 → top-level は1回しか走らない / 別の子で1回ずつ → 2回 走る)。
+ *   ★だから【別の子を2回】起こし、★★境目ごとに別々に比べる ── 前→1回目 と 1回目→2回目。
+ *   ★★★まとめて前後だけ見ると「1回目に作り、2回目に消す」副作用が相殺されて見えなくなる。
+ *
  * ★★★この門の値打ちは【これから】に在る: 誰かが top-level に1行 足した瞬間に赤くなる。
  *   その1行は、たぶん善意で足される(設定を読んでおこう / ログを1行)。
  *   ★足す人は、この検査がその module を import している事を知らない。門なら、知らなくても止まる。 */
@@ -1646,18 +1652,20 @@ if (process.argv.includes("--why")) {
         歩く(仮, "");
         return 出.join(String.fromCharCode(10));
       };
-      const 前 = 採る();
-      /* ★2回 読み込む(初回だけ何かする形を落とさない) */
-      const r = spawnSync(process.execPath, ["-e",
-        "require(" + JSON.stringify(絶対) + "); require(" + JSON.stringify(絶対) + ");"],
-        { cwd: 仮, encoding: "utf8", windowsHide: true, timeout: 60000 });
-      const 後 = 採る();
       const 訴え = [];
-      if (r.status !== 0) 訴え.push("出口 " + r.status);
-      if ((r.stdout || "").length) 訴え.push("stdout " + r.stdout.length + "バイト");
-      if ((r.stderr || "").length) 訴え.push("stderr " + r.stderr.length + "バイト: "
-        + String(r.stderr).split(String.fromCharCode(10))[0].slice(0, 80));
-      if (前 !== 後) 訴え.push("読み込んだ場所の木が変わりました");
+      /* ★別の子を2回 起こし、★★境目ごとに別々に比べる(同じ子だと2回目は cache に当たる) */
+      let 印 = 採る();
+      for (let 回 = 1; 回 <= 2; 回++) {
+        const r = spawnSync(process.execPath, ["-e", "require(" + JSON.stringify(絶対) + ");"],
+          { cwd: 仮, encoding: "utf8", windowsHide: true, timeout: 60000 });
+        if (r.status !== 0) 訴え.push(回 + "回目: 出口 " + r.status);
+        if ((r.stdout || "").length) 訴え.push(回 + "回目: stdout " + r.stdout.length + "バイト");
+        if ((r.stderr || "").length) 訴え.push(回 + "回目: stderr " + r.stderr.length + "バイト: "
+          + String(r.stderr).split(String.fromCharCode(10))[0].slice(0, 80));
+        const 後 = 採る();
+        if (印 !== 後) 訴え.push(回 + "回目: 読み込んだ場所の木が変わりました");
+        印 = 後;
+      }
       if (訴え.length) 汚した.push(rel + "(" + 訴え.join(" / ") + ")");
       測れた++;
     } finally {
@@ -1669,7 +1677,7 @@ if (process.argv.includes("--why")) {
       + " ── ★★この検査はその module を import しています。"
       + "★★★読み込みで何かが起きると、検査を回すこと自体が現場を変えます(計器が対象を動かす)");
   } else if (測れた) {
-    ok.push("低い層の module は、読み込んでも何も起こさない(" + 測れた + "件 ── ★出口0 / 出力0バイト / 木の差0、2回 読み込んで)");
+    ok.push("低い層の module は、読み込んでも何も起こさない(" + 測れた + "件 ── ★別の子を2回 起こし、★★境目ごとに 出口0 / 出力0バイト / 木の差0)");
   }
 }
 
