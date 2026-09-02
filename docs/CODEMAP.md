@@ -5,6 +5,21 @@
 
 (触った機能から書き足していく)
 
+## WHY の索引(`index.mjs`。2026-08-28)
+
+★`WHY.md` の見出しを読み、`WHY_INDEX.md` を作り直す。
+★★記号(◎ 構造の芽 / ○ / ・)で分ける ── ★★★◎ だけが本当に欲しいもので、
+他は「まだ構造化できていない」ことの記録である。
+
+```
+index.mjs        … 作り直す(引数なし)/ ★--check で「古くなっていないか」だけ見る
+合否(verdict)   … ★★この --check を1本 呼んでいる(索引が古ければ差戻)
+```
+
+⚠ ★2026-09-03 の監査で見つけた: この項は【地図に無かった】。
+★★配る11枚のうち、地図がバッククォートで名指ししていない唯一の1枚だった ──
+★★★名指ししないと、近傍照合の門もこのファイルを見ない。
+
 ## AI Council(複数AIで構造破壊の原因を研究する場。2026-08-29導入)
 - 入口: `research/council/README.md`(進め方・禁止事項)/ `research/council/VISION.md`(将来像。実験で必要性が確認されるまで実装しない)
 - 手順: `research/council/protocol/experiment.md` / `research/council/protocol/debate.md` / `research/council/protocol/falsification.md` / `research/council/protocol/promotion.md`
@@ -14,6 +29,8 @@
 ## 所有台帳 ── 入れたときを、外すときのために残す(2026-09-03)
 
 ★この項のファイル: `台帳.mjs` / `install.mjs`。
+
+★★接点: `install.mjs` が `台帳.mjs` を **動的に取り込む**(`await import` を try で包む ── ★★★無い現場でも本体を殺さないため。ただし「残していません」と必ず言う)。
 
 ★依頼主の問い「外すとき、残滓が残らない形にできるか」から。**所有は名前では決まらない** ──
 ★★同じ `.guardian` が、`ROOT` から書けば現場の物、`HERE` から書けば塊の物になる。
