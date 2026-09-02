@@ -221,7 +221,24 @@ if (process.argv.includes('--由来')) {
       h = crypto.createHash('sha256').update(b).digest('hex');
       大きさ = b.length;
     } catch (_) { h = '(読めません)'; }
-    return { rel, sha256: h, バイト: 大きさ };
+    /* ★commit の中の生バイトとも比べる(2026-09-03、会議で測った)。
+     *
+     *   ★★実測: `git status` が【綺麗】なのに、index.mjs / hooks/stop.js / README.md の
+     *   バイトが commit と違っていた ── git の改行の正規化(.gitattributes の eol=lf)は
+     *   ★★★作業木と索引で違うバイトを「同じ」と見なす。status は何も言わない。
+     *
+     *   ★直す前の この道具は「commit: <sha>」と作業木の指紋を並べて出していた。
+     *   ★★受け取った人は「その commit を取れば同じ指紋になる」と読む。★★★ならない。
+     *   汚れの札だけでは足りない ── **綺麗でも一致しないことが在る**。 */
+    let 同 = null;
+    if (sha && !sha.startsWith("(")) {
+      const g = spawnSync("git", ["-C", HERE, "cat-file", "blob", sha + ":" + rel],
+        { encoding: "buffer", windowsHide: true, timeout: 60000 });
+      if (!g.error && g.status === 0 && g.stdout) {
+        同 = crypto.createHash("sha256").update(g.stdout).digest("hex") === h;
+      }
+    }
+    return { rel, sha256: h, バイト: 大きさ, commitと同じ: 同 };
   });
   console.log(JSON.stringify({
     形: 'guardian-由来 v1',
@@ -229,6 +246,19 @@ if (process.argv.includes('--由来')) {
     版: (() => { try { return fs.readFileSync(path.join(HERE, "KIT_VERSION"), "utf8").trim(); } catch (_) { return null; } })(),
     commit: sha,
     作業木: 汚れ ? '★汚れています(未コミットの変更が在ります ── この一式は commit と一致しません)' : '綺麗',
+    指紋は何のバイトか: '★作業木のバイト(★★commit の中身では ありません)',
+    'commit と違うバイト': (() => {
+      const 違 = 出.filter((e) => e.commitと同じ === false).map((e) => e.rel);
+      const 測 = 出.filter((e) => e.commitと同じ === null).map((e) => e.rel);
+      return {
+        件数: 違.length, 道: 違,
+        測れなかった: 測.length, 測れなかった道: 測,
+        注: 違.length
+          ? '★この commit を取り直しても、上の指紋には なりません ── ★★git の改行の正規化が入っています'
+          : (測.length ? '★不明 ── 一部が測れませんでした(★★不明は「同じ」ではありません)'
+                       : '★全件 commit と同じバイトでした'),
+      };
+    })(),
     出どころ: 'pull.mjs の --distributed 宣言集合から作成',
     件数: 出.length,
     一式: 出,
