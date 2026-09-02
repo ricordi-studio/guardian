@@ -136,6 +136,26 @@ if (process.argv.includes('--口一覧')) {
  * ★場所は所有の証明ではない(輪の線)。★★「分からない」と言うには足りる、という使い方だけをする。 */
 const 塊が書き込む場所 = ['.guardian/', '.claude/', '.github/workflows/'];
 
+/* ★【昔の名前】も見る(2026-09-03、会議で @kozo が化石を置いて測った)。
+ *
+ *   ★★実測(直す前): tools/guardian/check.mjs / codemap.config.json / tools/codemap/x.md を置くと
+ *   ★★★3件とも **retained にすら入らず**、報告に1行も出なかった。
+ *   それでも尾は「残っているのは③(現場の物)だけです」と言っていた ──
+ *   ★**現場には あと3件 残っている。勘定が、見た宇宙の外を数えていた。**
+ *
+ *   ★★install.mjs は昔の名前を【5つ】知っている(改名の事故から)。走査は 0 だった。
+ *   ★★★写経しない ── install の宣言を読む(pull の 配るもの を読むのと同じ作法)。 */
+const 昔の名前 = (() => {
+  try {
+    const src = fs.readFileSync(path.join(HERE, 'install.mjs'), 'utf8');
+    const h = src.indexOf('const 古い = [');
+    if (h < 0) return [];
+    const 尾 = src.indexOf('].filter(', h);
+    if (尾 < 0) return [];
+    return [...src.slice(h, 尾).matchAll(new RegExp("p: '([^']+)'", 'g'))].map((m) => m[1]);
+  } catch (_) { return []; }
+})();
+
 
 /* ★根は【塊の1つ上】から探す(install と同じ作法)。塊は現場の中に在る前提。 */
 const ROOT = (() => {
@@ -680,6 +700,23 @@ for (const d of ['.guardian', '.claude', '.claude/commands', '.github/workflows'
 for (const f of ['guardian.config.json', 'docs/CODEMAP.md']) {
   if (fs.existsSync(path.join(ROOT, f))) 走査.push(f);
 }
+/* ★昔の名前(install が知っている分)も走査に入れる ── ★★フォルダなら中も1件ずつ */
+for (const p of 昔の名前) {
+  const 先 = path.join(ROOT, p);
+  let st = null;
+  try { st = fs.statSync(先); } catch (_) { continue; }
+  if (!st.isDirectory()) { 走査.push(p); continue; }
+  const 歩く = (rel, 深さ) => {
+    if (深さ > 4) return;
+    let es = [];
+    try { es = fs.readdirSync(path.join(ROOT, rel), { withFileTypes: true }); } catch (_) { return; }
+    for (const e of es) {
+      const q = rel + '/' + e.name;
+      if (e.isDirectory()) 歩く(q, 深さ + 1); else 走査.push(q);
+    }
+  };
+  歩く(p, 0);
+}
 
 /* ---------- ⑤ 外す ---------- */
 /* ---------- ④' ★【残す物 → 消す物】への依存を、消す前に見る(2026-09-03、会議で @codex が出した形) ----------
@@ -946,21 +983,11 @@ if (衝突.length) {
   console.log('\n★CONFLICT ' + 衝突.length + '件(消しません ── 人が見てください):');
   for (const c of 衝突) console.log('  ・' + c);
 }
-/* ★retained を3つに分ける(2026-09-03、@codex の指摘)。
- *   ★★「残っている」だけでは、どれが【期待どおり】でどれが【盲点】か読み手に分からない。
- *   ★★★塊が書く名は、塊自身のコードから拾う ── 一覧を手で持たない(手で持つと古くなる)。 */
-const 塊が書く名 = (() => {
-  const 名 = new Set();
-  const 見る = ['check.mjs', 'verdict.mjs', 'neighbors.mjs', 'pull.mjs', 'index.mjs',
-    'hooks/clock.js', 'selfcheck.mjs', 'install.mjs'];
-  for (const f of 見る) {
-    let s = '';
-    try { s = fs.readFileSync(path.join(ROOT, 'guardian', f), 'utf8'); } catch (_) { continue; }
-    for (const m of s.matchAll(/['"`]\.guardian['"`]\s*,\s*['"`]([^'"`]+)['"`]/g)) 名.add(m[1]);
-    for (const m of s.matchAll(/['"`]\.guardian\/([^'"`]+)['"`]/g)) 名.add(m[1]);
-  }
-  return 名;
-})();
+/* ★ここに在った 塊が書く名(塊のコードから .guardian/ の名前を拾う)は、22.0 で判定から外し、
+ *   23.4 の定期監査で【呼ばれていない記号】として出た(2026-09-03)。
+ *   ★★消した理由は「使っていないから」ではなく、★★★**コメントが嘘になっていたから**である ──
+ *   「報告で印にだけ使う」と書いてあったが、実際はどこからも呼ばれていなかった。
+ *   ★死んだコードより、**死んだ説明**の方が高くつく(読んだ人が「在る」と思う)。 */
 
 const 束 = retained.filter((r) => r.startsWith('guardian/'));
 /* ★.guardian/ に在る物は【既定で所有未確定】(2026-09-03、会議で @kozo が化石を名指しした)。
@@ -1006,7 +1033,11 @@ const 束 = retained.filter((r) => r.startsWith('guardian/'));
  *   ★★札には「台帳にも保持一覧にも無い物」と書いていたが、★★★実装は場所しか見ていなかった。
  *   実測: 台帳が 作った:false で持つ .claude/settings.json が、盲点に出ていた。 */
 const 台帳が知る道 = new Set(項.map((x) => x.rel));
-const 盲点 = retained.filter((r) => 塊が書き込む場所.some((d) => r.startsWith(d)) && !台帳が知る道.has(r));
+/* ★昔の名前の下も【塊が書き込む場所】として見る(2026-09-03)── ★★かつてはそうだった。
+ *   ★★★「現場の物」だと言い切れないので、所有未確定(UNKNOWN)へ落とす。 */
+const 見る場所 = [...塊が書き込む場所, ...昔の名前.map((p) => p + '/')];
+const 盲点 = retained.filter((r) => (見る場所.some((d) => r.startsWith(d)) || 昔の名前.includes(r))
+  && !台帳が知る道.has(r));
 /* ★所有未確定も【盲点】に入れる(2026-09-03)── ★★UNKNOWN の材料を1つにまとめる。
  *   ★★★別の箱にすると、判定を組むとき片方を忘れる(16.5 で一度そうなった)。 */
 for (const r of 所有未確定) if (retained.includes(r) && !盲点.includes(r)) 盲点.push(r);
@@ -1132,7 +1163,9 @@ if (判定 === 'CONFLICT') {
   console.log('  ★★★緑にするための一括追加はしないこと ── 足した行は後で消せますが、消しても【削除の許可】にはなりません。');
 } else {
   console.log('  ★★【台帳が知る】塊の持ち物は、★残り 0 件です(' + 外した数(消す.length) + ')。誰の物か決まっていない物も在りません。');
-  console.log('  ★★★残っているのは③(現場の物)だけです。');
+  console.log('  ★★★この一覧に残っているのは③(現場の物)だけです。');
+  console.log('  ★ただし【見た場所】は次に限ります ── ' + [...見る場所, 'guardian.config.json', 'docs/CODEMAP.md', 'guardian/'].join(' / '));
+  console.log('  ★★ここに無い場所は【見ていません】── 「現場に何も残っていない」という意味では ありません。');
 }
 
 if (実行 && 判定 === 'PASS') {
