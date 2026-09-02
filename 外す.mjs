@@ -790,7 +790,22 @@ const 束 = retained.filter((r) => r.startsWith('guardian/'));
  *
  * ★出口は【保持一覧】── 現場が「これは自分の物だ」と理由付きで宣言すれば、期待保持へ上がる。
  *   ★★塊が書く名の一覧は、もう判定には使わない(下の報告で「塊が名指ししている」印にだけ使う)。 */
-const 盲点 = retained.filter((r) => r.startsWith(".guardian/"));
+/* ★どのフォルダが【塊が作った物】か ── ★★台帳のフォルダの項(作った:true)から取る。
+ *   ★★★.guardian/ は必ず塊の物(台帳そのものの置き場)なので、載っていなくても足す。
+ *
+ *   ★実測(2026-09-03、会議が実物で見つけた): 過去の Guardian の化石 codemap_audit_at は
+ *   ★★.guardian/ ではなく **.claude/ に在った** ── 20.1 の直しは【一階ずれて】いた。
+ *   → .guardian/ だけを見ていたので、.claude/ の化石は ③現場の物 に落ちて PASS だった。
+ *
+ *   ★★★向きは同じ: **塊が作ったフォルダの中に在って、台帳にも保持一覧にも無い物は、
+ *   誰の物か分からない。** 場所は所有の証明ではないが、「分からない」と言うには足りる。
+ *   ★元から在ったフォルダ(現場の .claude/ など)は載らないので、中身は現場の物のままである。 */
+const 塊が作った場所 = (() => {
+  const 出 = new Set([".guardian/"]);
+  for (const x of 項) if (x.種類 === "フォルダ" && x.作った) 出.add(x.rel.split("/").filter(Boolean).join("/") + "/");
+  return [...出];
+})();
+const 盲点 = retained.filter((r) => 塊が作った場所.some((d) => r.startsWith(d)));
 /* ★所有未確定も【盲点】に入れる(2026-09-03)── ★★UNKNOWN の材料を1つにまとめる。
  *   ★★★別の箱にすると、判定を組むとき片方を忘れる(16.5 で一度そうなった)。 */
 for (const r of 所有未確定) if (retained.includes(r) && !盲点.includes(r)) 盲点.push(r);
@@ -802,7 +817,11 @@ for (let i = 盲点.length - 1; i >= 0; i--) {
   保持で上げた.push(盲点[i]);
   盲点.splice(i, 1);
 }
-const 現場の物 = retained.filter((r) => !束.includes(r) && !盲点.includes(r));
+/* ★保持で上げた物は、②' に出したので ③ には出さない(2026-09-03、実測で二重に出ていた)。
+ *   ★★どちらも「残す」だが、★★★出どころが違う ──
+ *   ②' は【塊の territory に在って、人が理由付きで残すと宣言した物】、
+ *   ③ は【最初から現場の物】。混ぜると、宣言が要る物と要らない物の区別が消える。 */
+const 現場の物 = retained.filter((r) => !束.includes(r) && !盲点.includes(r) && !保持で上げた.includes(r));
 
 console.log('\n★retained(★★走査で在った物 − 消した物) ' + retained.length + '件 ── 3つに分けます:');
 console.log('\n  ① 塊の束(★フォルダごと消す場所) ' + 束.length + '件:');
@@ -811,7 +830,7 @@ for (const r of 束) console.log('     ・' + r);
  *   ★★【塊が書いている】ではない。実測(2026-09-03、会議): `踏んだこと` は
  *   hooks/clock.js が読むだけで、書き手はこの塊のどこにも無い(=人が書く物)。
  *   ★★★「書く名」と書くと、次の人が「塊の物だから消してよい」と読む。それは事故になる。 */
-console.log('\n  ② ★★.guardian/ に在って、台帳にも保持一覧にも無い物(★★★誰の物か分かりません) ' + 盲点.length + '件:');
+console.log('\n  ② ★★塊が作った場所に在って、台帳にも保持一覧にも無い物(★★★誰の物か分かりません) ' + 盲点.length + '件:');
 for (const r of 盲点) console.log('     ・' + r
   + '  ← ★台帳にも保持一覧にも在りません(★★昔の導入の物かもしれません)');
 if (!盲点.length) console.log('     (なし)');
