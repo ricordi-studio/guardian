@@ -42,6 +42,8 @@ const ROOT = (() => {
 })();
 
 const 実行 = process.argv.includes('--外す');
+const 走査だけ = process.argv.includes('--走査');
+
 /* ★指紋は【書き手.cjs に1本だけ】(2026-09-03)。ここで再実装しない ──
  *   ★★直す前は 台帳.mjs / 書き手.cjs / ここ の3つに同じ式が在った。
  *   1つずれるだけで、外す側は「人が触った」と読んで止まる ── ★★★誰のせいでもない CONFLICT が出る。 */
@@ -51,6 +53,152 @@ const 指紋 = 書き手.指紋;
 const 台帳の道 = 書き手.台帳の道(ROOT);
 const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
 const 読む = (p) => { try { return fs.readFileSync(p, 'utf8'); } catch (_) { return null; } };
+
+/* ★実行する物 ── ★★ここに載る形だけが「束が消えたら壊れる」相手になる */
+/* ★依存として数えるのは【実行される位置に在る綴り】だけ(2026-09-03、実測で2回 直した)。
+ *
+ *   ★★1回目の直し: 文書(.md)を外した ── 地図が guardian/METHOD.md を名指しするのは説明である。
+ *   ★★★2回目(ここ): それでも足りなかった ── guardian.config.json の【説明の欄】が
+ *   guardian/check.mjs を名指ししていて、依存と読まれた。
+ *   実測: 案内どおりに宣言を埋めた現場で「依存切れ 5件」→ 何も消せない。
+ *
+ *   ★だから【形】ではなく【位置】で取る:
+ *     .claude/settings.json … hooks[…].hooks[].command だけ
+ *     package.json          … scripts の値だけ
+ *     .yml / .yaml          … run: の行だけ
+ *     コード                … 本文ぜんぶ(require / spawn の道が散らばるので)
+ *     ★★それ以外の .json / 文書 … 見ない(説明が入るため)
+ *
+ *   ★★★見なかった分は【言う】── 下の「依存の網」の行に、形ごとの数が出る。 */
+const 実行される綴り = (rel, t) => {
+  if (/\.(([cm]?js)|ts|sh|ps1|cmd|bat)$/i.test(rel)) return t;
+  if (/\.ya?ml$/i.test(rel)) {
+    return t.split(String.fromCharCode(10)).filter((l) => /(^|\s)-?\s*run\s*:/.test(l)).join(String.fromCharCode(10));
+  }
+  if (rel === '.claude/settings.json') {
+    let j = null; try { j = JSON.parse(t); } catch (_) { return null; }
+    const 出 = [];
+    for (const ev of Object.keys((j && j.hooks) || {}))
+      for (const g of (j.hooks[ev] || []))
+        for (const h of ((g && g.hooks) || []))
+          if (h && typeof h.command === 'string') 出.push(h.command);
+    return 出.join(String.fromCharCode(10));
+  }
+  if (rel === 'package.json' || rel.endsWith('/package.json')) {
+    let j = null; try { j = JSON.parse(t); } catch (_) { return null; }
+    return Object.values((j && j.scripts) || {}).filter((v) => typeof v === "string").join(String.fromCharCode(10));
+  }
+  return null;   /* ★それ以外は【実行されない】── 説明が入る所なので見ない */
+};
+
+/* ---------- ⓪ 走査だけ ── ★台帳が無い現場に当てる(2026-09-03、依頼主の依頼) ----------
+ *
+ * ★なぜ要るか: 台帳を作らない版で入れた現場は、外す側が【何も材料を持たない】。
+ *   ★★実測: 台帳を消すと「所有台帳が読めません … 何も消していません」で止まる。
+ *   ★★★それは正しいが、そこで終わると【昔の導入は永久に外せない】。
+ *
+ * ★この口は【消さない】。候補を出し、★★何を根拠にそう言うかを一緒に出す。
+ *
+ * ★★★輪で決めた線を守る: **綴りで所有を決めない。**
+ *   道に guardian が入っているのは【候補の出し方】であって、所有の証明ではない。
+ *   実測の裏付け(@kozo が 161版を数えた): settings.json に居る no-reflex の登録は、
+ *   ★どの版の install も【一度も登録していない】── 道は塊の物に見えるのに、人が足した物だった。
+ *
+ * ★根拠の強さを、そのまま名前にして出す:
+ *   束        … pull.mjs と KIT_VERSION を持つフォルダ = 塊の束
+ *   ★★指紋一致 … 配る雛形と1バイトも違わない = 塊が置いて、誰も触っていない
+ *   印        … CLAUDE.md の guardian:begin/end = その区間は塊の物
+ *   ★★★命令   … フックの command が束を名指ししている = 塊に向けて登録されている
+ *                (★誰が登録したかは分からない ── 人が手で足した例が実在する)
+ *   名前だけ  … ★★上のどれでもない = 候補にしかならない */
+if (走査だけ) {
+  const 出 = { 束: [], 指紋一致: [], 印: [], 命令: [], 名前だけ: [] };
+  const 見ない = new Set([".git", "node_modules"]);
+
+  /* ★雛形は、現場の束から取る ── ★★無ければ、いま走っているこの塊から取る */
+  const 雛形 = new Map();   /* 指紋 → 雛形の名 */
+  {
+    const 置き場 = [path.join(ROOT, "guardian", "templates"), path.join(HERE, "templates")];
+    for (const d of 置き場) {
+      let es = [];
+      try { es = fs.readdirSync(d); } catch (_) { continue; }
+      for (const f of es) {
+        const t = 読む(path.join(d, f));
+        if (t != null && !雛形.has(指紋(t))) 雛形.set(指紋(t), f);
+      }
+      if (雛形.size) break;   /* ★現場の束が在れば、そちらを使う(版が合うので) */
+    }
+  }
+
+  const 歩く = (相対) => {
+    let es = [];
+    try { es = fs.readdirSync(path.join(ROOT, 相対 || "."), { withFileTypes: true }); } catch (_) { return; }
+    for (const e of es) {
+      const rel = 相対 ? 相対 + "/" + e.name : e.name;
+      if (e.isDirectory()) {
+        if (見ない.has(e.name)) continue;
+        /* ★束かどうかは【中身】で見る ── 名前では見ない */
+        const 束か = fs.existsSync(path.join(ROOT, rel, "pull.mjs"))
+          && fs.existsSync(path.join(ROOT, rel, "KIT_VERSION"));
+        if (束か) {
+          let 版 = "(読めません)";
+          try { 版 = String(fs.readFileSync(path.join(ROOT, rel, "KIT_VERSION"), "utf8")).trim(); } catch (_) {}
+          let 数 = 0;
+          try { 数 = fs.readdirSync(path.join(ROOT, rel)).length; } catch (_) {}
+          出.束.push(rel + "/(版 " + 版 + " ・ 中身 " + 数 + "件)");
+          continue;   /* ★束の中は歩かない(丸ごと1件として出す) */
+        }
+        歩く(rel);
+        continue;
+      }
+      const t = 読む(path.join(ROOT, rel));
+      if (t == null) continue;
+      /* ★★指紋一致 ── 配る雛形と1バイトも違わない */
+      const 名 = 雛形.get(指紋(t));
+      if (名) { 出.指紋一致.push(rel + "(雛形 " + 名 + " と一致)"); continue; }
+      /* ★印 ── 区間のマーカー */
+      if (t.includes("<!-- guardian:begin")) {
+        出.印.push(rel + "(guardian:begin/end の区間が在ります)"); continue;
+      }
+      /* ★★命令 ── フックの command / workflow の run / script が束を名指ししている */
+      const 命令 = 実行される綴り(rel, t);
+      if (命令 != null) {
+        const 当たり = (命令.match(/[A-Za-z0-9_.\/-]*guardian[A-Za-z0-9_.\/-]*/g) || []);
+        if (当たり.length) { 出.命令.push(rel + " → " + [...new Set(当たり)].slice(0, 3).join(", ")); continue; }
+      }
+      /* ★★★名前だけ ── 候補にしかならない */
+      if (/guardian/i.test(rel)) 出.名前だけ.push(rel);
+    }
+  };
+  歩く("");
+
+  const 台帳あり = fs.existsSync(台帳の道);
+  console.log("【走査だけ ── ★何も消していません】" + String.fromCharCode(10));
+  console.log("台帳: " + (台帳あり ? "★在ります(--外す で、台帳が知る物だけを外せます)"
+    : "★★在りません ── ★★★昔の導入か、台帳を消したかのどちらかです") + String.fromCharCode(10));
+
+  const 見せる = (名, 一覧, 意味) => {
+    console.log("■ " + 名 + " " + 一覧.length + "件 ── " + 意味);
+    if (!一覧.length) console.log("   (なし)");
+    for (const x of 一覧.slice(0, 40)) console.log("   ・" + x);
+    if (一覧.length > 40) console.log("   … ほか " + (一覧.length - 40) + "件");
+    console.log("");
+  };
+  見せる("束", 出.束, "★pull.mjs と KIT_VERSION を持つフォルダ。**名前では見ていません**");
+  見せる("指紋一致", 出.指紋一致, "★★配る雛形と1バイトも違わない ── 塊が置いて、誰も触っていない");
+  見せる("印", 出.印, "★guardian:begin/end の区間が在る ── ★★その区間は塊の物(外側は人の物)");
+  見せる("命令", 出.命令, "★★★フック/workflow/script が束を名指ししている ── ★誰が登録したかは**分かりません**");
+  見せる("名前だけ", 出.名前だけ, "★★上のどれでもない ── ★★★候補にしかなりません(綴りで所有は決めない)");
+
+  console.log("★この走査は【消す物を決めません】。決めるのに足りないもの:");
+  console.log("  ・命令 … その登録を塊が入れたのか、人が足したのかは、台帳が無いと分かりません");
+  console.log("    ★★実例: no-reflex の登録は【どの版の install も一度も入れていません】(会議で161版を数えた)");
+  console.log("  ・名前だけ … ★★★綴りは候補の出し方であって、所有の証明ではありません");
+  console.log("  ・指紋一致 … 一致すれば塊の物ですが、★人が1文字でも直すと外れます(外れた物はここに出ません)");
+  console.log(String.fromCharCode(10) + "★次の一手は【人が決めること】です ── この一覧を見て、外す物を選んでください。");
+  process.exit(0);
+}
+
 
 
 /* ---------- ① 台帳を読む(★無ければ UNKNOWN ── 消してよい物が分からないので) ---------- */
@@ -353,42 +501,6 @@ for (const x of 項) {
 }
 
 const 依存 = [];
-/* ★実行する物 ── ★★ここに載る形だけが「束が消えたら壊れる」相手になる */
-/* ★依存として数えるのは【実行される位置に在る綴り】だけ(2026-09-03、実測で2回 直した)。
- *
- *   ★★1回目の直し: 文書(.md)を外した ── 地図が guardian/METHOD.md を名指しするのは説明である。
- *   ★★★2回目(ここ): それでも足りなかった ── guardian.config.json の【説明の欄】が
- *   guardian/check.mjs を名指ししていて、依存と読まれた。
- *   実測: 案内どおりに宣言を埋めた現場で「依存切れ 5件」→ 何も消せない。
- *
- *   ★だから【形】ではなく【位置】で取る:
- *     .claude/settings.json … hooks[…].hooks[].command だけ
- *     package.json          … scripts の値だけ
- *     .yml / .yaml          … run: の行だけ
- *     コード                … 本文ぜんぶ(require / spawn の道が散らばるので)
- *     ★★それ以外の .json / 文書 … 見ない(説明が入るため)
- *
- *   ★★★見なかった分は【言う】── 下の「依存の網」の行に、形ごとの数が出る。 */
-const 実行される綴り = (rel, t) => {
-  if (/\.(([cm]?js)|ts|sh|ps1|cmd|bat)$/i.test(rel)) return t;
-  if (/\.ya?ml$/i.test(rel)) {
-    return t.split(String.fromCharCode(10)).filter((l) => /(^|\s)-?\s*run\s*:/.test(l)).join(String.fromCharCode(10));
-  }
-  if (rel === '.claude/settings.json') {
-    let j = null; try { j = JSON.parse(t); } catch (_) { return null; }
-    const 出 = [];
-    for (const ev of Object.keys((j && j.hooks) || {}))
-      for (const g of (j.hooks[ev] || []))
-        for (const h of ((g && g.hooks) || []))
-          if (h && typeof h.command === 'string') 出.push(h.command);
-    return 出.join(String.fromCharCode(10));
-  }
-  if (rel === 'package.json' || rel.endsWith('/package.json')) {
-    let j = null; try { j = JSON.parse(t); } catch (_) { return null; }
-    return Object.values((j && j.scripts) || {}).filter((v) => typeof v === "string").join(String.fromCharCode(10));
-  }
-  return null;   /* ★それ以外は【実行されない】── 説明が入る所なので見ない */
-};
 const 依存の網 = { 見た: 0, 飛ばした: [], 見ない形: [], 上限: 4000, 大きさの上限: 512 * 1024 };
 {
   /* ★消えるとどうなるかを聞く相手 = 塊の束 と、この回で消すファイル */
