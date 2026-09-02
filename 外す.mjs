@@ -190,7 +190,120 @@ for (const f of ['guardian.config.json', 'docs/CODEMAP.md']) {
 }
 
 /* ---------- ⑤ 外す ---------- */
-if (実行) {
+/* ---------- ④' ★【残す物 → 消す物】への依存を、消す前に見る(2026-09-03、会議で @codex が出した形) ----------
+ *
+ * ★実測(直す前): 現場の settings.json に `node guardian/hooks/no-reflex.js` を呼ぶフックが在る現場で
+ *   外すと ── ★★判定 PASS。settings.json はバイトで元どおり。だが guardian/ は消える。
+ *   → ★★★毎回の Edit/Write が「そんなファイルは無い」で落ちる。**残滓ではなく、壊れている。**
+ *
+ * ★「残しすぎれば安全」は、★★【残す物が単独で無害な時】だけ成り立つ(会議で @kozo が言い直した)。
+ *   依存を持つ物を残すと、依存先が消えた瞬間に壊れる。
+ *
+ * ★★★消す【前】に見る ── 消してから「壊れました」と言うより、先に止まる方が安い。
+ *
+ * ★これは既に在る2つの検査の【3方向目】である:
+ *   B13 (15.0)  配る物 → 現場の物   … 配布先で落ちる
+ *   B13b(16.1)  除外した物 → 依存    … 理由の失効
+ *   ここ        ★★残す物 → 消す物  … 依存切れ
+ *
+ * ★★網は【宣言する】── 全部を見たとは言わない。見た数と、見なかった理由を出す。 */
+/* ★依存は【外したあとに残る中身】で測る(2026-09-03、実測で自分が踏んだ)。
+ *   ★★直す前は【いまの中身】を見ていたので、★★★塊が自分で入れたフック4本まで
+ *   「残る物が消す物に依存している」と数え、依存の無い現場でも 12件 出して止まっていた。
+ *   → 消す前に、外したあとの中身を計算しておく。★消しはしない(帳面の上だけ)。 */
+const NL = String.fromCharCode(10);   /* ★改行(この現場の流儀にそろえる) */
+const 予定 = new Map();     /* rel → 外したあとの中身(null = ファイルごと消える) */
+for (const c of 消す) {
+  if (c.種類 === 'ファイル') { 予定.set(c.rel, null); continue; }
+  const 元本 = 予定.has(c.rel) ? 予定.get(c.rel) : 読む(c.道);
+  if (元本 == null) continue;
+  if (c.種類 === '区間') {
+    予定.set(c.rel, (元本.slice(0, c.始) + 元本.slice(c.終)).replace(/\n{3,}/g, NL + NL));
+  } else if (c.種類 === 'JSON要素') {
+    let j = null;
+    try { j = JSON.parse(元本); } catch (_) { continue; }
+    let 外した = false;
+    for (const ev of Object.keys(j.hooks || {})) {
+      const list = j.hooks[ev] || [];
+      for (let gi = 0; gi < list.length && !外した; gi++) {
+        const g = list[gi];
+        for (let hi = 0; hi < (g.hooks || []).length; hi++) {
+          if (指紋(JSON.stringify({ event: ev, matcher: g.matcher || null, entry: g.hooks[hi] })) !== c.印) continue;
+          g.hooks.splice(hi, 1);
+          if (!g.hooks.length) list.splice(gi, 1);
+          if (!list.length) delete j.hooks[ev];
+          外した = true; break;
+        }
+      }
+    }
+    予定.set(c.rel, JSON.stringify(j, null, 2) + NL);
+  }
+}
+/* ★バイトで戻す物は、戻したあとの中身が残る ── ★★元の中身にも依存が在り得る(実測: no-reflex) */
+for (const x of 項) {
+  if (x.元 == null) continue;
+  const 今 = 予定.has(x.rel) ? 予定.get(x.rel) : 読む(path.join(ROOT, x.rel));
+  if (今 == null) continue;
+  const 解く = (t) => { try { return JSON.stringify(JSON.parse(t)); } catch (_) { return null; } };
+  const A = 解く(今), B = 解く(x.元);
+  const 同じ = (A != null && B != null) ? (A === B) : (今.trimEnd() === x.元.trimEnd());
+  if (同じ) 予定.set(x.rel, x.元);
+}
+
+const 依存 = [];
+const 依存の網 = { 見た: 0, 飛ばした: [], 上限: 4000, 大きさの上限: 512 * 1024 };
+{
+  /* ★消えるとどうなるかを聞く相手 = 塊の束 と、この回で消すファイル */
+  const 消える = new Set(['guardian']);
+  for (const c of 消す) if (c.種類 === 'ファイル') 消える.add(c.rel);
+
+  const 見ない = new Set(['.git', 'node_modules', 'guardian']);
+  const 歩く = (相対) => {
+    if (依存の網.見た >= 依存の網.上限) return;
+    let 中身 = [];
+    try { 中身 = fs.readdirSync(path.join(ROOT, 相対 || '.'), { withFileTypes: true }); } catch (_) { return; }
+    for (const e of 中身) {
+      const rel = 相対 ? 相対 + '/' + e.name : e.name;
+      if (e.isDirectory()) { if (!見ない.has(e.name)) 歩く(rel); continue; }
+      if (消える.has(rel)) continue;                     /* ★消える物の中は見ない(消えるので) */
+      /* ★台帳そのものは見ない(2026-09-03、実測で自分が引っかかった)。
+       *   ★★台帳は【入れる前の写し(元)】を持つので、現場の綴りをそのまま含む。
+       *   ★★★それを依存と読むと、【台帳が塊に依存している】という無い話になる。
+       *   台帳は最後に自分で消えるので、依存の主体ではない。 */
+      if (rel === '.guardian/導入台帳.json') continue;
+      if (依存の網.見た >= 依存の網.上限) { 依存の網.飛ばした.push('上限 ' + 依存の網.上限 + ' 件に達しました'); return; }
+      let st = null;
+      try { st = fs.statSync(path.join(ROOT, rel)); } catch (_) { continue; }
+      if (!予定.has(rel) && st.size > 依存の網.大きさの上限) { 依存の網.飛ばした.push(rel + '(大きすぎます)'); continue; }
+      let t = null;
+      if (予定.has(rel)) { t = 予定.get(rel); if (t == null) continue; }   /* ★外したあとの中身 */
+      else { try { t = fs.readFileSync(path.join(ROOT, rel), 'utf8'); } catch (_) { continue; } }
+      if (t.indexOf(String.fromCharCode(0)) >= 0) continue;   /* 文字の入れ物ではない */
+      依存の網.見た++;
+      /* ★束の中の道を名指ししているか ── ★★綴りで所有は決めないが、【依存】は綴りで見るしかない。
+       *   ★★★所有(誰の物か)と依存(消えたら壊れるか)は別の問いである。 */
+      const 出 = t.match(/guardian\/[A-Za-z0-9_./-]+/g);
+      if (!出) continue;
+      for (const 道 of [...new Set(出)]) {
+        if (!fs.existsSync(path.join(ROOT, 道))) continue;    /* いま無い物は、消えても変わらない */
+        依存.push({ 読み手: rel, 参照先: 道 });
+      }
+    }
+  };
+  歩く('');
+}
+/* ★読み手が【ファイルごと消える】なら、依存切れにはならない(その行も一緒に消える)。
+ *   ★★JSON要素 や 区間 だけ外す物は【ファイルが残る】── ★★★そこは依存切れになる。 */
+const 依存衝突 = 依存.filter((d) => !消す.some((c) => c.rel === d.読み手 && c.種類 === 'ファイル'));
+
+
+/* ★依存が切れる物が在るなら、【何も消さない】(2026-09-03)。
+ *   ★★束を消した瞬間に壊れるので、消してから言っても遅い。
+ *   ★★★これは CONFLICT である ── 人が「その登録を外してよいか」を決める話。 */
+if (実行 && 依存衝突.length) {
+  console.log('★★消しませんでした ── 残る物が、消す物に依存しています(下の【依存切れ】)');
+}
+if (実行 && !依存衝突.length) {
   for (const c of 消す) {
     try {
       if (c.種類 === 'ファイル') {
@@ -301,8 +414,22 @@ if (実行) {
 const 消した道 = new Set(消す.filter((c) => c.種類 === 'ファイル').map((c) => c.rel));
 const retained = 走査.filter((p) => !消した道.has(p) && p !== '.guardian/導入台帳.json');
 
-console.log((実行 ? '【外しました】' : '【確かめただけ ── 何も消していません】') + '\n');
+console.log((実行 && !依存衝突.length ? '【外しました】'
+  : 実行 ? '【★止めました ── 依存が切れるので、何も消していません】'
+  : '【確かめただけ ── 何も消していません】') + String.fromCharCode(10));
 console.log('外す物 ' + 消す.length + '件:');
+if (依存衝突.length) {
+  console.log(String.fromCharCode(10) + "★依存切れ " + 依存衝突.length + "件(★★残す物が、消す物を名指ししています):");
+  for (const d of 依存衝突) console.log('  ・' + d.読み手 + ' → ' + d.参照先);
+  console.log('  ★★★束を消すと、この呼び出しは【そんなファイルは無い】で落ちます。');
+  console.log('  ★所有は台帳で決まりますが、★★依存は綴りで見るしかありません ── 別の問いです。');
+  console.log('  ★★★人が決めてください: その登録を外す / それとも塊を残す。');
+}
+if (依存の網.飛ばした.length) {
+  console.log(String.fromCharCode(10) + "★依存の網から外れた物 " + 依存の網.飛ばした.length + "件(★★見ていません):");
+  for (const s of 依存の網.飛ばした.slice(0, 5)) console.log('  ・' + s);
+}
+console.log(String.fromCharCode(10) + "(依存の網: " + 依存の網.見た + "ファイルを読みました。★.git / node_modules / guardian/ は見ていません)");
 for (const c of 消す) console.log('  ・' + c.rel + '(' + c.種類 + ')');
 if (戻した.length) {
   console.log(String.fromCharCode(10) + "★入れる前の中身に戻したファイル " + 戻した.length + "件(バイトで一致):");
@@ -363,7 +490,9 @@ if (!現場の物.length) console.log('     (なし)');
  *   ★★★未分類(誰の物か決まっていない) → UNKNOWN ── ★不明は合格ではない
  *   期待保持(現場の物)は PASS の邪魔をしない。
  * ★直す前は、未分類が在っても PASS と出していた ── 測っていない物を、緑に数えていた。 */
-const 判定 = 衝突.length ? 'CONFLICT' : (盲点.length ? 'UNKNOWN' : 'PASS');
+/* ★依存切れも CONFLICT である(2026-09-03)── ★★残滓は無くても【壊れている】から。
+ *   ★★★実測(直す前): 現場のフックが guardian/hooks/no-reflex.js を呼ぶ現場で、判定は PASS だった。 */
+const 判定 = (衝突.length || 依存衝突.length) ? 'CONFLICT' : (盲点.length ? 'UNKNOWN' : 'PASS');
 console.log('\n判定: ★' + 判定);
 if (判定 === 'CONFLICT') {
   console.log('  ★★塊の物のうち、人が触った物が在ります ── 消していません。人が見てください。');

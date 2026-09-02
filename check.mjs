@@ -422,7 +422,7 @@ if (!map) {
      *   その現場では「一時領域だらけ」に見えて、本物が埋もれる(7条)。 */
     /* git に聞く(下の 管理下 を埋める) */
     {
-      const r = spawnSync('git', ['-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard'],
+      const r = spawnSync('git', ['-c', 'core.quotePath=false', '-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard'],
         { encoding: 'utf8', windowsHide: true, maxBuffer: 64 * 1024 * 1024, timeout: 60000 });
       if (r.status === 0) {
         管理下 = new Set(String(r.stdout || "").split(NL).map((x) => x.trim()).filter(Boolean)
@@ -539,7 +539,7 @@ if (!map) {
     }
     let 管理下 = null;
     {
-      const r = spawnSync('git', ['-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard'],
+      const r = spawnSync('git', ['-c', 'core.quotePath=false', '-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard'],
         { encoding: 'utf8', windowsHide: true, maxBuffer: 64 * 1024 * 1024, timeout: 60000 });
       if (r.status === 0) 管理下 = new Set(String(r.stdout || "").split(NL)
         .map((x) => x.trim()).filter(Boolean).map((x) => path.resolve(ROOT, x)));
@@ -1161,7 +1161,7 @@ if (argv.includes('--tighten')) {
  *   ★★上限も置かない(何行が正しいかを、こちらは知らない)。★★★出すだけ。
  * ★git が無ければ何も言わない(7条 ── 測れないものを言わない)。 */
 {
-  const r = spawnSync("git", ["-C", ROOT, "diff", "--numstat", "HEAD"], { encoding: "utf8", windowsHide: true, timeout: 60000 });
+  const r = spawnSync("git", ["-c", "core.quotePath=false", "-C", ROOT, "diff", "--numstat", "HEAD"], { encoding: "utf8", windowsHide: true, timeout: 60000 });
   if (r.status === 0) {
     /* ★塊の分を分けて出す(2026-08-31、配布先の実測)。
      *   ★★配布先では【取り直すだけで数千行動く】── 実測: 総量の 89% が塊だった。
@@ -1205,7 +1205,7 @@ if (argv.includes('--tighten')) {
  * ★git が無ければ何も言わない(7条)。 */
 {
   const 出すか = process.argv.includes("--冷たい順");
-  const r = spawnSync("git", ["-C", ROOT, "ls-files"], { encoding: "utf8", windowsHide: true, timeout: 60000 });
+  const r = spawnSync("git", ["-c", "core.quotePath=false", "-C", ROOT, "ls-files"], { encoding: "utf8", windowsHide: true, timeout: 60000 });
   if (r.status === 0) {
     /* 見る場所: 宣言の watch(無ければ根の直下)。★ファイル単位だと多すぎるので【場所】でまとめる */
     const この検査が見ない = new RegExp("(^|/)(\\.git|node_modules|\\.guardian)(/|$)");
@@ -1222,7 +1222,7 @@ if (argv.includes('--tighten')) {
      *   ★★★この検査だけの変数にする(隣から借りない ── 今夜4回踏んだ)。 */
     const いま触っている = new Set();
     {
-      const d = spawnSync("git", ["-C", ROOT, "diff", "--name-only", "HEAD"],
+      const d = spawnSync("git", ["-c", "core.quotePath=false", "-C", ROOT, "diff", "--name-only", "HEAD"],
         { encoding: "utf8", windowsHide: true, timeout: 60000 });
       if (d.status === 0) {
         for (const f of String(d.stdout || "").split(/\r?\n/)) {
@@ -1233,7 +1233,7 @@ if (argv.includes('--tighten')) {
     }
     const 並び = [];
     for (const 頭 of 場所.keys()) {
-      const d = spawnSync("git", ["-C", ROOT, "log", "-1", "--format=%ct", "--", 頭],
+      const d = spawnSync("git", ["-c", "core.quotePath=false", "-C", ROOT, "log", "-1", "--format=%ct", "--", 頭],
         { encoding: "utf8", windowsHide: true, timeout: 60000 });
       const t = Number(String(d.stdout || "").trim());
       if (!Number.isFinite(t) || !t) continue;

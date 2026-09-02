@@ -162,8 +162,16 @@ const 書き出す = (相対, 中身) => 書き手.書く(ROOT, 相対, 中身, 
  *   空白を消しただけの対照では「環0」と正しく出る。
  * ★引数の配列で渡せば、括る作法そのものが要らなくなる(括り忘れが起きる場所を消す)。
  *   9.16 まで居た sh / shRaw(名前を囲まない ── もう実装に無いので)は、同じ仕事をシェル経由でやっていた。 */
+/* ★★★git は【非ASCIIの道をクォートして返す】(2026-09-03、この門が自分で踏んだ)。
+ *   実測: 外す.mjs を大きく直しても、この門は「触れた記号: (器のコードに変更なし)」と答えた。
+ *     $ git diff --name-only HEAD          → "\345\244\226\343\201\231.mjs"
+ *     $ git -c core.quotePath=false diff …  → 外す.mjs
+ *   ★クォートされた名は実物のどの道とも一致しないので、★★この現場の【日本語名のファイルは
+ *   1枚も見えていなかった】── 台帳.mjs / 外す.mjs / 書き手.cjs の3枚が丸ごと門の外に居た。
+ *   ★★★しかも門は何も言わない。「近傍: なし」は「見た上で無かった」と読める。
+ * ★だから【入口で1回だけ】切る ── 呼ぶ側が思い出す形にしない。 */
 const gitRaw = (...args) => {
-  const r = spawnSync('git', args, { cwd: ROOT, encoding: 'utf8', windowsHide: true, maxBuffer: 128 * 1024 * 1024, timeout: 60000 });
+  const r = spawnSync('git', ['-c', 'core.quotePath=false', ...args], { cwd: ROOT, encoding: 'utf8', windowsHide: true, maxBuffer: 128 * 1024 * 1024, timeout: 60000 });
   return { ok: r.status === 0, out: r.stdout || '', err: String(r.stderr || '').trim(), code: r.status };
 };
 const 測れなかった = [];

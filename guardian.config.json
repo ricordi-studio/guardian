@@ -1,107 +1,111 @@
 {
- "_": "Guardian 自身の現場。ここが正本 ── ここで直し、ここから配る。",
- "_ここは特別": "ふつうの現場では guardian/ はリポジトリの中の1フォルダだが、ここではリポジトリそのものが塊。だから map も watch も、塊自身を指す。",
- "map": "docs/CODEMAP.md",
- "watch": [
-  "hooks",
-  "templates",
-  "githooks"
- ],
- "_context": "この塊が【どう運用されるか】。空だと運用の欠落は永久に見つからない(guardian/hunch.md)",
- "context": [
-  "配布される開発ツール。他人のリポジトリに置かれて動く",
-  "導入と取り直しは日常の作業ではない(数週間に一度)。だから厳重にしてよい",
-  "配布先は不特定。こちらの現場では踏めない石を踏む",
-  "人とAIの両方が読む。AIは最小の読み込みで改修する",
-  "正本は公開リポジトリ。中身はそのまま世に出る"
- ],
- "auditHours": 3,
- "_sources": "記号の実在照合の対象 ── 塊のエンジンそのもの",
- "sources": [
-  "check.mjs",
-  "selfcheck.mjs",
-  "neighbors.mjs",
-  "verdict.mjs",
-  "install.mjs",
-  "pull.mjs",
-  "index.mjs",
-  "hooks/clock.js",
-  "hooks/codemap.js",
-  "hooks/lib-root.js",
-  "hooks/no-fixed-names.js",
-  "hooks/no-reflex.js",
-  "hooks/stop.js",
-  "talk/talk.mjs"
- ],
- "skipSymbols": [],
- "_checks": "この現場の不変条件。塊自身については selfcheck が見張るので、ここは空でよい",
- "checks": [],
- "selectors": [],
- "okMarker": "guardian:ok|lint-deps:ok",
- "_private": "塊へ混ぜてはいけない個人情報。事故を書くときに人名が入るので、ここでも見張る",
- "private": [
-  "依頼主",
-  "人1",
-  "人2",
-  "人3",
-  "yosuke",
-  "現場Aのrepo",
-  "現場A"
- ],
- "_neighbors": "修正の2つ外側に答えたか",
- "neighbors": {
-  "rings": 2,
-  "code": [
-   ".",
-   "hooks"
+  "_": "Guardian 自身の現場。ここが正本 ── ここで直し、ここから配る。",
+  "_ここは特別": "ふつうの現場では guardian/ はリポジトリの中の1フォルダだが、ここではリポジトリそのものが塊。だから map も watch も、塊自身を指す。",
+  "map": "docs/CODEMAP.md",
+  "watch": [
+    "hooks",
+    "templates",
+    "githooks"
   ],
-  "notes": [],
-  "ext": [
-   "mjs",
-   "js"
+  "_context": "この塊が【どう運用されるか】。空だと運用の欠落は永久に見つからない(guardian/hunch.md)",
+  "context": [
+    "配布される開発ツール。他人のリポジトリに置かれて動く",
+    "導入と取り直しは日常の作業ではない(数週間に一度)。だから厳重にしてよい",
+    "配布先は不特定。こちらの現場では踏めない石を踏む",
+    "人とAIの両方が読む。AIは最小の読み込みで改修する",
+    "正本は公開リポジトリ。中身はそのまま世に出る"
   ],
-  "answer": ".guardian/neighbors.answer.json",
-  "need": ".guardian/neighbors.need.json",
-  "max_callers": 40,
-  "skip_touched": [
-   "\\.selftest\\.",
-   "\\.e2e\\.",
-   "\\.test\\."
+  "auditHours": 3,
+  "_sources": "記号の実在照合の対象 ── 塊のエンジンそのもの。★ここに無いファイルは、近傍照合の門が【見ない】(2026-09-03 に実測: 外す.mjs を大きく直しても「近傍: なし」と出ていた)。エンジンを足したら、必ずここにも足すこと。",
+  "sources": [
+    "check.mjs",
+    "selfcheck.mjs",
+    "neighbors.mjs",
+    "verdict.mjs",
+    "install.mjs",
+    "pull.mjs",
+    "index.mjs",
+    "hooks/clock.js",
+    "hooks/codemap.js",
+    "hooks/lib-root.js",
+    "hooks/no-fixed-names.js",
+    "hooks/no-reflex.js",
+    "hooks/stop.js",
+    "talk/talk.mjs",
+    "台帳.mjs",
+    "外す.mjs",
+    "書き手.cjs",
+    "hooks/in-loop.js"
   ],
-  "ignore_symbols": [],
-  "entry_symbols": [],
-  "_skip_dirs": "コーパスから外す場所。重複していることが正しい所(実験の見本・再現・生成物)。実測: 実験室を足した日、写経の疑いが12→46件になり、増えた34件は全部が意図した重複だった(2026-08-30 監査)",
-  "skip_dirs": [
-   "research"
-  ]
- },
- "_evidence": "合否が回す証拠。★塊自身の検査が、そのまま証拠になる",
- "evidence": [
-  {
-   "name": "塊の自己検査(わざと壊して赤くなるか)",
-   "run": "node selfcheck.mjs",
-   "fast": true,
-   "timeoutSec": 180
+  "skipSymbols": [],
+  "_checks": "この現場の不変条件。塊自身については selfcheck が見張るので、ここは空でよい",
+  "checks": [],
+  "selectors": [],
+  "okMarker": "guardian:ok|lint-deps:ok",
+  "_private": "塊へ混ぜてはいけない個人情報。事故を書くときに人名が入るので、ここでも見張る",
+  "private": [
+    "依頼主",
+    "人1",
+    "人2",
+    "人3",
+    "yosuke",
+    "現場Aのrepo",
+    "現場A"
+  ],
+  "_neighbors": "修正の2つ外側に答えたか",
+  "neighbors": {
+    "rings": 2,
+    "code": [
+      ".",
+      "hooks"
+    ],
+    "notes": [],
+    "ext": [
+      "mjs",
+      "js"
+    ],
+    "answer": ".guardian/neighbors.answer.json",
+    "need": ".guardian/neighbors.need.json",
+    "max_callers": 40,
+    "skip_touched": [
+      "\\.selftest\\.",
+      "\\.e2e\\.",
+      "\\.test\\."
+    ],
+    "ignore_symbols": [],
+    "entry_symbols": [],
+    "_skip_dirs": "コーパスから外す場所。重複していることが正しい所(実験の見本・再現・生成物)。実測: 実験室を足した日、写経の疑いが12→46件になり、増えた34件は全部が意図した重複だった(2026-08-30 監査)",
+    "skip_dirs": [
+      "research"
+    ]
   },
-  {
-   "name": "WHY の索引が最新か",
-   "run": "node index.mjs --check",
-   "fast": true,
-   "timeoutSec": 60
-  },
-  {
-   "name": "地図・正本",
-   "run": "node check.mjs",
-   "fast": true,
-   "timeoutSec": 120
-  },
-  {
-   "name": "近傍照合(修正の2つ外側に答えたか)",
-   "run": "node neighbors.mjs --gate",
-   "fast": true,
-   "timeoutSec": 120
-  }
- ],
- "okMax": 9,
- "_okMax": "逃げ道(guardian:ok)の上限。増やすときは人が上げる ── 黙らせるのは直すより速いので、放っておくと増える一方になる。★8→9(2026-08-30): hooks/codemap.js:90 の逃げ道は前から在ったが、囲みコメントを閉じたあとに置いてあり【裸のコード】だったので数えられていなかった。囲みの中へ戻したら数に入った ── 増えたのではなく、いままで数え落としていた分である。"
+  "_evidence": "合否が回す証拠。★塊自身の検査が、そのまま証拠になる",
+  "evidence": [
+    {
+      "name": "塊の自己検査(わざと壊して赤くなるか)",
+      "run": "node selfcheck.mjs",
+      "fast": true,
+      "timeoutSec": 180
+    },
+    {
+      "name": "WHY の索引が最新か",
+      "run": "node index.mjs --check",
+      "fast": true,
+      "timeoutSec": 60
+    },
+    {
+      "name": "地図・正本",
+      "run": "node check.mjs",
+      "fast": true,
+      "timeoutSec": 120
+    },
+    {
+      "name": "近傍照合(修正の2つ外側に答えたか)",
+      "run": "node neighbors.mjs --gate",
+      "fast": true,
+      "timeoutSec": 120
+    }
+  ],
+  "okMax": 9,
+  "_okMax": "逃げ道(guardian:ok)の上限。増やすときは人が上げる ── 黙らせるのは直すより速いので、放っておくと増える一方になる。★8→9(2026-08-30): hooks/codemap.js:90 の逃げ道は前から在ったが、囲みコメントを閉じたあとに置いてあり【裸のコード】だったので数えられていなかった。囲みの中へ戻したら数に入った ── 増えたのではなく、いままで数え落としていた分である。"
 }
