@@ -42,7 +42,7 @@ const 正本 = 'https://github.com/ricordi-studio/guardian.git';
  * ★この直し自体は、古い版には届かない ── 9.42 以前を取ってから戻る経路は依然として黙る。
  *   届くのは『ここから先』だけである。それでも入れる理由は、口はこれからも増えるからである。 */
 {
-  const 知っている口 = ['--口一覧', '--check', '--force', '--distributed', '--at', '--由来'];
+  const 知っている口 = ['--口一覧', '--check', '--force', '--降格を承知', '--distributed', '--at', '--由来'];
   const 値を取る口 = { '--at': 1 };
   const 残りを全部取る口 = [];
   const 渡されたもの = process.argv.slice(2);
@@ -91,8 +91,21 @@ const 正本 = 'https://github.com/ricordi-studio/guardian.git';
   }
 }
 const 見るだけ = process.argv.includes('--check');
-/* ★--force は「この現場の直りを上書きする」と「降格を承知で取る」の両方に効く(2026-09-03) */
+/* ★口を【1つの決定に1つ】に分けた(24.0、2026-09-03、会議で @codex が release blocker として止め、
+ *   @kozo が運んだ)。
+ *
+ *   ★★直す前、--force は2箇所で効いていた:
+ *     :525 この現場の直りを上書きする
+ *     :671 版が下がる／配ると宣言した物が消えるのを承知で取る
+ *
+ *   ★★★人が --force を打つ理由は、生まれた理由(:523)の通り【前者】である ──
+ *   「前回の取り直しが途中で終わった。私の直りは要らない。取り直したい」。
+ *   その人に起きるのは、版が 23.x → 13.24 へ戻り、外す.mjs が消え、台帳だけ残ることだった。
+ *
+ *   ★門自身が「外す.mjs が消えると、外す手段が無くなります」と説明し、
+ *   ★★その次の行で --force を案内していた ── **説明と案内が逆を向いていた**。 */
 const 強く = process.argv.includes('--force');
+const 降格を承知 = process.argv.includes('--降格を承知');
 
 /* ★シェルを通さない(2026-08-30、違和感の掘り出しで見つかった)。
  *   直す前は `shell: true` + 引数の配列だった。この形は Node が **DEP0190 で非推奨**にしている
@@ -668,7 +681,7 @@ const 版を数に = (v) => {
   const 下がる = (旧 && 新) && (新[0] < 旧[0] || (新[0] === 旧[0] && 新[1] < 旧[1]));
   /* ★消えるもののうち【配ると宣言している物】= エンジンの消失 */
   const 消えるエンジン = 全消える.filter((n) => 配るもの.has(String(n).split("/")[0]));
-  if ((下がる || 消えるエンジン.length) && !見るだけ && !強く) {
+  if ((下がる || 消えるエンジン.length) && !見るだけ && !降格を承知) {
     console.error('');
     console.error('✗ 取り直しを止めました ── ★このまま取ると、いまより【後ろ】へ動きます');
     if (下がる) console.error('  ★★版が下がります: ' + 旧版 + ' → ' + 新版);
@@ -676,10 +689,31 @@ const 版を数に = (v) => {
       console.error('  ★★★配ると宣言している物が消えます(' + 消えるエンジン.length + '件): ' + 消えるエンジン.join(', '));
     console.error('  ★正本がまだ古い(こちらが先行している)のか、上流で本当に消されたのかは、ここからは分かりません。');
     console.error('  ★★確かめ方: node guardian/pull.mjs --check(取らずに差だけ見る)');
-    console.error('  ★★★それでも取るなら: node guardian/pull.mjs --force');
+    console.error('  ★★★それでも取るなら: node guardian/pull.mjs --降格を承知');
+    if (強く) console.error('  ★--force は【この現場の直りを上書きする】口で、'
+      + '★★降格の許しでは ありません(24.0 で分けました)。2つ要るなら2つ打ってください。');
     console.error('  ── 外す.mjs が消えると、台帳が現場に残ったまま【外す手段が無くなります】。');
     fs.rmSync(仮, { recursive: true, force: true });
     process.exit(1);
+  }
+}
+
+/* ★二重の警告(24.0)── 口が在っても、黙って後ろへ動かさない。
+ *   ★★@codex の条文:「別の明示flagと二重警告」。門を素通りさせるのではなく、
+ *   ★★★何が消えるかを もう一度 名前で出してから進む。 */
+{
+  const 旧 = 版を数に(旧版), 新 = 版を数に(新版);
+  const 下がる = (旧 && 新) && (新[0] < 旧[0] || (新[0] === 旧[0] && 新[1] < 旧[1]));
+  const 消えるエンジン = 全消える.filter((n) => 配るもの.has(String(n).split("/")[0]));
+  if ((下がる || 消えるエンジン.length) && !見るだけ && 降格を承知) {
+    console.error('');
+    console.error('★★--降格を承知 で通します ── ★★★これから【後ろ】へ動きます:');
+    if (下がる) console.error('  ・版: ' + 旧版 + ' → ' + 新版);
+    if (消えるエンジン.length)
+      console.error('  ・消える物(' + 消えるエンジン.length + '件): ' + 消えるエンジン.join(', '));
+    if (消えるエンジン.some((n) => String(n).startsWith('外す')))
+      console.error('  ★外す.mjs が消えます ── 台帳が現場に残ったまま【外す手段が無くなります】。');
+    console.error('  ★★元へ戻す道: node guardian/pull.mjs --at <戻したい版の commit>');
   }
 }
 
