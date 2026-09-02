@@ -42,7 +42,7 @@ const 正本 = 'https://github.com/ricordi-studio/guardian.git';
  * ★この直し自体は、古い版には届かない ── 9.42 以前を取ってから戻る経路は依然として黙る。
  *   届くのは『ここから先』だけである。それでも入れる理由は、口はこれからも増えるからである。 */
 {
-  const 知っている口 = ['--口一覧', '--check', '--force', '--distributed', '--at'];
+  const 知っている口 = ['--口一覧', '--check', '--force', '--distributed', '--at', '--由来'];
   const 値を取る口 = { '--at': 1 };
   const 残りを全部取る口 = [];
   const 渡されたもの = process.argv.slice(2);
@@ -195,6 +195,42 @@ const 一覧 = (dir, 元 = dir, 深さ = 0) => fs.readdirSync(dir, { withFileTyp
  * ★クローンより手前に置く ── 一覧を見るだけならネットは要らない。 */
 if (process.argv.includes('--distributed')) {
   for (const f of 一覧(HERE)) process.stdout.write(f + String.fromCharCode(10));
+  process.exit(0);
+}
+
+/* ★【由来】── 配る一式が「いつの・どの中身か」を、後から突き合わせられる形で出す
+ *   (2026-09-03、会議で @codex が外部監査の入口として求めた)。
+ *
+ *   ★★外部監査に渡すのは【物】だけで、弱点も既知の赤も渡さない。
+ *   ★★★渡すのは「あなたが見たのは、この commit の、この39点の、この中身です」という一枚。
+ *
+ *   ★これが在ると「監査中に対象が変わった」「別の一式を見た」を後から区別できる。
+ *   ★★指紋は SHA-256(この塊の内部で使う FNV とは別 ── ★★★外の人が同じ値を出せる形にする)。 */
+if (process.argv.includes('--由来')) {
+  const 走 = (...a) => spawnSync('git', ['-C', HERE, ...a], { encoding: 'utf8', windowsHide: true, timeout: 60000 });
+  const sha = (走('rev-parse', 'HEAD').stdout || '').trim() || '(git が答えません)';
+  const 汚れ = (走('status', '--porcelain').stdout || '').trim();
+  const 道 = 一覧(HERE).sort();
+  const crypto = await import('node:crypto');
+  const 出 = 道.map((rel) => {
+    let h = null, 大きさ = null;
+    try {
+      const b = fs.readFileSync(path.join(HERE, rel));
+      h = crypto.createHash('sha256').update(b).digest('hex');
+      大きさ = b.length;
+    } catch (_) { h = '(読めません)'; }
+    return { rel, sha256: h, バイト: 大きさ };
+  });
+  console.log(JSON.stringify({
+    形: 'guardian-由来 v1',
+    作った時刻: new Date().toISOString(),
+    版: (() => { try { return fs.readFileSync(path.join(HERE, "KIT_VERSION"), "utf8").trim(); } catch (_) { return null; } })(),
+    commit: sha,
+    作業木: 汚れ ? '★汚れています(未コミットの変更が在ります ── この一式は commit と一致しません)' : '綺麗',
+    出どころ: 'pull.mjs の --distributed 宣言集合から作成',
+    件数: 出.length,
+    一式: 出,
+  }, null, 1));
   process.exit(0);
 }
 
