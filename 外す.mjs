@@ -242,14 +242,37 @@ if (走査だけ) {
   if (!束.length) console.log('   (なし)');
   console.log('');
 
-  console.log('■ 候補 ' + 候補.length + '件 ── ★証拠は【足して】います(1つのファイルが複数 持ちます)');
-  const 並べ = [...候補].sort((a, b) =>
+  /* ★候補を【強い証拠が在る】と【弱い証拠しかない】に分ける(2026-09-03、@claude の指摘)。
+   *   ★★実物の現場で、現場自身のフック(.claude/hooks/sandbox.js)が候補に出た ──
+   *   証拠は [命令] と [場所だけ] で、所有は主張していない。振る舞いとしては正しい。
+   *   ★★★だが これは【消す物を人が選ぶ画面】である。同じ箱に並べると、人は消す。
+   *
+   *   ★強い = 塊が置いた事を示す(雛形と一致 / 塊が置く道 / 印)
+   *   ★★弱い = 関わりを示すだけ(命令 / 場所だけ / 名前だけ)── ★★★所有の証明ではない。 */
+  const 強い証拠 = new Set(['雛形と一致', '塊が置く道', '塊が置く道(中身は違う)', '印']);
+  const 並べ = (一覧) => [...一覧].sort((a, b) =>
     強い順.indexOf(a.証拠[0].型) - 強い順.indexOf(b.証拠[0].型) || (a.rel < b.rel ? -1 : 1));
-  for (const c of 並べ.slice(0, 60)) {
-    console.log('   ・' + c.rel);
-    for (const e of c.証拠) console.log('        [' + e.型 + '] ' + e.詳細);
+  const 出す = (一覧, 上限) => {
+    for (const c of 並べ(一覧).slice(0, 上限)) {
+      console.log('   ・' + c.rel);
+      for (const e of c.証拠) console.log('        [' + e.型 + '] ' + e.詳細);
+    }
+    if (一覧.length > 上限) console.log('   …他' + (一覧.length - 上限) + '件');
+  };
+  const 強い候補 = 候補.filter((c) => c.証拠.some((e) => 強い証拠.has(e.型)));
+  const 弱い候補 = 候補.filter((c) => !c.証拠.some((e) => 強い証拠.has(e.型)));
+
+  console.log('■ 候補A ★塊が置いた事を示す証拠が在る ' + 強い候補.length + '件 ── ★★証拠は足しています(1件が複数 持ちます)');
+  出す(強い候補, 60);
+  if (!強い候補.length) console.log('   (なし)');
+  console.log('');
+  console.log('■ 候補B ★★関わりを示すだけの証拠しか無い ' + 弱い候補.length + '件 ── ★★★所有の証明では【ありません】');
+  出す(弱い候補, 60);
+  if (!弱い候補.length) console.log('   (なし)');
+  if (弱い候補.length) {
+    console.log('   ★ここに現場自身の物が混ざります(実測: 現場のフックが [命令] と [場所だけ] で出た)。');
+    console.log('   ★★この箱を、まとめて消さないでください ── ★★★候補の出し方であって、判定ではありません。');
   }
-  if (並べ.length > 60) console.log('   … ほか ' + (並べ.length - 60) + '件');
   console.log('');
 
   console.log('■ 証拠なし ' + 証拠なし.length + '件 ── ★★この網では証拠が付きませんでした');
