@@ -1,4 +1,4 @@
-20.0
+20.1
 METHOD.md 1kv4bye-22912
 PROTOCOL.json aajo32-354
 README.md tizyyd-8211
@@ -27,8 +27,8 @@ templates/guardian-audit-command.md hyfuh-175
 templates/guardian.config.json 128yym3-2262
 templates/nightly-check.yml 1ybpxvw-2843
 verdict.mjs 1khv7yf-10356
-保持一覧.json 1r6arum-768
+保持一覧.json tfn9m3-1146
 台帳.mjs kl8ahu-3737
-外す.mjs wtibsc-33177
+外す.mjs 8vuhbz-33856
 書き手.cjs 18bc76y-4834
 道.cjs 1mpvcnl-2966
