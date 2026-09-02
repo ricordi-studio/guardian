@@ -35,7 +35,8 @@
     "台帳.mjs",
     "外す.mjs",
     "書き手.cjs",
-    "hooks/in-loop.js"
+    "hooks/in-loop.js",
+    "道.cjs"
   ],
   "skipSymbols": [],
   "_checks": "この現場の不変条件。塊自身については selfcheck が見張るので、ここは空でよい",

@@ -54,6 +54,8 @@ import fs from 'node:fs';
 import { createRequire as __cr } from 'node:module';
 /* ★共通の書き手(CJS)── 走行中に増える物を、書いた事実で台帳に載せる(2026-09-03) */
 const 書き手 = __cr(import.meta.url)('./書き手.cjs');
+/* ★git から道の一覧を取る唯一の口(2026-09-03) */
+const 道 = __cr(import.meta.url)('./道.cjs');
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -669,7 +671,15 @@ const 外した件を言う = () => {
 };
 
 if (!BASE_OVERRIDE && dirty !== '') {
-  const untracked = git('ls-files','--others','--exclude-standard').trim().split('\n').filter(Boolean);
+  /* ★道の一覧は 道.cjs から取る(2026-09-03、会議で @codex と @kozo が形を出した)。
+   *   ★★直す前は trim().split(改行) だったので、★★★先頭・末尾に空白を持つ道が壊れた
+   *   (実測: " leading.mjs" → "leading.mjs" = 実在しない道。エラーは出ない)。 */
+  const u = 道.道を取る(ROOT, 'ls-files', '--others', '--exclude-standard');
+  const untracked = u.道;
+  /* ★読めなかった道を【黙って落とさない】── 保存則(発見 = 読めた + 読めなかった) */
+  if (u.読めなかった.length) 測れなかった.push('git ls-files … 道 ' + u.読めなかった.length
+    + '件が UTF-8 として読めません(この門は、その道を見ていません)');
+  if (u.落ちた) 測れなかった.push('git ls-files … ' + u.落ちた);
   for (const f of untracked) {
     if (isCode(f) && inSkipped(f)) { 宣言で外した.push(f); continue; }
     if (!isCode(f) || SKIP_TOUCHED.some((re) => re.test(f))) continue;

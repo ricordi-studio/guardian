@@ -29,6 +29,8 @@
 import { createRequire as __cr } from 'node:module';
 /* ★共通の書き手(CJS)── hooks(CJS)と engines(ESM)の両方から使うため */
 const 書き手 = __cr(import.meta.url)('./書き手.cjs');
+/* ★git から道の一覧を取る唯一の口(2026-09-03)── ★★行では割れない(空白を持つ道が壊れる) */
+const 道 = __cr(import.meta.url)('./道.cjs');
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -422,11 +424,15 @@ if (!map) {
      *   その現場では「一時領域だらけ」に見えて、本物が埋もれる(7条)。 */
     /* git に聞く(下の 管理下 を埋める) */
     {
-      const r = spawnSync('git', ['-c', 'core.quotePath=false', '-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard'],
-        { encoding: 'utf8', windowsHide: true, maxBuffer: 64 * 1024 * 1024, timeout: 60000 });
-      if (r.status === 0) {
-        管理下 = new Set(String(r.stdout || "").split(NL).map((x) => x.trim()).filter(Boolean)
-          .map((x) => path.resolve(ROOT, x)));
+      /* ★道の一覧は 道.cjs から取る(2026-09-03)── ★★trim().split(改行) は
+       *   先頭・末尾に空白を持つ道を壊す(実測: " leading.mjs" → "leading.mjs" = 実在しない道)。 */
+      const r = 道.道を取る(ROOT, 'ls-files', '--cached', '--others', '--exclude-standard');
+      if (!r.落ちた) {
+        管理下 = new Set(r.道.map((x) => path.resolve(ROOT, x)));
+        /* ★★読めなかった道を【黙って落とさない】── 保存則(発見 = 読めた + 読めなかった) */
+        if (r.読めなかった.length) problems.push('★git が返した道のうち ' + r.読めなかった.length
+          + '件が **UTF-8 として読めません**(16進: ' + r.読めなかった.slice(0, 3).join(', ')
+          + ')── ★★この検査は、その道を**見ていません**');
       }
     }
     const 場所 = new Set();
@@ -539,10 +545,13 @@ if (!map) {
     }
     let 管理下 = null;
     {
-      const r = spawnSync('git', ['-c', 'core.quotePath=false', '-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard'],
-        { encoding: 'utf8', windowsHide: true, maxBuffer: 64 * 1024 * 1024, timeout: 60000 });
-      if (r.status === 0) 管理下 = new Set(String(r.stdout || "").split(NL)
-        .map((x) => x.trim()).filter(Boolean).map((x) => path.resolve(ROOT, x)));
+      /* ★道の一覧は 道.cjs から取る(2026-09-03、上と同じ理由) */
+      const r = 道.道を取る(ROOT, 'ls-files', '--cached', '--others', '--exclude-standard');
+      if (!r.落ちた) {
+        管理下 = new Set(r.道.map((x) => path.resolve(ROOT, x)));
+        if (r.読めなかった.length) problems.push('★git が返した道のうち ' + r.読めなかった.length
+          + '件が **UTF-8 として読めません**── ★★この検査は、その道を見ていません');
+      }
     }
     const 拡張 = ["", ".ts", ".tsx", ".js", ".mjs", ".cjs", ".jsx"];
     const 解く = (元, 先) => {
@@ -1205,8 +1214,9 @@ if (argv.includes('--tighten')) {
  * ★git が無ければ何も言わない(7条)。 */
 {
   const 出すか = process.argv.includes("--冷たい順");
-  const r = spawnSync("git", ["-c", "core.quotePath=false", "-C", ROOT, "ls-files"], { encoding: "utf8", windowsHide: true, timeout: 60000 });
-  if (r.status === 0) {
+  /* ★道の一覧は 道.cjs から取る(2026-09-03) */
+  const r = 道.道を取る(ROOT, "ls-files");
+  if (!r.落ちた) {
     /* 見る場所: 宣言の watch(無ければ根の直下)。★ファイル単位だと多すぎるので【場所】でまとめる */
     const この検査が見ない = new RegExp("(^|/)(\\.git|node_modules|\\.guardian)(/|$)");
     const 場所 = new Map();
@@ -1222,13 +1232,10 @@ if (argv.includes('--tighten')) {
      *   ★★★この検査だけの変数にする(隣から借りない ── 今夜4回踏んだ)。 */
     const いま触っている = new Set();
     {
-      const d = spawnSync("git", ["-c", "core.quotePath=false", "-C", ROOT, "diff", "--name-only", "HEAD"],
-        { encoding: "utf8", windowsHide: true, timeout: 60000 });
-      if (d.status === 0) {
-        for (const f of String(d.stdout || "").split(/\r?\n/)) {
-          const t = f.trim(); if (!t) continue;
-          いま触っている.add(t.includes("/") ? t.slice(0, t.indexOf("/")) : ".");
-        }
+      /* ★道の一覧は 道.cjs から取る(2026-09-03)── ★★整形しない(trim もしない) */
+      const d = 道.道を取る(ROOT, "diff", "--name-only", "HEAD");
+      if (!d.落ちた) {
+        for (const t of d.道) いま触っている.add(t.includes("/") ? t.slice(0, t.indexOf("/")) : ".");
       }
     }
     const 並び = [];

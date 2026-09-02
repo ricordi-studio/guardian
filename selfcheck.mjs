@@ -28,6 +28,9 @@
  * 出口コード: どれか1つでも外れれば 1(CIがそのまま落ちる)。
  */
 import fs from 'node:fs';
+import { createRequire as __cr2 } from 'node:module';
+/* ★git から道の一覧を取る唯一の口(2026-09-03)── ★★行では割れない(空白を持つ道が壊れる) */
+const 道 = __cr2(import.meta.url)('./道.cjs');
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -1594,6 +1597,51 @@ if (process.argv.includes("--why")) {
   }
 }
 
+/* ---------- B15. 道の一覧を、共通の口の外で取っていないか(2026-09-03、会議で @codex が形を出した) ----------
+ *
+ * ★事故は2つ、続けて起きた:
+ *   ① git は非ASCIIの道を**クォートして**返す(17.2 で切った)
+ *   ② ★★クォートを切っても `.trim().split(改行)` は**空白を持つ道を壊す**
+ *
+ * ```
+ * 在るファイル : " leading.mjs" / "middle space.mjs" / "trailing .mjs" / "日本語.mjs"
+ * trim().split : ["leading.mjs", ...]   ← ★先頭の空白が消え、★★実在しない道になる
+ * -z + NUL 割り: [" leading.mjs", ...]  ← ★★★正しい
+ * ```
+ *
+ * ★★壊れ方が悪い: 消えた道は【無かったこと】になる。エラーも出ないし、
+ *   ★★★「見なかった」とも言わない ── 届いていないので、居たことすら知らない。
+ *
+ * ★門の形(@codex の案): **道の一覧を返す git を、共通の口の外で叩いていたら赤。**
+ *   ★★1つ1つの trim を追いかけるのではなく、【入口を1本にする】ことを見張る。 */
+{
+  /* ★道の一覧を返す下位命令 ── ★★status は道にしていないので、ここには入れない
+   *   (実測: neighbors の status は真偽にしか使っておらず、道を壊していない) */
+  const 道を返す命令 = ['ls-files', 'diff-tree', 'diff-index'];
+  const 外で叩いている = [];
+  for (const rel of ENGINE_FILES.filter((x) => /\.(mjs|cjs|js)$/.test(x))) {
+    if (rel === '道.cjs') continue;              /* ★ここが唯一の口 */
+    let t = null;
+    try { t = fs.readFileSync(path.join(HERE, rel), "utf8"); } catch (_) { continue; }
+    /* ★改行の定数は、この現場では NL2 である ── ★★NL は無い(B13 で一度 踏んだ形)。
+     *   ★★★ここは字面で作る(名前を思い出さなくてよい形にする)。 */
+    for (const 行 of t.split(String.fromCharCode(10))) {
+      if (!/spawnSync\s*\(\s*['"`]git['"`]/.test(行)) continue;
+      const 命令 = 道を返す命令.find((c) => 行.includes("'" + c + "'") || 行.includes('"' + c + '"'));
+      const 名前だけ = /--name-only|--name-status/.test(行);
+      if (命令 || 名前だけ) 外で叩いている.push(rel + ": " + (命令 || "--name-only"));
+    }
+  }
+  if (外で叩いている.length) {
+    ng.push("★道の一覧を、共通の口(道.cjs)の外で取っています(" + 外で叩いている.length + "件): "
+      + 外で叩いている.join(", ") + " ── ★★行では割れません。"
+      + "先頭・末尾に空白を持つ道が壊れ、★★★実在しない道になります(エラーは出ません)。"
+      + "道.cjs の 道を取る() を通してください");
+  } else {
+    ok.push("道の一覧は、共通の口(道.cjs)だけが取っている ── ★-z と NUL で割り、整形しない");
+  }
+}
+
 /* ---------- B14. 正本の綴りが、写しを持っていないか(2026-09-03、会議で @kozo が数えた) ----------
  *
  * ★事故: 台帳の道が【5箇所】に直書きされていた(綴りはここに書かない ── ★★書けば これも写しになる)。
@@ -2089,8 +2137,15 @@ if (process.argv.includes("--why")) {
       } else {
         /* 配布物だけを見る ── この現場のものが変わっても、配る中身は変わっていない */
         const 変わった = [];
-        const d = g("diff", "--name-only", c, "--");
-        const 一覧 = String(d.stdout || "").split(NL2).map((x) => x.trim()).filter(Boolean);
+        /* ★道の一覧は 道.cjs から取る(2026-09-03、会議で @codex と @kozo が形を出した)。
+         *   ★★直す前は split(改行).map(trim) で、★★★空白を持つ道が【全件】壊れた
+         *   (実測: " leading.mjs" → "leading.mjs" = 実在しない道。エラーは出ない)。 */
+        const d = 道.道を取る(HERE, "diff", "--name-only", c, "--");
+        const 一覧 = d.道;
+        /* ★読めなかった道を黙って落とさない ── 保存則(発見 = 読めた + 読めなかった) */
+        if (d.読めなかった.length) 未測.push("公開後の中身の照合: git が返した道 "
+          + d.読めなかった.length + "件が UTF-8 として読めません(その道は見ていません)");
+        if (d.落ちた) 未測.push("公開後の中身の照合: " + d.落ちた);
         for (const f of 一覧) if (ENGINE_FILES.includes(f)) 変わった.push(f);
         if (変わった.length) {
           ng.push("★版 " + いまの版 + " は既に公開されていて、その後に配る中身が変わっています: "
@@ -2458,8 +2513,10 @@ if (process.argv.includes("--why")) {
         + " ── 小番号だけ動いた。繰り上げていない)");
     } else {
       /* 大番号が動いた ── その版の中で SPEC.md も動いているか(作業木まで含めて見る) */
-      const d = g("diff", "--name-only", 前sha, "--", "SPEC.md");
-      if (String(d.stdout || "").trim()) {
+      /* ★ここも 道.cjs を通す(2026-09-03)── ★★使うのは真偽だが、
+       *   ★★★「道の一覧を返す git を、共通の口の外で叩かない」を1本の規則にするため。 */
+      const d = 道.道を取る(HERE, "diff", "--name-only", 前sha, "--", "SPEC.md");
+      if (d.道.length) {
         ok.push("版の上げ方は宣言どおり(大番号 " + 前.大 + " → " + いま.大 + " ── SPEC.md も一緒に変わっている)");
       } else {
         ng.push("★大番号を上げたのに SPEC.md が変わっていません(" + 前.大 + "." + 前.小
