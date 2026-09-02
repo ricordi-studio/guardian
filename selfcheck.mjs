@@ -2270,7 +2270,16 @@ if (process.argv.includes("--why")) {
  * ★穴として書く: 証明できるのは「その口を受け付ける」までで、**その口が仕事をする**ことではない。
  *   そこは各口の検査の仕事である(9.43 の未知オプション拒否と同じ線)。 */
 {
-  const 道具 = ["check.mjs", "index.mjs", "install.mjs", "neighbors.mjs", "pull.mjs", "selfcheck.mjs", "verdict.mjs"];
+  const 道具 = ["check.mjs", "index.mjs", "install.mjs", "neighbors.mjs", "pull.mjs", "selfcheck.mjs", "verdict.mjs",
+    "外す.mjs"];
+  /* ★【引数の誤りの出口】は道具ごとに違う(2026-09-03、会議で @kozo が数えた)。
+   *   ★★7口は 1 を使う。★★★外す.mjs は使えない ── 出口に【2つの軸】が載っているため:
+   *     軸A 判定(0=PASS / 1=CONFLICT / 2=UNKNOWN)/ 軸B 判定器が成立したか
+   *   1 も 2 も判定で埋まっているので、引数の誤りは 3 を使う。
+   *   ★7口を 3 に揃えないのは、既に測定契約として 1 が使われているためである。
+   *   ★★ここに書くのは【綴りではなく約束】── 道具が変えたら、この表も変える(片方だけ古くなる)。 */
+  const 引数の誤りの出口 = { "外す.mjs": 3 };
+  const 誤りの出口 = (t) => (引数の誤りの出口[t] || 1);
   let spec = null;
   try { spec = fs.readFileSync(path.join(HERE, "SPEC.md"), "utf8"); } catch (_) {}
   if (!spec) {
@@ -2281,7 +2290,12 @@ if (process.argv.includes("--why")) {
     let いま = null;
     for (const 行 of spec.split(NL2)) {
       if (!行.startsWith("|")) { continue; }
-      const m = 行.match(/^\|\s*`([A-Za-z0-9_.\/-]+\.(?:mjs|js))`\s*\|/);
+      /* ★道具の名は【ASCII だけ】ではない(2026-09-03、今夜3度目の同じ形)。
+       *   ★★直す前の網は [A-Za-z0-9_./-] だったので、外す.mjs の行が読めず、
+       *   ★★★直前の持ち主(pull.mjs)の続きとして数えられていた ──
+       *   「SPEC に在るが口として無い」と、無い側を名指しして赤くしていた。
+       *   同じ形: git のクォート(18.0)/ 命令の道の網(21.2)/ ここ(22.1)。 */
+      const m = 行.match(new RegExp("^\\|\\s*`([^`\\s|]+\\.(?:mjs|js|cjs))`\\s*\\|"));
       if (m) { いま = m[1]; if (!宣言[いま]) 宣言[いま] = new Set(); }
       if (!いま || !宣言[いま]) continue;
       /* 口の欄(2番目のセル)だけを見る ── 説明文に出てくる口は数えない */
@@ -2313,7 +2327,8 @@ if (process.argv.includes("--why")) {
        *   この形なら、門が壊れていても**口一覧が出て終わる**だけで済む。 */
       const z = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧", "--この口は無い"],
         { encoding: "utf8", windowsHide: true, cwd: HERE, timeout: 60000 });
-      if (z.status !== 1) ずれ.push(t + ": 知らない口を拒みません(出口 " + z.status + ")");
+      if (z.status !== 誤りの出口(t))
+        ずれ.push(t + ": 知らない口を拒みません(出口 " + z.status + " ── ★この道具は " + 誤りの出口(t) + " のはずです)");
       /* 出力は「口 個数」の2列。名前だけを取り出す(個数は下の叩き方が使う) */
       const 個数 = new Map();
       for (const 行 of String(r.stdout || "").split(NL2)) {
@@ -2333,7 +2348,8 @@ if (process.argv.includes("--why")) {
         if (名 === "--口一覧") continue;
         const 餌 = 数 === "*" ? ["--餌1", "--餌2", "--餌3"]
           : Array.from({ length: Math.max(1, Number(数) || 0) }, (_, n) => "--餌" + (n + 1));
-        const 期待 = (数 === "0") ? 1 : 0;   /* 飲まない口に未知を渡せば出口1 / 飲む口なら出口0 */
+        /* ★飲まない口に未知を渡せば【その道具の引数の誤りの出口】/ 飲む口なら出口0(2026-09-03) */
+        const 期待 = (数 === "0") ? 誤りの出口(t) : 0;
         const w = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧", 名, ...餌],
           { encoding: "utf8", windowsHide: true, cwd: HERE, timeout: 60000 });
         if (w.status !== 期待)
@@ -2347,7 +2363,7 @@ if (process.argv.includes("--why")) {
           const 短い = 餌.slice(0, Number(数) - 1);
           const v2 = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧", 名, ...短い],
             { encoding: "utf8", windowsHide: true, cwd: HERE, timeout: 60000 });
-          if (v2.status !== 1)
+          if (v2.status !== 誤りの出口(t))
             ずれ.push(t + ": " + 名 + " に値を " + 短い.length + " 個しか渡していないのに止まりません(出口 " + v2.status + ")");
         }
         /* ★【飲みすぎない】も測る(2026-08-31、配布先の実測を機械に移した)。
@@ -2360,7 +2376,7 @@ if (process.argv.includes("--why")) {
           const v3 = spawnSync(process.execPath,
             [path.join(HERE, t), "--口一覧", 名, ...餌, "--この口は無い"],
             { encoding: "utf8", windowsHide: true, cwd: HERE, timeout: 60000 });
-          if (v3.status !== 1)
+          if (v3.status !== 誤りの出口(t))
             ずれ.push(t + ": " + 名 + " が値の後ろの未知の口まで飲んでいます(出口 " + v3.status + ")");
         }
       }

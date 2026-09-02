@@ -28,6 +28,57 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
+/* ★【この道具が知っている口】── ★★塊の7つの入口が既に持っている作法を、ここにも置く
+ *   (2026-09-03、会議で @kozo が「外す.mjs だけ持っていない」と数えた)。
+ *
+ * ★★★実測(直す前): `node 外す.mjs --外す --dry` が **消した**(出口0)。
+ *   `--dry` は この塊の他の道具では「見るだけ」の口である ──
+ *   ★人は「見るだけのつもり」で打ち、★★道具は黙って無視して消し、★★★出口0で「通った」と言った。
+ *
+ * ★これは【唯一の破壊できる口】である。7つのうち、門を持っていないのはここだけだった。
+ *
+ * ★★門は【根を決める前】に置く ── ★★★`--root` が根を変えるので、根の後では遅い。
+ *
+ * ★出口は 3 にする(他の7口は 1)。理由: この道具は出口に【2つの軸】が載っている ──
+ *   ★★軸A 判定(0=PASS / 1=CONFLICT / 2=UNKNOWN)/ 軸B 判定器が成立したか。
+ *   ★★★1 も 2 も判定で埋まっているので、引数の誤りは 3 を使うしかない。
+ *   他の7口を 3 に揃えないのは、既に測定契約として 1 が使われているためである。 */
+const 知っている口 = ['--口一覧', '--外す', '--走査', '--root', '--json'];
+const 値を取る口 = { '--root': 1 };
+{
+  const 渡された = process.argv.slice(2);
+  const 知らない = [], 足りない = [], 重なり = [];
+  const 見た = new Set();
+  for (let i = 0; i < 渡された.length; i++) {
+    const v = 渡された[i];
+    if (!v.startsWith('--')) continue;
+    if (!知っている口.includes(v)) { 知らない.push(v); continue; }
+    /* ★同じ口が2回 来たら止める(2026-09-03)── ★★どちらが効いたか、打った人には分からない */
+    if (見た.has(v)) 重なり.push(v); else 見た.add(v);
+    const 要る = 値を取る口[v] || 0;
+    if (要る && i + 要る >= 渡された.length + 0)
+      足りない.push(v + '(値が ' + 要る + ' 個要りますが ' + (渡された.length - i - 1) + ' 個です)');
+    i += 要る;
+  }
+  const 訴え = [];
+  if (知らない.length) 訴え.push('この道具は、その口を知りません: ' + 知らない.join(', '));
+  if (足りない.length) 訴え.push('口に渡す値が足りません: ' + 足りない.join(', '));
+  if (重なり.length) 訴え.push('同じ口が2回 来ています: ' + 重なり.join(', '));
+  if (訴え.length) {
+    for (const t of 訴え) console.error('✗ ' + t);
+    console.error('  知っている口: ' + 知っている口.join(' / '));
+    console.error('  ★黙って無視すると、打ったつもりと違う動きをしたまま報告することになります');
+    console.error('  ★★この道具は【消せる】口です ── 実測: --外す --dry は、直す前は消しました');
+    console.error('  ★★★出口3(引数の誤り)── 0/1/2 は判定で埋まっています');
+    process.exit(3);
+  }
+}
+if (process.argv.includes('--口一覧')) {
+  /* ★口の名前と【いくつ値を取るか】を出す(他の7口と同じ形) */
+  for (const k of 知っている口) process.stdout.write(k + ' ' + (値を取る口[k] || 0) + String.fromCharCode(10));
+  process.exit(0);
+}
+
 /* ★根は【塊の1つ上】から探す(install と同じ作法)。塊は現場の中に在る前提。 */
 const ROOT = (() => {
   let d = path.resolve(HERE, '..');
