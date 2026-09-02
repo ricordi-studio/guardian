@@ -42,14 +42,16 @@ const ROOT = (() => {
 })();
 
 const 実行 = process.argv.includes('--外す');
-const 台帳の道 = path.join(ROOT, '.guardian', '導入台帳.json');
-const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
-const 読む = (p) => { try { return fs.readFileSync(p, 'utf8'); } catch (_) { return null; } };
-
 /* ★指紋は【書き手.cjs に1本だけ】(2026-09-03)。ここで再実装しない ──
  *   ★★直す前は 台帳.mjs / 書き手.cjs / ここ の3つに同じ式が在った。
  *   1つずれるだけで、外す側は「人が触った」と読んで止まる ── ★★★誰のせいでもない CONFLICT が出る。 */
-const 指紋 = __cr(import.meta.url)('./書き手.cjs').指紋;
+const 書き手 = __cr(import.meta.url)('./書き手.cjs');
+const 指紋 = 書き手.指紋;
+/* ★道は 書き手.cjs が正本(2026-09-03、会議で @kozo が「写しが5箇所」と数えた) */
+const 台帳の道 = 書き手.台帳の道(ROOT);
+const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
+const 読む = (p) => { try { return fs.readFileSync(p, 'utf8'); } catch (_) { return null; } };
+
 
 /* ---------- ① 台帳を読む(★無ければ UNKNOWN ── 消してよい物が分からないので) ---------- */
 let 台帳 = null;
@@ -79,6 +81,7 @@ const 消す = [];
 const 衝突 = [];
 const 触らない = [];
 const フォルダ = [];  /* ★塊が作ったフォルダ(2026-09-03) */
+const 所有未確定 = [];  /* ★今回の導入は作っていないが、いま在る物(2026-09-03) */
 const 戻す = [];    /* ★入れる前の中身を持っている物(2026-09-03) */
 const 戻した = [];
 const 畳んだ = [];   /* ★空になって畳んだフォルダ(2026-09-03) */
@@ -90,7 +93,28 @@ for (const x of 項) {
    *   ★★所有の判定とは別の話 ── 元から在ったファイルでも、塊が書き足した所を抜いたあと
    *   整形や空行が残ることが在る。★★★見た目が同じでも git は差分を出す。それは残滓である。 */
   if (x.元 != null && !戻す.some((r) => r.rel === x.rel)) 戻す.push({ rel: x.rel, 道: 先, 元: x.元 });
-  if (!x.作った) { 触らない.push(x.rel + '(' + x.種類 + ' ── 入れる前から在った)'); continue; }
+  if (!x.作った) {
+    /* ★「入れる前から在った」は【この導入が置いたのではない】だけで、★★「現場の物」ではない
+     *   (2026-09-03、会議で @kozo・@codex・@claude の3席が同じ所を指した)。
+     *   ★★★過去の Guardian が置いた物も、そっくり ここに入る。
+     *
+     *   実測(直す前): 昔の Guardian の docs/CODEMAP.md が在る現場で外すと、
+     *   ★「触らない物(入れる前から在った)」と出て、判定は PASS、
+     *   ★★「残っているのは③(現場の物)だけです」と言った ── ★★★読み替えている。
+     *
+     * ★@codex の表に寄せる:
+     *   いま無い                     → 触らない(判定に影響なし)
+     *   いま在る + 元を持っている     → ★★この導入が書き足した先。バイトで戻すので期待保持
+     *   いま在る + 元を持っていない   → ★★★所有未確定(この導入は触っていない)→ UNKNOWN
+     *
+     * ★札も変える ── 「入れる前から在った」ではなく【今回の導入は作っていない】。
+     *   観測した範囲を、札に入れる。 */
+    if (!fs.existsSync(先)) { 触らない.push(x.rel + '(' + x.種類 + ' ── もう在りません)'); continue; }
+    if (x.元 != null) { 触らない.push(x.rel + '(' + x.種類 + ' ── ★この導入が書き足した先。元へ戻します)'); continue; }
+    if (!所有未確定.includes(x.rel)) 所有未確定.push(x.rel);
+    触らない.push(x.rel + '(' + x.種類 + ' ── ★★今回の導入は作っていません。★★★所有は未確定です)');
+    continue;
+  }
 
   /* ★走行中に増えた物(2026-09-03、共通の書き手が載せた分)。
    *   ★★中身の指紋は持たない ── 走行ごとに変わるので「変わっている」としか言えないため。
@@ -270,7 +294,7 @@ const 依存の網 = { 見た: 0, 飛ばした: [], 上限: 4000, 大きさの�
        *   ★★台帳は【入れる前の写し(元)】を持つので、現場の綴りをそのまま含む。
        *   ★★★それを依存と読むと、【台帳が塊に依存している】という無い話になる。
        *   台帳は最後に自分で消えるので、依存の主体ではない。 */
-      if (rel === '.guardian/導入台帳.json') continue;
+      if (rel === 書き手.台帳の相対) continue;
       if (依存の網.見た >= 依存の網.上限) { 依存の網.飛ばした.push('上限 ' + 依存の網.上限 + ' 件に達しました'); return; }
       let st = null;
       try { st = fs.statSync(path.join(ROOT, rel)); } catch (_) { continue; }
@@ -412,7 +436,7 @@ if (実行) {
  *   中の4件を外しただけで、ファイルは現場の物として残っているのに。
  *   残っている物を retained から隠すのは、フォルダ要約で中を隠すのと同じ形である。 */
 const 消した道 = new Set(消す.filter((c) => c.種類 === 'ファイル').map((c) => c.rel));
-const retained = 走査.filter((p) => !消した道.has(p) && p !== '.guardian/導入台帳.json');
+const retained = 走査.filter((p) => !消した道.has(p) && p !== 書き手.台帳の相対);
 
 console.log((実行 && !依存衝突.length ? '【外しました】'
   : 実行 ? '【★止めました ── 依存が切れるので、何も消していません】'
@@ -468,6 +492,9 @@ const 盲点 = retained.filter((r) => {
   if (!r.startsWith('.guardian/')) return false;
   return 塊が書く名.has(r.slice('.guardian/'.length));
 });
+/* ★所有未確定も【盲点】に入れる(2026-09-03)── ★★UNKNOWN の材料を1つにまとめる。
+ *   ★★★別の箱にすると、判定を組むとき片方を忘れる(16.5 で一度そうなった)。 */
+for (const r of 所有未確定) if (retained.includes(r) && !盲点.includes(r)) 盲点.push(r);
 const 現場の物 = retained.filter((r) => !束.includes(r) && !盲点.includes(r));
 
 console.log('\n★retained(★★走査で在った物 − 消した物) ' + retained.length + '件 ── 3つに分けます:');
