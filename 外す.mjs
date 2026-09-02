@@ -187,8 +187,24 @@ if (走査だけ) {
       if (t.includes('<!-- guardian:begin')) 証拠.push({ 型: '印', 詳細: 'guardian:begin/end の区間が在ります' });
       const 命令部 = 実行される綴り(rel, t);
       if (命令部 != null) {
-        const 当たり = [...new Set(命令部.match(/[A-Za-z0-9_.\/-]*guardian[A-Za-z0-9_.\/-]*/g) || [])];
-        if (当たり.length) 証拠.push({ 型: '命令', 詳細: '実行される位置が名指し: ' + 当たり.slice(0, 3).join(', ') });
+        /* ★【回数も数える】(2026-09-03、@claude が実物で見つけた)。
+         *   ★★実物の現場では、同じフックが **2回ずつ** 登録されていた(8登録 / 4本)。
+         *   外す側の規則では「同じ要素が N件 → どれを外すか決められません(CONFLICT)」になるので、
+         *   ★★★重複は【撤去の可否を分ける情報】である。出さないと、人は「4本 外せばよい」と読む。 */
+        /* ★道は【空白と区切り】で止める(2026-09-03、自分の試験で見つけた)。
+         *   ★★直す前は [A-Za-z0-9_./-] だったので、★★★日本語名の道が guardian/ で切れていた
+         *   (実測: guardian/外す.mjs → "guardian/")。この塊は日本語名を5枚 配っている。 */
+        const 生 = 命令部.match(new RegExp("[^\\s\"'`;|&<>()]*guardian[^\\s\"'`;|&<>()]*", "g")) || [];
+        const 回数 = new Map();
+        for (const x of 生) 回数.set(x, (回数.get(x) || 0) + 1);
+        if (回数.size) {
+          /* ★切らない ── 切るなら必ず「…他N件」を付ける(04:46 の規則を、ここにも当てる) */
+          const 並 = [...回数.entries()].map(([x, n]) => x + (n > 1 ? "(★" + n + "回)" : ""));
+          const 出 = 並.length > 8 ? 並.slice(0, 8).join(", ") + " …他" + (並.length - 8) + "件" : 並.join(", ");
+          const 重なり = [...回数.values()].filter((n) => n > 1).length;
+          証拠.push({ 型: "命令", 詳細: "実行される位置が名指し(" + 回数.size + "種 / 登録 " + 生.length + "件"
+            + (重なり ? " ・★同じ物が2回以上 登録されている物 " + 重なり + "種" : "") + "): " + 出 });
+        }
       }
       const 場所 = 既知の場所.find((d) => rel.startsWith(d));
       if (場所) 証拠.push({ 型: '場所だけ', 詳細: '塊が作る場所 ' + 場所 + ' の中(★所有の証明にはなりません)' });
@@ -240,8 +256,11 @@ if (走査だけ) {
   console.log('   ★★★これは【塊の物ではない】証明ではありません ── 網の外に在るかもしれません');
   console.log('');
   console.log('■ 見ていない ' + 見ていない.length + '件 / 読めない ' + 読めない.length + '件');
+  /* ★畳んでよいが、隠してはいけない ── 切ったら必ず「…他N件」を出す(2026-09-03) */
   for (const s of 見ていない.slice(0, 6)) console.log('   ・' + s.rel + '(' + s.理由 + ')');
+  if (見ていない.length > 6) console.log('   …他' + (見ていない.length - 6) + '件(見ていない)');
   for (const s of 読めない.slice(0, 6)) console.log('   ・' + s.rel + '(' + s.理由 + ')');
+  if (読めない.length > 6) console.log('   …他' + (読めない.length - 6) + '件(読めない)');
   console.log('');
   console.log('(終端の保存則: 見た ' + 見た数 + ' = 候補 ' + 候補.length + ' + 証拠なし ' + 証拠なし.length
     + ' + 読めない ' + 読めない.length + ' → ' + (保存則 ? '★成り立つ' : '★★破れています(黙って消えた物が在ります)') + ')');
@@ -593,7 +612,8 @@ const 依存の網 = { 見た: 0, 飛ばした: [], 見ない形: [], 上限: 40
       依存の網.見た++;
       /* ★束の中の道を名指ししているか ── ★★綴りで所有は決めないが、【依存】は綴りで見るしかない。
        *   ★★★所有(誰の物か)と依存(消えたら壊れるか)は別の問いである。 */
-      const 出 = t.match(/guardian\/[A-Za-z0-9_./-]+/g);
+      /* ★同じ理由で、依存の網も 空白と区切り で止める(2026-09-03) */
+      const 出 = t.match(new RegExp("guardian/[^\\s\"'`;|&<>()]+", "g"));
       if (!出) continue;
       for (const 道 of [...new Set(出)]) {
         if (!fs.existsSync(path.join(ROOT, 道))) continue;    /* いま無い物は、消えても変わらない */
@@ -647,7 +667,7 @@ if (実行 && !依存衝突.length) {
         fs.writeFileSync(c.道, JSON.stringify(j, null, 2) + '\n');
       }
     } catch (e) {
-      衝突.push(c.rel + ' ── 外せませんでした: ' + String(e && e.message).slice(0, 60));
+      衝突.push(c.rel + ' ── 外せませんでした: ' + (String(e && e.message).length > 60 ? String(e && e.message).slice(0, 60) + '…(以下 略)' : String(e && e.message)));
     }
   }
 
@@ -739,6 +759,7 @@ if (依存衝突.length) {
 if (依存の網.飛ばした.length) {
   console.log(String.fromCharCode(10) + "★依存の網から外れた物 " + 依存の網.飛ばした.length + "件(★★見ていません):");
   for (const s of 依存の網.飛ばした.slice(0, 5)) console.log('  ・' + s);
+  if (依存の網.飛ばした.length > 5) console.log('  …他' + (依存の網.飛ばした.length - 5) + '件');
 }
 console.log(String.fromCharCode(10) + "(依存の網: " + 依存の網.見た + "ファイルを読みました。★.git / node_modules / guardian/ は見ていません。★★実行しない形(文書など)" + 依存の網.見ない形.length + "件も見ていません ── 文書が道を名指しするのは説明であって依存ではないため)");
 for (const c of 消す) console.log('  ・' + c.rel + '(' + c.種類 + ')');
