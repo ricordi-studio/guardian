@@ -100,25 +100,42 @@ const 実行される綴り = (rel, t) => {
  * ★この口は【消さない】。候補を出し、★★何を根拠にそう言うかを一緒に出す。
  *
  * ★★★輪で決めた線を守る: **綴りで所有を決めない。**
- *   道に guardian が入っているのは【候補の出し方】であって、所有の証明ではない。
- *   実測の裏付け(@kozo が 161版を数えた): settings.json に居る no-reflex の登録は、
+ *   実測の裏付け(@kozo が161版を数えた): settings.json に居る no-reflex の登録は、
  *   ★どの版の install も【一度も登録していない】── 道は塊の物に見えるのに、人が足した物だった。
  *
- * ★根拠の強さを、そのまま名前にして出す:
- *   束        … pull.mjs と KIT_VERSION を持つフォルダ = 塊の束
- *   ★★指紋一致 … 配る雛形と1バイトも違わない = 塊が置いて、誰も触っていない
- *   印        … CLAUDE.md の guardian:begin/end = その区間は塊の物
- *   ★★★命令   … フックの command が束を名指ししている = 塊に向けて登録されている
- *                (★誰が登録したかは分からない ── 人が手で足した例が実在する)
- *   名前だけ  … ★★上のどれでもない = 候補にしかならない */
+ * ★【証拠は足す。排他にしない】(2026-09-03、会議で @codex が形を出した)。
+ *   ★★直す前は if/else if の連鎖で、当たった1つで continue していた ──
+ *   ★★★1つのファイルが複数の証拠を持つとき、最初の1つ以外が【隠れる】。
+ *   実測: 現場が育てた docs/CODEMAP.md は、雛形と一致せず、名前にも guardian が無いので
+ *   ★走査から【丸ごと消えていた】(塊が置いた物なのに)。
+ *
+ * ★★終端は必ず1つ(@codex)── 候補 / 証拠なし / 見ていない / 読めない。
+ *   ★★★分類の枝を抜けた物が0であることを、毎回 数えて出す。 */
 if (走査だけ) {
-  const 出 = { 束: [], 指紋一致: [], 印: [], 命令: [], 名前だけ: [] };
-  const 見ない = new Set([".git", "node_modules"]);
+  /* ★どこを走査するか ── --root で外の現場も見られる(★★消さない口なので安全) */
+  const 根引数 = process.argv.indexOf('--root');
+  const 走査の根 = 根引数 >= 0 && process.argv[根引数 + 1]
+    ? path.resolve(process.argv[根引数 + 1]) : ROOT;
+  const JSONで出す = process.argv.includes('--json');
+
+  /* ★塊が置く【道】(exact)── ★★一致しなくても、そこに在れば証拠になる */
+  const 既知の道 = new Set(['docs/CODEMAP.md', 'guardian.config.json', 'CLAUDE.md',
+    '.claude/settings.json', '.claude/commands/guardian-audit.md',
+    '.github/workflows/guardian-nightly.yml']);
+  /* ★★塊が作る【場所】── ★★★場所だけでは所有の証明にならない(輪の線) */
+  const 既知の場所 = ['.guardian/', '.claude/', '.claude/commands/', '.github/workflows/'];
+
+  const 候補 = [];          /* { rel, 証拠: [{型, 詳細}] } */
+  const 証拠なし = [];
+  const 見ていない = [];    /* { rel, 理由 } */
+  const 読めない = [];      /* { rel, 理由 } */
+  const 束 = [];
+  let 見た数 = 0;
 
   /* ★雛形は、現場の束から取る ── ★★無ければ、いま走っているこの塊から取る */
   const 雛形 = new Map();   /* 指紋 → 雛形の名 */
   {
-    const 置き場 = [path.join(ROOT, "guardian", "templates"), path.join(HERE, "templates")];
+    const 置き場 = [path.join(走査の根, 'guardian', 'templates'), path.join(HERE, 'templates')];
     for (const d of 置き場) {
       let es = [];
       try { es = fs.readdirSync(d); } catch (_) { continue; }
@@ -130,72 +147,112 @@ if (走査だけ) {
     }
   }
 
+  const 見ないフォルダ = new Set(['.git', 'node_modules']);
   const 歩く = (相対) => {
     let es = [];
-    try { es = fs.readdirSync(path.join(ROOT, 相対 || "."), { withFileTypes: true }); } catch (_) { return; }
+    try { es = fs.readdirSync(path.join(走査の根, 相対 || '.'), { withFileTypes: true }); }
+    catch (e) { 読めない.push({ rel: 相対 + '/', 理由: String(e && e.code || e) }); return; }
     for (const e of es) {
-      const rel = 相対 ? 相対 + "/" + e.name : e.name;
+      const rel = 相対 ? 相対 + '/' + e.name : e.name;
       if (e.isDirectory()) {
-        if (見ない.has(e.name)) continue;
+        if (見ないフォルダ.has(e.name)) { 見ていない.push({ rel: rel + '/', 理由: '宣言で見ない場所' }); continue; }
         /* ★束かどうかは【中身】で見る ── 名前では見ない */
-        const 束か = fs.existsSync(path.join(ROOT, rel, "pull.mjs"))
-          && fs.existsSync(path.join(ROOT, rel, "KIT_VERSION"));
+        const 束か = fs.existsSync(path.join(走査の根, rel, 'pull.mjs'))
+          && fs.existsSync(path.join(走査の根, rel, 'KIT_VERSION'));
         if (束か) {
-          let 版 = "(読めません)";
-          try { 版 = String(fs.readFileSync(path.join(ROOT, rel, "KIT_VERSION"), "utf8")).trim(); } catch (_) {}
+          let 版 = '(読めません)';
+          try { 版 = String(fs.readFileSync(path.join(走査の根, rel, 'KIT_VERSION'), 'utf8')).trim(); } catch (_) {}
           let 数 = 0;
-          try { 数 = fs.readdirSync(path.join(ROOT, rel)).length; } catch (_) {}
-          出.束.push(rel + "/(版 " + 版 + " ・ 中身 " + 数 + "件)");
-          continue;   /* ★束の中は歩かない(丸ごと1件として出す) */
+          try { 数 = fs.readdirSync(path.join(走査の根, rel)).length; } catch (_) {}
+          束.push({ rel: rel + '/', 版, 中身: 数 });
+          見ていない.push({ rel: rel + '/*', 理由: '束の中(束ごと1件として出しています)' });
+          continue;
         }
         歩く(rel);
         continue;
       }
-      const t = 読む(path.join(ROOT, rel));
-      if (t == null) continue;
-      /* ★★指紋一致 ── 配る雛形と1バイトも違わない */
-      const 名 = 雛形.get(指紋(t));
-      if (名) { 出.指紋一致.push(rel + "(雛形 " + 名 + " と一致)"); continue; }
-      /* ★印 ── 区間のマーカー */
-      if (t.includes("<!-- guardian:begin")) {
-        出.印.push(rel + "(guardian:begin/end の区間が在ります)"); continue;
+      見た数++;
+      const t = 読む(path.join(走査の根, rel));
+      if (t == null) { 読めない.push({ rel, 理由: '読めません' }); continue; }
+
+      /* ★★★証拠は【足す】── 当たっても止めない */
+      const 証拠 = [];
+      const 雛形名 = 雛形.get(指紋(t));
+      if (雛形名) 証拠.push({ 型: '雛形と一致', 詳細: '雛形 ' + 雛形名 + ' と1バイトも違いません' });
+      if (既知の道.has(rel)) {
+        証拠.push(雛形名
+          ? { 型: '塊が置く道', 詳細: 'install が置く道です' }
+          : { 型: '塊が置く道(中身は違う)', 詳細: 'install が置く道ですが、雛形と中身が違います(現場が育てた可能性)' });
       }
-      /* ★★命令 ── フックの command / workflow の run / script が束を名指ししている */
-      const 命令 = 実行される綴り(rel, t);
-      if (命令 != null) {
-        const 当たり = (命令.match(/[A-Za-z0-9_.\/-]*guardian[A-Za-z0-9_.\/-]*/g) || []);
-        if (当たり.length) { 出.命令.push(rel + " → " + [...new Set(当たり)].slice(0, 3).join(", ")); continue; }
+      if (t.includes('<!-- guardian:begin')) 証拠.push({ 型: '印', 詳細: 'guardian:begin/end の区間が在ります' });
+      const 命令部 = 実行される綴り(rel, t);
+      if (命令部 != null) {
+        const 当たり = [...new Set(命令部.match(/[A-Za-z0-9_.\/-]*guardian[A-Za-z0-9_.\/-]*/g) || [])];
+        if (当たり.length) 証拠.push({ 型: '命令', 詳細: '実行される位置が名指し: ' + 当たり.slice(0, 3).join(', ') });
       }
-      /* ★★★名前だけ ── 候補にしかならない */
-      if (/guardian/i.test(rel)) 出.名前だけ.push(rel);
+      const 場所 = 既知の場所.find((d) => rel.startsWith(d));
+      if (場所) 証拠.push({ 型: '場所だけ', 詳細: '塊が作る場所 ' + 場所 + ' の中(★所有の証明にはなりません)' });
+      if (/guardian/i.test(rel)) 証拠.push({ 型: '名前だけ', 詳細: '道に guardian が入っている(★所有の証明にはなりません)' });
+
+      if (証拠.length) 候補.push({ rel, 証拠 });
+      else 証拠なし.push(rel);
     }
   };
-  歩く("");
+  歩く('');
 
-  const 台帳あり = fs.existsSync(台帳の道);
-  console.log("【走査だけ ── ★何も消していません】" + String.fromCharCode(10));
-  console.log("台帳: " + (台帳あり ? "★在ります(--外す で、台帳が知る物だけを外せます)"
-    : "★★在りません ── ★★★昔の導入か、台帳を消したかのどちらかです") + String.fromCharCode(10));
+  /* ★終端の保存則(@codex)── 分類の枝を抜けた物が0であることを数える */
+  const 終端 = 候補.length + 証拠なし.length + 読めない.length;
+  const 保存則 = (終端 === 見た数);
 
-  const 見せる = (名, 一覧, 意味) => {
-    console.log("■ " + 名 + " " + 一覧.length + "件 ── " + 意味);
-    if (!一覧.length) console.log("   (なし)");
-    for (const x of 一覧.slice(0, 40)) console.log("   ・" + x);
-    if (一覧.length > 40) console.log("   … ほか " + (一覧.length - 40) + "件");
-    console.log("");
-  };
-  見せる("束", 出.束, "★pull.mjs と KIT_VERSION を持つフォルダ。**名前では見ていません**");
-  見せる("指紋一致", 出.指紋一致, "★★配る雛形と1バイトも違わない ── 塊が置いて、誰も触っていない");
-  見せる("印", 出.印, "★guardian:begin/end の区間が在る ── ★★その区間は塊の物(外側は人の物)");
-  見せる("命令", 出.命令, "★★★フック/workflow/script が束を名指ししている ── ★誰が登録したかは**分かりません**");
-  見せる("名前だけ", 出.名前だけ, "★★上のどれでもない ── ★★★候補にしかなりません(綴りで所有は決めない)");
+  if (JSONで出す) {
+    console.log(JSON.stringify({
+      版: 'guardian-走査 v1', 根: 走査の根,
+      台帳: fs.existsSync(path.join(走査の根, 書き手.台帳の相対)),
+      束, 候補, 証拠なし, 見ていない, 読めない,
+      数: { 見た: 見た数, 候補: 候補.length, 証拠なし: 証拠なし.length, 読めない: 読めない.length, 保存則 },
+    }, null, 1));
+    process.exit(0);
+  }
 
-  console.log("★この走査は【消す物を決めません】。決めるのに足りないもの:");
-  console.log("  ・命令 … その登録を塊が入れたのか、人が足したのかは、台帳が無いと分かりません");
-  console.log("    ★★実例: no-reflex の登録は【どの版の install も一度も入れていません】(会議で161版を数えた)");
-  console.log("  ・名前だけ … ★★★綴りは候補の出し方であって、所有の証明ではありません");
-  console.log("  ・指紋一致 … 一致すれば塊の物ですが、★人が1文字でも直すと外れます(外れた物はここに出ません)");
-  console.log(String.fromCharCode(10) + "★次の一手は【人が決めること】です ── この一覧を見て、外す物を選んでください。");
+  const 強い順 = ['雛形と一致', '塊が置く道(中身は違う)', '塊が置く道', '印', '命令', '場所だけ', '名前だけ'];
+  console.log('【走査だけ ── ★何も消していません】' + String.fromCharCode(10));
+  console.log('根: ' + 走査の根);
+  console.log('台帳: ' + (fs.existsSync(path.join(走査の根, 書き手.台帳の相対))
+    ? '★在ります(--外す で、台帳が知る物だけを外せます)'
+    : '★★在りません ── ★★★昔の導入か、台帳を消したかのどちらかです') + String.fromCharCode(10));
+
+  console.log('■ 束 ' + 束.length + '件 ── ★pull.mjs と KIT_VERSION を持つフォルダ。**名前では見ていません**');
+  for (const b of 束) console.log('   ・' + b.rel + '(版 ' + b.版 + ' ・ 中身 ' + b.中身 + '件)');
+  if (!束.length) console.log('   (なし)');
+  console.log('');
+
+  console.log('■ 候補 ' + 候補.length + '件 ── ★証拠は【足して】います(1つのファイルが複数 持ちます)');
+  const 並べ = [...候補].sort((a, b) =>
+    強い順.indexOf(a.証拠[0].型) - 強い順.indexOf(b.証拠[0].型) || (a.rel < b.rel ? -1 : 1));
+  for (const c of 並べ.slice(0, 60)) {
+    console.log('   ・' + c.rel);
+    for (const e of c.証拠) console.log('        [' + e.型 + '] ' + e.詳細);
+  }
+  if (並べ.length > 60) console.log('   … ほか ' + (並べ.length - 60) + '件');
+  console.log('');
+
+  console.log('■ 証拠なし ' + 証拠なし.length + '件 ── ★★この網では証拠が付きませんでした');
+  console.log('   ★★★これは【塊の物ではない】証明ではありません ── 網の外に在るかもしれません');
+  console.log('');
+  console.log('■ 見ていない ' + 見ていない.length + '件 / 読めない ' + 読めない.length + '件');
+  for (const s of 見ていない.slice(0, 6)) console.log('   ・' + s.rel + '(' + s.理由 + ')');
+  for (const s of 読めない.slice(0, 6)) console.log('   ・' + s.rel + '(' + s.理由 + ')');
+  console.log('');
+  console.log('(終端の保存則: 見た ' + 見た数 + ' = 候補 ' + 候補.length + ' + 証拠なし ' + 証拠なし.length
+    + ' + 読めない ' + 読めない.length + ' → ' + (保存則 ? '★成り立つ' : '★★破れています(黙って消えた物が在ります)') + ')');
+  console.log('');
+  console.log('★この走査は【消す物を決めません】。決めるのに足りないもの:');
+  console.log('  ・命令 … その登録を塊が入れたのか、人が足したのかは、台帳が無いと分かりません');
+  console.log('    ★★実例: no-reflex の登録は【どの版の install も一度も入れていません】(会議で161版を数えた)');
+  console.log('  ・場所だけ / 名前だけ … ★★★所有の証明ではありません(候補の出し方です)');
+  console.log('  ・証拠なし … この網では付かなかった、という観測にすぎません');
+  console.log(String.fromCharCode(10) + '★次の一手は【人が決めること】です ── この一覧を見て、外す物を選んでください。');
+  console.log('★★`--json` で機械が読む形、`--root <道>` で外の現場も走査できます(どちらも消しません)。');
   process.exit(0);
 }
 

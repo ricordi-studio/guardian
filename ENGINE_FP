@@ -1,9 +1,9 @@
-20.1
+21.0
 METHOD.md 1kv4bye-22912
 PROTOCOL.json aajo32-354
-README.md tizyyd-8211
+README.md 1tovmkb-8267
 RULES.md t55p66-12134
-SPEC.md kwrbsz-11266
+SPEC.md 1v99zi-11369
 audit.md 78qkl6-2162
 check.mjs 11egthp-57599
 githooks/pre-commit zijic4-1499
@@ -29,6 +29,6 @@ templates/nightly-check.yml 1ybpxvw-2843
 verdict.mjs 1khv7yf-10356
 保持一覧.json tfn9m3-1146
 台帳.mjs kl8ahu-3737
-外す.mjs 8vuhbz-33856
+外す.mjs 18w81m9-36328
 書き手.cjs 18bc76y-4834
 道.cjs 1mpvcnl-2966
