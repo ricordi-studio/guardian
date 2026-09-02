@@ -83,7 +83,37 @@ function main() {
   };
   let last = 0;
   try { last = Number(fs.readFileSync(MARK, 'utf8').trim()) || 0; } catch (_) {}
-  const changed = WATCH.some((w) => newest(path.join(ROOT, w)) > last);
+  /* ★宣言 watch の【外】で仕事をすると、この門は一度も回らなかった
+   *   (2026-09-03、★★外の監査役が実測)。
+   *
+   *   ★★★実測(直す前): 導入直後の watch は ["src"]。src に触らず server/api.js を作ると、
+   *   合否は 不明1 / 出口2 なのに、★この門は【出力なし・出口0】── 合否そのものを回していない。
+   *
+   *   ★★install は【現場に実在するフォルダ】からしか watch を作らないので、
+   *   ★★★導入後に生まれた層は**永久に watch の外**に居る。
+   *   README の書き出しは「接点が4層に散っていても1層だけ直され」だが、
+   *   ★**新しい層を丸ごと足す改修**が、ちょうど門の回らない形だった。
+   *
+   * ★★だから git にも聞く ── 変わった道と、まだ入れていない道を出させ、
+   *   ★★★その中に印より新しい物が1つでも在れば回す(watch の中か外かを問わない)。
+   *   git が答えないときは、これまでどおり watch を歩く(黙って通さない)。 */
+  let changed = WATCH.some((w) => newest(path.join(ROOT, w)) > last);
+  if (!changed) {
+    try {
+      const 道 = require('../道.cjs');
+      const 候補 = [];
+      for (const c of [['ls-files', '--others', '--exclude-standard'], ['diff', '--name-only', 'HEAD']]) {
+        const r = 道.道を取る(ROOT, ...c);
+        if (!r.落ちた) 候補.push(...r.道);
+      }
+      for (const rel of [...new Set(候補)]) {
+        if (rel === ".git" || rel.startsWith(".git/") || rel.startsWith("node_modules/")) continue;
+        let st = null;
+        try { st = fs.statSync(path.join(ROOT, rel)); } catch (_) { continue; }
+        if (st.mtimeMs > last) { changed = true; break; }
+      }
+    } catch (_) { /* ★道.cjs が無い古い配布先では、watch だけで見る(前の版と同じ) */ }
+  }
   if (!changed) return pass();
 
   /* ---- 合否を集める ---- */
