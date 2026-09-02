@@ -72,7 +72,9 @@ function main() {
   try { v = JSON.parse(r.stdout || '{}'); } catch (_) { return pass(); }
   if (!v || !v.results) return pass();
 
-  try { fs.mkdirSync(path.dirname(MARK), { recursive: true }); fs.writeFileSync(MARK, String(Date.now())); } catch (_) {}
+  /* ★共通の書き手を通す(2026-09-03) ── ここは【現場の .claude/ に塊が書く】唯一の場所。
+   *   ★★台帳に載せないと、外すとき「誰の物か決まっていない」に落ちる。 */
+  try { require('../書き手.cjs').書く(ROOT, '.claude/verdict_at', String(Date.now()), 'hooks/stop.js'); } catch (_) {}
 
   const of = (k) => v.results.filter((x) => x.verdict === k);
   const brief = (x) => {

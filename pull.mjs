@@ -119,6 +119,9 @@ const 走る = (cmd, args, opts = {}) =>
  * ★門(この道具)と検査(selfcheck)は**同じ2つの宣言を読む** ── RULES 44条(門には双子を置く)。
  *   門は黙って死ねるので、同じ宣言を読む検査が要る。 */
 const 配るもの = new Set([
+  '書き手.cjs',          /* ★共通の書き手(2026-09-03)。走行中に増える物を、書いた事実で台帳に載せる */
+  '外す.mjs',            /* ★外す側(2026-09-03)。台帳と実物の差から、塊の持ち物だけ外す */
+  '台帳.mjs',            /* ★所有台帳(2026-09-03)。install が【何をどの根から置いたか】を残す */
   /* エンジン */
   'check.mjs', 'selfcheck.mjs', 'neighbors.mjs', 'verdict.mjs', 'install.mjs', 'pull.mjs', 'index.mjs',
   'hooks', 'githooks', 'templates',
@@ -166,13 +169,21 @@ const 現場のもの = new Set([
  *
  * ★直下は【配ると決めたもの】だけを歩く。だから深い所で名前を見て弾く必要はない。
  *   どこに在っても要らないもの(版管理と依存の置き場)だけを、深さに関係なく落とす。 */
+/* ★フォルダごと配る宣言の中から、1件だけ外す口(2026-09-03、会議で導かれた)。
+ *   ★★規則: 【配るもの】が【現場のもの】を require していたら矛盾である。
+ *   実測: hooks/ はフォルダごと配るが、hooks/in-loop.js は .guardian/印の場所.cjs
+ *   (= 現場のもの)を require する。★★★配布先では、その依存が無いので働けない。
+ *   ★「配る物は配布先で動く」を守るため、この1件だけ外す(器の層の話ではなく、依存の向きの話)。 */
+const 配らない道 = new Set(['hooks/in-loop.js']);
+
 const どこでも要らない = new Set(['.git', 'node_modules', '.guardian', '.guardian-pull-tmp']);
 const 一覧 = (dir, 元 = dir, 深さ = 0) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
   if (どこでも要らない.has(e.name)) return [];
   if (深さ === 0 && (現場のもの.has(e.name) || !配るもの.has(e.name))) return [];
   const full = path.join(dir, e.name);
-  return e.isDirectory() ? 一覧(full, 元, 深さ + 1)
-                         : [path.relative(元, full).split(path.sep).join('/')];
+  if (e.isDirectory()) return 一覧(full, 元, 深さ + 1);
+  const 道 = path.relative(元, full).split(path.sep).join('/');
+  return 配らない道.has(道) ? [] : [道];
 });
 
 /* ★【何を配るか】を、門自身に言わせる口(2026-08-30、配布先を 9.13 → 9.22 に上げて見つかった)。

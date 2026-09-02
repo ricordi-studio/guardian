@@ -51,6 +51,9 @@
  *     そこは実測と計器の層が受け持つ(2026-08-26 の「話し終わりの合図」事故)。
  */
 import fs from 'node:fs';
+import { createRequire as __cr } from 'node:module';
+/* ★共通の書き手(CJS)── 走行中に増える物を、書いた事実で台帳に載せる(2026-09-03) */
+const 書き手 = __cr(import.meta.url)('./書き手.cjs');
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
@@ -132,6 +135,18 @@ const 定義一覧 = argv.includes('--定義一覧');
 const 跨ぐ記号 = argv.includes('--跨ぐ記号');
 
 const read = (p) => { try { return fs.readFileSync(path.join(ROOT, p), 'utf8'); } catch (_) { return ''; } };
+/* ★出力は【自分の親を自分で作る】(2026-09-03、外の会議 の議論から実測して見つけた)。
+ *
+ * ★★直す前: answer の親を作る mkdir が1つ在り、その次の行で need を書いていた。
+ *   既定では両方 `.guardian/` に居るので、★★★1つの mkdir が偶然 両方の親を作っていた。
+ *   宣言(N.answer)で answer を `.guardian/` の外へ出した瞬間、need が ENOENT で落ちる。
+ *   実測(空のプロジェクト): answer だけ差し替え → 落ちる / 両方 差し替え → 落ちる / 既定 → 通る。
+ *
+ * ★偶然の相乗りは【見えない前提】である ── 既定のままなら誰も気づかない。
+ *   ★★だから「書く前に親を作る」を、書く側1つ1つに持たせる。
+ * ★★★ここは、この先の【共通の書き手】(所有台帳に root と相対名で登録する口)の種でもある。 */
+const 書き出す = (相対, 中身) => 書き手.書く(ROOT, 相対, 中身, 'neighbors.mjs');
+
 /* ★失敗を空文字と区別する(2026-08-30、違和感の掘り出しで見つかった)。
  *   直す前は `r.status === 0 ? (r.stdout||'') : (r.stdout||'')` と**両辺が同じ**で、
  *   git の失敗が「出力が空」と見分けられなかった。
@@ -897,8 +912,7 @@ if (ESCAPED) {
   const 新記録 = { at: new Date().toISOString(), 元: rangeOf(元引数), 直し: rangeOf(直し引数), 結果, 最大環: 最大, 届かない, 打ち切り: 打ち切った };
   if (既に >= 0) { 台帳.記録[既に] = 新記録; console.log("(同じ範囲の記録を上書きしました ── 二度数えません)"); }
   else 台帳.記録.push(新記録);
-  fs.mkdirSync(path.dirname(path.join(ROOT, 台帳P)), { recursive: true });
-  fs.writeFileSync(path.join(ROOT, 台帳P), JSON.stringify(台帳, null, 1));
+  書き出す(台帳P, JSON.stringify(台帳, null, 1));
   const 超え = 台帳.記録.filter((r) => r.最大環 > RINGS).length;
   const 外 = 台帳.記録.filter((r) => r.届かない > 0).length;
   console.log('台帳: 全' + 台帳.記録.length + '件 / いまの rings=' + RINGS + ' を超えた逃し ' + 超え + '件 / この軸の外 ' + 外 + '件');
@@ -1125,9 +1139,8 @@ if (!GATE) {
       + '(**理由は残してあります** ── 読み直して、判定を入れ直してください):');
     for (const x of 戻した) console.log('  ・' + x.記号 + ' @' + x.場所 + '(根「' + x.根 + '」が、答えたときと違う中身になっています)');
   }
-  fs.mkdirSync(path.dirname(path.join(ROOT, ANSWER_PATH)), { recursive: true });
-  fs.writeFileSync(path.join(ROOT, NEED_PATH), JSON.stringify({ range, need: 一覧 }, null, 1));
-  fs.writeFileSync(path.join(ROOT, ANSWER_PATH), JSON.stringify({ range, answers: draft }, null, 1));
+  書き出す(NEED_PATH, JSON.stringify({ range, need: 一覧 }, null, 1));
+  書き出す(ANSWER_PATH, JSON.stringify({ range, answers: draft }, null, 1));
   console.log('回答の下書きを書きました: ' + ANSWER_PATH + '(判定と理由を埋めてから --gate)');
   process.exit(0);
 }

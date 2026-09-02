@@ -1,6 +1,12 @@
 /**
  * 地図と正本の機械検査(汎用エンジン)
  *
+ * ★この器の性格(2026-09-03、会議で「置き場が方針を決めているのに、それが書かれていない」と出た):
+ *   測る対象 … ★★【この現場のコード】
+ *   出口     … notes(柔らかい・止めない) / problems(硬い・止める)
+ *   逃げ道   … ★★★在る(guardian:ok。数は okMax で上限つき・ラチェット)
+ *   → だから「注意で済ませる」判定を、ここには置ける。
+ *
  * このファイルは【どのプロジェクトでも同じ中身】。プロジェクト固有のことは
  * 全部 guardian.config.json(宣言)に書く ── だから guardian/ ごとコピペで配れる。
  *
@@ -20,6 +26,9 @@
  * **検査を足すときは、必ず WHY.md に「どの事故を防ぐのか」を書くこと。**
  * 理由の無い検査は、次の人に「意味の無い儀式」として外される。
  */
+import { createRequire as __cr } from 'node:module';
+/* ★共通の書き手(CJS)── hooks(CJS)と engines(ESM)の両方から使うため */
+const 書き手 = __cr(import.meta.url)('./書き手.cjs');
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -1036,7 +1045,10 @@ if (argv.includes('--tighten')) {
       done.push(`${t.name}: ${t.max} → ${t.hits}`);
     }
     if (done.length) {
-      fs.writeFileSync(path.join(ROOT, cfgPath), text, 'utf8');
+      /* ★塊が自分で置いた物を、自分で書き換える(2026-09-03)。台帳の指紋も一緒に直す ──
+      *   ★★直さないと、外すとき「入れたときから変わっています(この現場が育てた物なので、
+      *   消しません)」と出る ── ★★★塊自身がやったことを人のせいにして CONFLICT で止まる(実測)。 */
+      書き手.書き換える(ROOT, cfgPath, text, "check.mjs --tighten");
       console.log(`  ✓ ${cfgPath} の max を下げました(${done.length}件)`);
       for (const d of done) console.log('      ' + d);
     }
@@ -1132,7 +1144,10 @@ if (argv.includes('--tighten')) {
     const c2 = JSON.parse(fs.readFileSync(path.join(ROOT, cfgPath), "utf8"));
     c2.okMax = 逃げ道.length;
     c2._okMax = "逃げ道(guardian:ok)の上限。増やすときは人が上げる ── 黙らせるのは直すより速いので、放っておくと増える一方になる";
-    fs.writeFileSync(path.join(ROOT, cfgPath), JSON.stringify(c2, null, 2) + "\n");
+    /* ★塊が自分で置いた物を、自分で書き換える(2026-09-03)。台帳の指紋も一緒に直す ──
+    *   ★★直さないと、外すとき「入れたときから変わっています(この現場が育てた物なので、
+    *   消しません)」と出る ── ★★★塊自身がやったことを人のせいにして CONFLICT で止まる(実測)。 */
+    書き手.書き換える(ROOT, cfgPath, JSON.stringify(c2, null, 2) + "\n", "check.mjs --tighten");
     notes.push("逃げ道の上限を " + 逃げ道.length + " に下げました(一方通行)");
   }
 }
@@ -1257,8 +1272,9 @@ for (const n of notes) console.log('  ✓ ' + n);
   const 予想を書く = argv.indexOf("--予想");
   if (予想を書く >= 0) {
     const 文 = argv[予想を書く + 1];
-    fs.mkdirSync(path.dirname(予想の道), { recursive: true });
-    fs.writeFileSync(予想の道, JSON.stringify({ 文, 数の行 }, null, 1) + "\n");
+    /* ★共通の書き手を通す(2026-09-03) ── 走行中に増える物を、書いた事実で台帳に載せる。
+     *   ★★載せないと、外すとき「誰の物か決まっていない」に落ちて判定が UNKNOWN になる。 */
+    書き手.書く(ROOT, ".guardian/予想.json", JSON.stringify({ 文, 数の行 }, null, 1) + "\n", "check.mjs");
     console.log("");
     console.log("★予想を置きました: " + 文);
     console.log("  次に " + "check.mjs" + " を素で走らせると、【そのときの数】と突き合わせて差分だけ出します");

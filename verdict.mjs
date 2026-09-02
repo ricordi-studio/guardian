@@ -31,6 +31,8 @@
  *   ★子の出口2も【不明】として受ける(neighbors.mjs が宣言している約束)。
  *   ★不明を 0 にしない。CIも人も「0なら大丈夫」と読むので、そこで嘘をつくと全部が崩れる。
  */
+import { createRequire as __cr } from 'node:module';
+const 書き手 = __cr(import.meta.url)('./書き手.cjs');
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -241,7 +243,8 @@ if (n('不明')) console.log('  ※【不明】は合格ではありません。
     if (Number.isFinite(前) && 率 < 前)
       一言 = '  ← 前回 ' + 前 + '% から下がりました。**宣言(evidence)が実装に追いついていない合図**です';
     console.log('  測れた割合: ' + 率 + '%(' + 測れた + '/' + 全部 + ')' + 一言);
-    try { fs.mkdirSync(path.dirname(台帳), { recursive: true }); fs.writeFileSync(台帳, String(率) + '\n'); } catch (_) {}
+    /* ★共通の書き手を通す(2026-09-03) ── 走行中に増える物を、書いた事実で台帳に載せる */
+    try { 書き手.書く(ROOT, ".guardian/coverage", String(率) + String.fromCharCode(10), "verdict.mjs"); } catch (_) {}
   }
 }
 if (skipped.length) console.log('  ※この回で測っていないもの: ' + skipped.join(' / ') + '(--fast のため)');

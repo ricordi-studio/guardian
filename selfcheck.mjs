@@ -2,6 +2,15 @@
 /**
  * 塊の自己検査 ── 検査エンジンが【当たること】を機械で示す
  *
+ * ★この器の性格(2026-09-03、会議で「置き場が方針を決めているのに、それが書かれていない」と出た):
+ *   測る対象 … ★★【塊が自分自身】(配布物・指紋・自己整合)
+ *   出口     … ok / ng / 未測 ── ★★★柔らかい出口が【無い】
+ *   逃げ道   … ★無い(guardian:ok は効かない)
+ *   → だから、ここに置いた検査は【注意で済ませられない】。
+ *     ★★測った上で「まだ直っていない」なら ng で止まる ── それが分かって置くこと。
+ *   実測(2026-09-03): check は notes 36 / problems 38(柔らかい出口が在る)、
+ *     ここは ok 52 / ng 61 / 未測 19(柔らかい出口が無い)。
+ *
  *   node guardian/selfcheck.mjs
  *
  * なぜこれが要るのか:
@@ -255,6 +264,20 @@ const 分類表を取る = (名) => {
   if (尾 < 0) return null;
   return new Set([...src.slice(頭, 尾).matchAll(/'([^']*)'/g)].map((x) => x[1]));
 };
+/* ★フォルダごと配る宣言の中から、1件だけ外している分を読む(2026-09-03)。
+ *   ★★門(pull.mjs)は 配らない道 でそれを言う。指紋の対象は【実際に配る物】と揃えないと、
+ *   ★★★「指紋の対象なのに配られない」で、配布先が出口の無い部屋に入る(既に在る検査が言う)。
+ *   ここも 分類表を取る と同じく、門の宣言を読む(写経しない・39条)。 */
+const 配らない道を取る = () => {
+  try {
+    const s = fs.readFileSync(path.join(HERE, 'pull.mjs'), 'utf8');
+    const h = s.indexOf('const 配らない道 = new Set([');
+    if (h < 0) return new Set();
+    return new Set([...s.slice(h, s.indexOf(']);', h)).matchAll(/'([^']+)'/g)].map((m) => m[1]));
+  } catch (_) { return new Set(); }
+};
+const 配らない道 = 配らない道を取る();
+
 const ENGINE_FILES = (() => {
   const 表 = 分類表を取る('配るもの');
   if (!表) return [];
@@ -264,7 +287,7 @@ const ENGINE_FILES = (() => {
     const abs = path.join(HERE, n);
     try {
       if (!fs.statSync(abs).isDirectory()) return [n];
-      return fs.readdirSync(abs).filter((f) => !FP_SKIP.has(n + '/' + f)).map((f) => n + '/' + f);
+      return fs.readdirSync(abs).filter((f) => !FP_SKIP.has(n + '/' + f) && !配らない道.has(n + '/' + f)).map((f) => n + '/' + f);
     } catch (_) { return []; }
   };
   return 名.flatMap(展開).sort();
@@ -1526,6 +1549,98 @@ if (process.argv.includes("--why")) {
   }
 }
 
+/* ---------- B13. 配る物が【現場の物】に依存していないか(2026-09-03、会議で導かれた) ----------
+ *
+ * ★規則: 【配るもの】の中のファイルが【現場のもの】の下を require / import していたら赤。
+ *   ★★これは判断ではなく依存から出る ── 配布先には現場の物が無いので、その部品は必ず落ちる。
+ *   実測(2026-09-03): hooks/in-loop.js が `.guardian/印の場所.cjs` を require していた。
+ *   配布の形の写しで叩くと Cannot find module。★★★配る物の中に、配布先では動かない物が在った。
+ *
+ * ★★道を【畳んでから】当てる。文字列を見るだけでは取りこぼす ──
+ *   実測: `require(` の直後の文字列だけを探すと **0件** と出た(本物は path.join で組み立てていた)。
+ *   ★★★取りこぼす検査は、いちばん危ない形で緑を出す。 */
+{
+  const r2 = spawnSync(process.execPath, [path.join(HERE, "pull.mjs"), "--distributed"],
+    { encoding: "utf8", windowsHide: true, timeout: 60000 });
+  const 配る = String(r2.stdout || "").split(String.fromCharCode(10)).map((x) => x.trim()).filter(Boolean);
+  const src現場 = (() => { try { return fs.readFileSync(path.join(HERE, "pull.mjs"), "utf8"); } catch (_) { return ""; } })();
+  const h現場 = src現場.indexOf("const 現場のもの = new Set([");
+  const 現場 = h現場 < 0 ? null
+    : [...src現場.slice(h現場, src現場.indexOf("]);", h現場)).matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  if (!配る.length || !現場) {
+    未測.push("配る物の依存は見ていません(pull.mjs の宣言か配布一覧が読めません)");
+  } else {
+    const 違反 = [];
+    const 対象 = 配る.filter((x) => /.(mjs|cjs|js)$/.test(x));
+    for (const rel of 対象) {
+      let src = "";
+      try { src = fs.readFileSync(path.join(HERE, rel), "utf8"); } catch (_) { continue; }
+      for (const m of src.matchAll(/(?:require|import)s*(([^)]*))/g)) {
+        const 片 = [...m[1].matchAll(/['"`]([^'"`]+)['"`]/g)].map((x) => x[1]);
+        if (!片.length) continue;
+        const 道 = 片.join("/");
+        for (const 名 of 現場) {
+          if (道.split("/").includes(名)) { 違反.push(rel + " → " + 道 + "(" + 名 + " は現場のもの)"); break; }
+        }
+      }
+    }
+    if (違反.length) {
+      ng.push("★配る物が【現場の物】に依存しています(" + 違反.length + "件) ── "
+        + "配布先には無いので、その部品は必ず落ちます。配るのをやめるか、依存を切ること:" + String.fromCharCode(10) + "      "
+        + 違反.slice(0, 5).join(String.fromCharCode(10) + "      "));
+    } else {
+      ok.push("配る物は【現場の物】に依存していない(" + 対象.length + "件を、道を畳んで当てた)");
+    }
+  }
+}
+
+/* ---------- B13b. 除外の理由が、まだ生きているか(2026-09-03、会議の提案) ----------
+ *
+ * ★B13 は「配る物が現場の物に依存していたら赤」を見る。★★その逆を見るのが ここ。
+ *   `配らない道` に載っている物が、★★★まだ その依存を持っているか。
+ *
+ * ★なぜ要るか: 除外の理由は【コメント】に書いてあり、機械は読めない。
+ *   ★★誰かが将来その依存を切っても、除外は残り続ける ──
+ *   ★★★理由の無いまま配られない1本ができ、誰も気づかない(撤去日の無い旧経路)。
+ *
+ * ★落とす理由: この塊の自己検査には【注意】の置き場が無い(ok / ng / 未測 の3つ)。
+ *   ★★黙って残るより、赤で止めて人に決めさせる方が、この塊の掟に合う。
+ *   ★★★直しは1行(配らない道 から外す)なので、止められても高くつかない。 */
+{
+  const src = (() => { try { return fs.readFileSync(path.join(HERE, "pull.mjs"), "utf8"); } catch (_) { return ""; } })();
+  const h道 = src.indexOf("const 配らない道 = new Set([");
+  const 道一覧 = h道 < 0 ? []
+    : [...src.slice(h道, src.indexOf("]);", h道)).matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  const h現場 = src.indexOf("const 現場のもの = new Set([");
+  const 現場2 = h現場 < 0 ? []
+    : [...src.slice(h現場, src.indexOf("]);", h現場)).matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  if (!道一覧.length) {
+    ok.push("配らない道は空(除外が1件も無いので、理由が死ぬ心配も無い)");
+  } else {
+    const 理由なし = [];
+    for (const rel of 道一覧) {
+      let s2 = "";
+      try { s2 = fs.readFileSync(path.join(HERE, rel), "utf8"); } catch (_) { continue; }
+      let 依存 = false;
+      for (const m of s2.matchAll(/(?:require|import)\s*\(([^)]*)\)/g)) {
+        const 片 = [...m[1].matchAll(/['"`]([^'"`]+)['"`]/g)].map((x) => x[1]);
+        if (!片.length) continue;
+        const 道 = 片.join("/");
+        if (現場2.some((名) => 道.split("/").includes(名))) { 依存 = true; break; }
+      }
+      if (!依存) 理由なし.push(rel);
+    }
+    if (理由なし.length) {
+      ng.push("★配らない道 に、理由が無くなった物が在ります(" + 理由なし.length + "件): "
+        + 理由なし.join(", ") + " ── ★★現場の物に依存しなくなっています。"
+        + "★★★配ってよいなら pull.mjs の 配らない道 から外してください。"
+        + "外さない理由が別に在るなら、その理由をコメントに書き直してください");
+    } else {
+      ok.push("配らない道の理由は、まだ生きている(" + 道一覧.length + "件とも、現場の物に依存している)");
+    }
+  }
+}
+
 /* B8b. 【install が2回目に判断を変えないか】(2026-08-30、違和感の掘り出しで見つかった)。
  *
  * ★実際に起きた: `CC`(この現場は Claude Code か)の判定材料に `CLAUDE.md` が入っていたが、
@@ -1552,36 +1667,53 @@ if (process.argv.includes("--why")) {
        *   置くと【この検査が install を呼び、その install が selfcheck を呼ぶ】無限の入れ子になる
        *   (実測: 最初にそう書いたら、返ってこなくなった)。
        *   ここで測るのは install の判定だけなので、塊は install.mjs と templates/ で足りる。 */
-      fs.copyFileSync(path.join(HERE, 'install.mjs'), path.join(塊, 'install.mjs'));
+      /* ★install が【起動時に取り込む物】も一緒に置く(2026-09-03)。
+       *   ★★直す前は install.mjs だけ置いていた。書き手.cjs を足した日に install は
+       *   読み込みで落ち、この検査は「人が書いた CLAUDE.md の現場で入らなかった」と出した ──
+       *   ★★★赤くはなったが、理由が違う。落ちたことは、どこにも出ていなかった。
+       *   selfcheck を置かない理由(無限の入れ子)は下のとおりで、これらは呼び返さない。 */
+      for (const 要る of ['install.mjs', '書き手.cjs', '台帳.mjs'])
+        fs.copyFileSync(path.join(HERE, 要る), path.join(塊, 要る));
       for (const t of fs.readdirSync(path.join(HERE, 'templates')))
         fs.copyFileSync(path.join(HERE, 'templates', t), path.join(塊, 'templates', t));
       仕込み(根);
       return { 根, 塊 };
     };
-    const 回す = ({ 根, 塊 }, ...引数) => {
+    const 落ちた = [];
+    const 回す = ({ 根, 塊 }, 名前, ...引数) => {
       const r = spawnSync(process.execPath, [path.join(塊, 'install.mjs'), ...引数],
         { cwd: 根, encoding: 'utf8', windowsHide: true, timeout: 60000 });
-      return String(r.stdout || '') + String(r.stderr || '');
+      /* ★出口と stderr を捨てない(2026-09-03)。捨てると【落ちた】が【入らなかった】に化ける。 */
+      const 出 = String(r.stdout || '') + String(r.stderr || '');
+      if (r.status !== 0 || !出.trim()) {
+        /* ★理由の行は【Error の行】を拾う ── 末尾は 'Node.js v24.x' で、読んでも何も分からない */
+        const 並 = 出.trim().split(String.fromCharCode(10)).map((l) => l.trim()).filter(Boolean);
+        const 訳 = 並.find((l) => /Error|error:/.test(l)) || 並[並.length - 1] || '(何も言わずに終わった)';
+        落ちた.push(名前 + ': 出口 ' + r.status + ' / ' + 訳.slice(0, 120));
+      }
+      return 出;
     };
     const 入った = (出) => /フックを \d+ 本足しました|フックは登録済み/.test(出);
 
     /* ① 他の道具の現場 ── 何回回しても入らない(これが破れていた) */
     const 他所 = 建てる('other', () => {});
-    const 一度目 = 回す(他所), 二度目 = 回す(他所), 三度目 = 回す(他所);
+    const 一度目 = 回す(他所, '他所①'), 二度目 = 回す(他所, '他所②'), 三度目 = 回す(他所, '他所③');
     /* ② 人が書いた CLAUDE.md が在る現場 ── 入る */
     const 人 = 建てる('human', (根) => fs.writeFileSync(path.join(根, 'CLAUDE.md'), '# うちの規範\n\nテストは npm test。\n'));
-    const 人の結果 = 回す(人);
+    const 人の結果 = 回す(人, '人の CLAUDE.md');
     /* ③ .claude が在る現場 ── 入る */
     const 一式 = 建てる('cc', (根) => fs.mkdirSync(path.join(根, '.claude'), { recursive: true }));
-    const 一式の結果 = 回す(一式);
+    const 一式の結果 = 回す(一式, '.claude が在る');
     /* ④ --hooks で強制 ── 入る */
     const 強制 = 建てる('force', () => {});
-    const 強制の結果 = 回す(強制, '--hooks');
+    const 強制の結果 = 回す(強制, '--hooks', '--hooks');
     /* ⑤ --no-hooks で強制オフ ── .claude が在っても入らない(逃げ道が効くこと) */
     const 拒否 = 建てる('nohooks', (根) => fs.mkdirSync(path.join(根, '.claude'), { recursive: true }));
-    const 拒否の結果 = 回す(拒否, '--no-hooks');
+    const 拒否の結果 = 回す(拒否, '--no-hooks', '--no-hooks');
 
     const 外れ = [];
+    /* ★落ちたなら、それを先に言う ── 判定の話にすり替えない */
+    if (落ちた.length) 外れ.push('★install が落ちています(判定以前の話): ' + 落ちた.join(' / '));
     if (入った(一度目)) 外れ.push('1回目で入った');
     if (入った(二度目)) 外れ.push('**2回目で入った**(1回目が作った CLAUDE.md を根拠にしている)');
     if (入った(三度目)) 外れ.push('3回目で入った');

@@ -25,6 +25,9 @@ const DRY = process.argv.includes('--dry');
  *   (URLでは %20 になるので、そのままパスとして使うと存在しない場所を指す)。
  *   こちらのパスに空白が無いので一生出なかった ── 配布先(空白入り)で初めて出た。 */
 import { fileURLToPath } from 'node:url';
+import { createRequire as __cr } from 'node:module';
+/* ★共通の書き手(CJS)── 親フォルダの所有を、走行中と同じ規則で決めるため(2026-09-03) */
+const 書き手 = __cr(import.meta.url)('./書き手.cjs');
 
 /* ★【この道具が知っている口】── 宣言ではなく、ここが実装そのものである
  *   (2026-08-31、第2の議題。配布先(現場A)の実測が発端)。
@@ -121,7 +124,22 @@ function findInstallRoot(start) {
   }
   return process.cwd();
 }
+/* ★台帳は【付属品】── 無くても導入は通す(2026-09-03、自分の検査に止められた)。
+ *   ★★この塊の自己検査は、見本に install.mjs と templates/ だけを写す(無限の入れ子を避けるため)。
+ *   そこへ固い import を足したら、★★★見本の中で install が死に、フックが1本も入らなくなった。
+ *   ★付属品が本体を殺してはいけない。ただし【黙って落とさない】── 残せなければ、そう言う。 */
+let 台帳を作る = null;
+try { ({ 台帳を作る } = await import('./台帳.mjs')); } catch (_) {}
+const 台帳が在る = !!台帳を作る;
+
 const ROOT = findInstallRoot(HERE);
+
+/* ★所有台帳 ── 置いた物を【根の種類・相対名・指紋・書き手】で記録する(2026-09-03)。
+ *   ★★外すとき、名前ではなく【どの根から書いたか】で持ち主を決めるため。
+ *   ★★★台帳に載っていない物は【残す】(allowlist)── 人が手で書いた物は、ここを通らないので。 */
+let 塊の版 = '';
+try { 塊の版 = fs.readFileSync(path.join(HERE, 'KIT_VERSION'), 'utf8').trim(); } catch (_) {}
+const 台帳 = 台帳が在る ? 台帳を作る({ 塊の版, TARGET: ROOT, BUNDLE: HERE }) : { 記す() {}, 読んだ() {}, 件数: () => 0, 保存: () => null };
 
 /* ★【立っている現場】と【入れる先】が食い違ったら、止める(2026-09-01、実走で見つかった)。
  *
@@ -160,8 +178,22 @@ const skipped = [];
 const todo = [];
 
 function write(p, body, what) {
-  if (fs.existsSync(p)) { skipped.push(`${rel(p)} は既にあるので触っていません`); return false; }
-  if (!DRY) { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, body); }
+  if (fs.existsSync(p)) {
+    skipped.push(`${rel(p)} は既にあるので触っていません`);
+    /* ★元から在った物も記録する ── 「作っていない」が外すときの決め手になる */
+    台帳.記す({ 道: p, 種類: 'ファイル', 作った: false,
+      中身: (() => { try { return fs.readFileSync(p, 'utf8'); } catch (_) { return null; } })(),
+      writer: 'install.mjs' });
+    return false;
+  }
+  if (!DRY) {
+    /* ★作ったフォルダも台帳に載せる(2026-09-03)── ★★外すとき空のまま残るのを、
+     *   手で並べた一覧ではなく【所有】で決めるため。元から在ったフォルダは載らない。 */
+    for (const d of 書き手.親を作る(ROOT, p))
+      台帳.記す({ 道: path.join(ROOT, d), 種類: 'フォルダ', 作った: true, 中身: null, writer: 'install.mjs' });
+    fs.writeFileSync(p, body);
+  }
+  台帳.記す({ 道: p, 種類: 'ファイル', 作った: true, 中身: body, writer: 'install.mjs' });
   did.push(`${rel(p)} を置きました（${what}）`);
   return true;
 }
@@ -253,6 +285,11 @@ if (!fs.existsSync(cfgPath)) {
     selectors,
     okMarker: 'guardian:ok|lint-deps:ok',
   };
+  /* ★台帳へ ── ここは write() を通らない経路だった(2026-09-03、迂回を1つ塞ぐ)。
+   *   ★★config は install が置いた19欄から始まり、使う間に現場が育てる混合物なので、
+   *   ★★★外すときは「作った かつ 育っていない」だけが消してよい。指紋がその材料になる。 */
+  台帳.記す({ 道: cfgPath, 種類: 'ファイル', 作った: true,
+    中身: JSON.stringify(cfg, null, 2) + String.fromCharCode(10), writer: 'install.mjs' });
   if (!DRY) fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2) + '\n');
   did.push(`guardian.config.json を置きました（見張る場所 ${cfg.watch.join('/')} ・ソース候補 ${sources.length}件を自動で拾いました）`);
   todo.push('guardian.config.json の checks が空です。**同じ意味の値が複数箇所にある所**を探して並べてください(WHY.md の B を参照)');
@@ -330,6 +367,9 @@ const CC = process.argv.includes('--hooks') ? true
 /* ---------- 3. フックの登録(既存を壊さない) ---------- */
 if (CC) {
 const setPath = path.join(ROOT, '.claude', 'settings.json');
+/* ★このファイルが【元から在ったか】を、書き換える前に取る(2026-09-03)。
+ *   ★★外すときの判定が変わる ── 元から在れば混ぜた要素だけ外す / 無ければファイルごと消せる。 */
+const 設定が元から在った = fs.existsSync(setPath);
 let settings = {};
 try { settings = JSON.parse(fs.readFileSync(setPath, 'utf8')); } catch (_) {}
 settings.hooks = settings.hooks || {};
@@ -351,10 +391,25 @@ for (const [event, matcher, command, timeout] of want) {
   const entry = { type: 'command', command, timeout };
   if (slot) (slot.hooks = slot.hooks || []).push(entry);
   else list.push(matcher ? { matcher, hooks: [entry] } : { hooks: [entry] });
+  /* ★JSONの配列に混ぜた1件を記録する ── 外すときは、この指紋と一致する項だけ外す。
+   *   ★★綴りに guardian が入っているかで探すのは候補出しまで(2026-09-03、会議の線)。 */
+  台帳.記す({ rel: '.claude/settings.json', 種類: 'JSON要素', 作った: true,
+    中身: JSON.stringify({ event, matcher: matcher || null, entry }), writer: 'install.mjs' });
   added++;
 }
 if (added) {
-  if (!DRY) { fs.mkdirSync(path.dirname(setPath), { recursive: true }); fs.writeFileSync(setPath, JSON.stringify(settings, null, 2) + '\n'); }
+  /* ★ファイル自体が【元から在ったか】も残す(2026-09-03)。
+   *   ★★元から在れば、外すとき消してよいのは【混ぜた要素】だけ。
+   *   ★★★無かったなら、外すときファイルごと消せる ── そこで判定が変わる。 */
+  台帳.記す({ 道: setPath, 種類: 'ファイル', 作った: !設定が元から在った, 中身: null, writer: 'install.mjs' });
+  if (!DRY) {
+    /* ★ここも【作ったフォルダ】を台帳へ(2026-09-03)。直す前はここだけ素の mkdirSync だったので、
+     *   ★★.claude/ が誰の物か決まらず、外したあと【空のまま残っていた】(実測。
+     *   .claude/commands/ は畳めていたので、余計に気づきにくかった)。 */
+    for (const d of 書き手.親を作る(ROOT, setPath))
+      台帳.記す({ 道: path.join(ROOT, d), 種類: 'フォルダ', 作った: true, 中身: null, writer: 'install.mjs' });
+    fs.writeFileSync(setPath, JSON.stringify(settings, null, 2) + String.fromCharCode(10));
+  }
   did.push(`.claude/settings.json にフックを ${added} 本足しました（既存の設定は残しています）`);
 }
 
@@ -481,6 +536,28 @@ if (i >= 0 && j > i) {
   did.push('CLAUDE.md を作りました');
 }
 if (!DRY && body !== claude) fs.writeFileSync(claudePath, body);
+/* ★区間は【中身の指紋】で持つ ── 外すとき、人が中を書き換えていたら CONFLICT にできる。
+ *   ★★ファイル自体が元から在ったかも一緒に残す(無ければ、外すときファイルごと消せる)。 */
+{
+  const i = body.indexOf(始), j = body.indexOf(終);
+  const 区間 = (i >= 0 && j > i) ? body.slice(i, j + 終.length) : null;
+  /* ★所有は【どちらを作ったか】で決める(2026-09-03、外す試験で2回 直した所)。
+   *
+   *   ・ファイルが元から無かった  → ★ファイル全体が塊の物。区間だけ外すと ★★見出しが残る
+   *     (実測: 区間を外したあと「# CLAUDE.md — 開発規範」の30バイトが残っていた)
+   *   ・ファイルが元から在った    → ★★★区間だけが塊の物。外側は人の物なので触らない
+   *
+   *   ★★2つ載せない ── 同じ物を2通りで所有すると、外す順で結果が変わる。 */
+  if (区間 && !claude) {
+    台帳.記す({ rel: 'CLAUDE.md', 種類: 'ファイル', 作った: true, 中身: body, writer: 'install.mjs' });
+  } else if (区間) {
+    /* ★【区間を入れたか】で決める ── ファイルが元から在ったかではない(2026-09-03)。
+     *   ★★直す前は 作った: !claude としていた。人が書いた CLAUDE.md が在る現場では false になり、
+     *   ★★★外す側が「元から在った」と読んで、区間を残したまま PASS と出した。 */
+    台帳.記す({ rel: 'CLAUDE.md', 種類: '区間', 作った: !claude.includes(始),
+      中身: 区間, writer: 'install.mjs' });
+  }
+}
 
 /* ★地図が空かどうかを【実際に見て】言う(2026-08-30、配布先からの報告②)。
  *
@@ -614,6 +691,22 @@ if (!DRY) {
     if (古いフック)
       todo.push('★古いフックの登録が ' + 古いフック + '本残っています(.claude/settings.json の tools/codemap/…)。二重に走るので、古い方を消してください');
   } catch (_) {}
+}
+
+/* ★台帳は【TARGET 側】に置く(2026-09-03、置き場を移した)。
+ *   ★★最初は BUNDLE 側(guardian/)に置いた ── 理由は「消す判断の材料を、消される場所に置かない」。
+ *   その理由は書いた時点では正しかったが、★★★前提が入れ替わった:
+ *     .guardian/ は【消してはいけない場所】になり(現場が書いた物が混ざるため)、
+ *     guardian/ は【フォルダごと消す場所】のままである。
+ *   ★依頼主の元案は「guardian フォルダを削除して外す」── その時 台帳も一緒に死ぬ。
+ *   ★★実測: 台帳を合併で読むと7件、最後の走行だけだと3件。台帳が死ねば、
+ *     対象側に残った物(宣言・フック4件・区間・workflow)は【何者か分からない孤児】になる。
+ *   ★★★台帳は、自分が書き留めた物より長生きしなければならない。 */
+if (!DRY && 台帳が在る) {
+  const 先 = 台帳.保存(path.join(ROOT, '.guardian', '導入台帳.json'));
+  did.push('台帳を置きました（' + rel(先) + ' ── 外すときに、持ち主を名前ではなく根で決めるため）');
+} else if (!DRY) {
+  todo.push('★所有台帳を残していません(' + KIT + '/台帳.mjs が読めませんでした)。★★外すときに【何を消してよいか】の材料が在りません ── 外す側は UNKNOWN になります');
 }
 
 console.log(DRY ? '【下見】以下を行います\n' : '【導入しました】\n');

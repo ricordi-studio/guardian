@@ -1,0 +1,362 @@
+#!/usr/bin/env node
+/* 外す ── 【入れたときの台帳】と【いま在る物】の差から、塊の持ち物だけを外す(2026-09-03)。
+ *
+ * ★なぜ在るか: 依頼主の問い「Guardian を外すとき、残滓が残らない形にできるか」(2026-09-02)。
+ *   会議で 3席が測って寄った線を、そのまま実装している。
+ *
+ * ★★守る決まり(どれも実測から導かれた):
+ *   ・★台帳に【載っていない物は消さない】(allowlist)。人が手で書いた物は書き手を通らないので、
+ *     既定を「消してよい」に倒すと、いちばん惜しい物から先に消える。
+ *   ・★★台帳は【全走行の合併】で読む。実測: 合併7件 / 最後の走行だけ3件 ──
+ *     宣言・フック4件・settings のファイル・workflow は2回目の走行に出ない(既に在るので枝を通らない)。
+ *   ・★★★消してよいのは「作った かつ 入れたときから変わっていない」物だけ。変わっていれば CONFLICT。
+ *   ・★retained は【台帳から】ではなく【走査 − 消した物】で作る ──
+ *     台帳から作ると、台帳の盲点が報告の中でも盲点のまま残る。
+ *   ・★★台帳自身は最後に消す。PASS のときだけ。CONFLICT なら残して、もう一度 回せるように。
+ *
+ * ★出口: 0=PASS / 1=CONFLICT / 2=UNKNOWN(★★不明は合格ではない)
+ *
+ * 使い方:
+ *   node guardian/外す.mjs        … ★確かめるだけ(何も消さない)
+ *   node guardian/外す.mjs --外す  … ★★実際に外す
+ */
+
+import fs from 'node:fs';
+import { createRequire as __cr } from 'node:module';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+
+/* ★根は【塊の1つ上】から探す(install と同じ作法)。塊は現場の中に在る前提。 */
+const ROOT = (() => {
+  let d = path.resolve(HERE, '..');
+  for (;;) {
+    for (const 目印 of ['.git', 'package.json', 'CLAUDE.md']) {
+      if (fs.existsSync(path.join(d, 目印))) return d;
+    }
+    const up = path.dirname(d);
+    if (up === d) return path.resolve(HERE, '..');
+    d = up;
+  }
+})();
+
+const 実行 = process.argv.includes('--外す');
+const 台帳の道 = path.join(ROOT, '.guardian', '導入台帳.json');
+const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
+const 読む = (p) => { try { return fs.readFileSync(p, 'utf8'); } catch (_) { return null; } };
+
+/* ★指紋は【書き手.cjs に1本だけ】(2026-09-03)。ここで再実装しない ──
+ *   ★★直す前は 台帳.mjs / 書き手.cjs / ここ の3つに同じ式が在った。
+ *   1つずれるだけで、外す側は「人が触った」と読んで止まる ── ★★★誰のせいでもない CONFLICT が出る。 */
+const 指紋 = __cr(import.meta.url)('./書き手.cjs').指紋;
+
+/* ---------- ① 台帳を読む(★無ければ UNKNOWN ── 消してよい物が分からないので) ---------- */
+let 台帳 = null;
+try { 台帳 = JSON.parse(fs.readFileSync(台帳の道, 'utf8')); } catch (_) {}
+if (!台帳 || !Array.isArray(台帳.走行)) {
+  console.log('★UNKNOWN ── 所有台帳が読めません: ' + rel(台帳の道));
+  console.log('  ★★何を消してよいかの材料が在りません。**何も消していません。**');
+  console.log('  ★★★入れた版が古い(台帳を作らない版)か、台帳が消されたかのどちらかです。');
+  process.exit(2);
+}
+
+/* ---------- ② 全走行を合併する(★最初に置いた回を基準にする) ---------- */
+const 基準 = new Map();
+for (const 走 of 台帳.走行) {
+  for (const x of (走.項 || [])) {
+    const key = x.rootKind + '|' + x.rel + '|' + x.種類 + '|' + (x.hash || '');
+    if (!基準.has(key)) 基準.set(key, x);
+    else if (x.作った && !基準.get(key).作った) 基準.set(key, x);
+  }
+}
+const 項 = [...基準.values()];
+console.log('台帳: 走行 ' + 台帳.走行.length + '回 / 合併して ' + 項.length + '件');
+console.log('');
+
+/* ---------- ③ 1件ずつ見る ---------- */
+const 消す = [];
+const 衝突 = [];
+const 触らない = [];
+const フォルダ = [];  /* ★塊が作ったフォルダ(2026-09-03) */
+const 畳んだ = [];   /* ★空になって畳んだフォルダ(2026-09-03) */
+
+for (const x of 項) {
+  if (x.rootKind !== 'TARGET') continue;   /* BUNDLE 側はフォルダごと消える */
+  const 先 = path.join(ROOT, x.rel);
+  if (!x.作った) { 触らない.push(x.rel + '(' + x.種類 + ' ── 入れる前から在った)'); continue; }
+
+  /* ★走行中に増えた物(2026-09-03、共通の書き手が載せた分)。
+   *   ★★中身の指紋は持たない ── 走行ごとに変わるので「変わっている」としか言えないため。
+   *   ★★★だから【塊が書いた】という一点だけで消す。人はこの道に書かない(書けば書き手が要る)。 */
+  /* ★フォルダは【空になってから】畳む ── だからここでは計画に入れず、外した後に見る(2026-09-03) */
+  if (x.種類 === 'フォルダ') { if (!フォルダ.includes(x.rel)) フォルダ.push(x.rel); continue; }
+
+  if (x.種類 === '走行中の物') {
+    if (!fs.existsSync(先)) { 触らない.push(x.rel + '(もう在りません)'); continue; }
+    消す.push({ 種類: 'ファイル', 道: 先, rel: x.rel });
+    continue;
+  }
+  if (x.種類 === 'ファイル') {
+    const 中 = 読む(先);
+    if (中 == null) { 触らない.push(x.rel + '(もう在りません)'); continue; }
+    if (x.hash && 指紋(中) !== x.hash) {
+      衝突.push(x.rel + ' ── 入れたときから変わっています(この現場が育てた物なので、消しません)');
+    } else {
+      消す.push({ 種類: 'ファイル', 道: 先, rel: x.rel });
+    }
+  } else if (x.種類 === '区間') {
+    const 中 = 読む(先);
+    if (中 == null) { 触らない.push(x.rel + '(もう在りません)'); continue; }
+    const 始 = 中.indexOf('<!-- guardian:begin');
+    const 終印 = '<!-- guardian:end -->';
+    const 終 = 中.indexOf(終印);
+    if (始 < 0 || 終 < 始) { 衝突.push(x.rel + ' ── 区間の印が対で見つかりません'); continue; }
+    const 区間 = 中.slice(始, 終 + 終印.length);
+    if (x.hash && 指紋(区間) !== x.hash) {
+      衝突.push(x.rel + ' ── 区間の中が変わっています(人が書き足した可能性)');
+    } else {
+      消す.push({ 種類: '区間', 道: 先, rel: x.rel, 始, 終: 終 + 終印.length });
+    }
+  } else if (x.種類 === 'JSON要素') {
+    const 中 = 読む(先);
+    if (中 == null) { 触らない.push(x.rel + '(もう在りません)'); continue; }
+    let j = null;
+    try { j = JSON.parse(中); } catch (_) { 衝突.push(x.rel + ' ── JSON が読めません'); continue; }
+    /* ★台帳は要素の【指紋】しか持たない。いま在る要素を1つずつ指紋にして突き合わせる。
+     *   ★★綴りに guardian が入っているかで探さない(2026-09-03、会議で決めた線)。 */
+    let 当たり = 0, 場所 = null;
+    for (const ev of Object.keys(j.hooks || {})) {
+      const list = j.hooks[ev] || [];
+      for (let gi = 0; gi < list.length; gi++) {
+        const g = list[gi];
+        for (let hi = 0; hi < (g.hooks || []).length; hi++) {
+          const 印 = 指紋(JSON.stringify({ event: ev, matcher: g.matcher || null, entry: g.hooks[hi] }));
+          if (印 === x.hash) { 当たり++; 場所 = { ev, gi, hi }; }
+        }
+      }
+    }
+    if (当たり === 1) 消す.push({ 種類: 'JSON要素', 道: 先, rel: x.rel, 印: x.hash });
+    else if (当たり === 0) 衝突.push(x.rel + ' ── 入れた要素が見つかりません(編集・並び替え・既に外した)');
+    else 衝突.push(x.rel + ' ── 同じ要素が ' + 当たり + '件 在ります(どれを外すか決められません)');
+  }
+  else {
+    /* ★知らない種類は【黙って落とさない】(2026-09-03 の事故)。直す前は、どの枝にも当たらない
+     *   種類('走行中の物')が if 連鎖を素通りし、消しもせず・触らないにも入らず、
+     *   ★★台帳に載っているのに retained では「載っていません」と出ていた。 */
+    衝突.push(x.rel + ' ── 台帳の種類「' + x.種類 + '」を、この外す側は知りません(外す側が古い可能性)');
+  }
+}
+
+/* ---------- ④ 走査 ── ★台帳からではなく、その場に在る物から作る ---------- */
+const 走査 = [];
+/* ★塊のフォルダは【数で畳む】が、★★中に【塊の物でない物】が在れば名前で出す(2026-09-03)。
+ *   ★★★フォルダ単位の要約で中を隠さないこと ── 隠すと「知らない物が無い」と読めてしまう。
+ *   畳む理由: 中を全部 並べると26件が retained を埋め、本当に見てほしい物が埋もれる。 */
+{
+  const 塊の道 = path.join(ROOT, 'guardian');
+  if (fs.existsSync(塊の道)) {
+    let 配る = new Set();
+    try {
+      const s = fs.readFileSync(path.join(塊の道, 'pull.mjs'), 'utf8');
+      const h = s.indexOf('const 配るもの = new Set([');
+      if (h >= 0) 配る = new Set([...s.slice(h, s.indexOf(']);', h)).matchAll(/'([^']+)'/g)].map((m) => m[1]));
+    } catch (_) {}
+    let 中身 = [];
+    try { 中身 = fs.readdirSync(塊の道); } catch (_) {}
+    const 塊の物 = 中身.filter((f) => 配る.has(f));
+    const よその物 = 中身.filter((f) => !配る.has(f));
+    走査.push('guardian/(フォルダごと ── 塊の物 ' + 塊の物.length + '件)');
+    /* ★配る宣言に無い物は、フォルダの中でも【1件ずつ名前で出す】 */
+    for (const f of よその物) 走査.push('guardian/' + f + '(★配る宣言に無い ── 誰の物か分かりません)');
+  }
+}
+for (const d of ['.guardian', '.claude', '.claude/commands', '.github/workflows']) {
+  let 中身 = [];
+  try { 中身 = fs.readdirSync(path.join(ROOT, d), { withFileTypes: true }); } catch (_) { continue; }
+  for (const e of 中身) {
+    if (e.isDirectory()) continue;      /* 下の階は、その階の行で見る */
+    走査.push(d + '/' + e.name);
+  }
+}
+for (const f of ['guardian.config.json', 'docs/CODEMAP.md']) {
+  if (fs.existsSync(path.join(ROOT, f))) 走査.push(f);
+}
+
+/* ---------- ⑤ 外す ---------- */
+if (実行) {
+  for (const c of 消す) {
+    try {
+      if (c.種類 === 'ファイル') {
+        fs.rmSync(c.道, { force: true });
+      } else if (c.種類 === '区間') {
+        const 中 = 読む(c.道);
+        if (中 != null) fs.writeFileSync(c.道, (中.slice(0, c.始) + 中.slice(c.終)).replace(/\n{3,}/g, '\n\n'));
+      } else if (c.種類 === 'JSON要素') {
+        /* ★場所(添字)は【計画したときの物】── 1件 外すと後ろの添字がずれる。
+         *   ★★実測(2026-09-03): 添字で外したら、4本のうち1本が残ったまま PASS と出た。
+         *   ★★★だから外す瞬間に【指紋でもう一度 探して】から外す。添字は持ち越さない。 */
+        const j = JSON.parse(読む(c.道));
+        let 外した = false;
+        for (const ev of Object.keys(j.hooks || {})) {
+          const list = j.hooks[ev] || [];
+          for (let gi = 0; gi < list.length && !外した; gi++) {
+            const g = list[gi];
+            for (let hi = 0; hi < (g.hooks || []).length; hi++) {
+              const 印 = 指紋(JSON.stringify({ event: ev, matcher: g.matcher || null, entry: g.hooks[hi] }));
+              if (印 !== c.印) continue;
+              g.hooks.splice(hi, 1);
+              if (!g.hooks.length) list.splice(gi, 1);
+              if (!list.length) delete j.hooks[ev];
+              外した = true;
+              break;
+            }
+          }
+        }
+        if (!外した) 衝突.push(c.rel + ' ── 外そうとした要素が見つかりませんでした');
+        fs.writeFileSync(c.道, JSON.stringify(j, null, 2) + '\n');
+      }
+    } catch (e) {
+      衝突.push(c.rel + ' ── 外せませんでした: ' + String(e && e.message).slice(0, 60));
+    }
+  }
+
+  /* ★作ったフォルダを畳む(2026-09-03)。★★手で並べた一覧は持たない ──
+   *   直す前は ['.claude/commands', ...] と書いていた。それは【書き込みを足した人が
+   *   一覧を直し忘れると黙って漏れる】形で、★★★共通の書き手を作った理由と同じ穴である。
+   *   ★深い方から畳む(下が空になって初めて上が空になる)。中に何か在れば触らない。 */
+  for (const d of フォルダ.sort((a, b) => b.split('/').length - a.split('/').length)) {
+    const 道 = path.join(ROOT, d);
+    try {
+      if (fs.readdirSync(道).length === 0) { fs.rmdirSync(道); 畳んだ.push(d + '/'); }
+      else 触らない.push(d + '/(★中に物が在ります ── 現場が使っているので畳みません)');
+    } catch (_) {}
+  }
+}
+
+/* ---------- ⑤' 外した後に【本当に消えたか】を見る ----------
+ *
+ * ★実測(2026-09-03): 直す前は、計画した10件のうち2種類が残ったまま【PASS】と出した。
+ *   ★★フックは添字のずれで1本 残り、区間は「元から在った」と誤って読んで手を付けなかった。
+ * ★★★判定を【計画】から出していたのが原因である。計画は「やるつもり」であって、結果ではない。
+ *   ここで実物を見て、残っていれば CONFLICT に落とす ── PASS は、確かめてから名乗る。 */
+if (実行) {
+  for (const c of 消す) {
+    if (c.種類 === 'ファイル') {
+      if (fs.existsSync(c.道)) 衝突.push(c.rel + ' ── 外したはずが、まだ在ります');
+    } else if (c.種類 === '区間') {
+      const 中 = 読む(c.道);
+      if (中 != null && 中.includes('<!-- guardian:begin')) {
+        衝突.push(c.rel + ' ── 区間を外したはずが、まだ在ります');
+      }
+    } else if (c.種類 === 'JSON要素') {
+      const 中 = 読む(c.道);
+      if (中 == null) continue;
+      let j = null;
+      try { j = JSON.parse(中); } catch (_) { continue; }
+      for (const ev of Object.keys(j.hooks || {})) {
+        for (const g of (j.hooks[ev] || [])) {
+          for (const e of (g.hooks || [])) {
+            const 印 = 指紋(JSON.stringify({ event: ev, matcher: g.matcher || null, entry: e }));
+            if (印 === c.印) 衝突.push(c.rel + ' ── 外したはずの要素が、まだ在ります');
+          }
+        }
+      }
+    }
+  }
+}
+
+/* ---------- ⑥ 出す ---------- */
+/* ★「消した」と数えてよいのは【ファイルごと消した物】だけ(2026-09-03、実測で見つけた)。
+ *   ★★要素や区間を外しただけの物は、ファイル自体は【残っている】。
+ *   ★★★直す前は .claude/settings.json が retained から消えていた ──
+ *   中の4件を外しただけで、ファイルは現場の物として残っているのに。
+ *   残っている物を retained から隠すのは、フォルダ要約で中を隠すのと同じ形である。 */
+const 消した道 = new Set(消す.filter((c) => c.種類 === 'ファイル').map((c) => c.rel));
+const retained = 走査.filter((p) => !消した道.has(p) && p !== '.guardian/導入台帳.json');
+
+console.log((実行 ? '【外しました】' : '【確かめただけ ── 何も消していません】') + '\n');
+console.log('外す物 ' + 消す.length + '件:');
+for (const c of 消す) console.log('  ・' + c.rel + '(' + c.種類 + ')');
+if (畳んだ.length) {
+  console.log(String.fromCharCode(10) + "★空になったので畳んだフォルダ " + 畳んだ.length + "件:");
+  for (const d of 畳んだ) console.log('  ・' + d);
+}
+if (触らない.length) {
+  console.log('\n触らない物 ' + 触らない.length + '件(入れる前から在った / もう無い):');
+  for (const t of 触らない) console.log('  ・' + t);
+}
+if (衝突.length) {
+  console.log('\n★CONFLICT ' + 衝突.length + '件(消しません ── 人が見てください):');
+  for (const c of 衝突) console.log('  ・' + c);
+}
+/* ★retained を3つに分ける(2026-09-03、@codex の指摘)。
+ *   ★★「残っている」だけでは、どれが【期待どおり】でどれが【盲点】か読み手に分からない。
+ *   ★★★塊が書く名は、塊自身のコードから拾う ── 一覧を手で持たない(手で持つと古くなる)。 */
+const 塊が書く名 = (() => {
+  const 名 = new Set();
+  const 見る = ['check.mjs', 'verdict.mjs', 'neighbors.mjs', 'pull.mjs', 'index.mjs',
+    'hooks/clock.js', 'selfcheck.mjs', 'install.mjs'];
+  for (const f of 見る) {
+    let s = '';
+    try { s = fs.readFileSync(path.join(ROOT, 'guardian', f), 'utf8'); } catch (_) { continue; }
+    for (const m of s.matchAll(/['"`]\.guardian['"`]\s*,\s*['"`]([^'"`]+)['"`]/g)) 名.add(m[1]);
+    for (const m of s.matchAll(/['"`]\.guardian\/([^'"`]+)['"`]/g)) 名.add(m[1]);
+  }
+  return 名;
+})();
+
+const 束 = retained.filter((r) => r.startsWith('guardian/'));
+const 盲点 = retained.filter((r) => {
+  if (!r.startsWith('.guardian/')) return false;
+  return 塊が書く名.has(r.slice('.guardian/'.length));
+});
+const 現場の物 = retained.filter((r) => !束.includes(r) && !盲点.includes(r));
+
+console.log('\n★retained(★★走査で在った物 − 消した物) ' + retained.length + '件 ── 3つに分けます:');
+console.log('\n  ① 塊の束(★フォルダごと消す場所) ' + 束.length + '件:');
+for (const r of 束) console.log('     ・' + r);
+/* ★札は測った通りに書く ── ここで拾えているのは【塊のコードが名指ししている】までで、
+ *   ★★【塊が書いている】ではない。実測(2026-09-03、会議): `踏んだこと` は
+ *   hooks/clock.js が読むだけで、書き手はこの塊のどこにも無い(=人が書く物)。
+ *   ★★★「書く名」と書くと、次の人が「塊の物だから消してよい」と読む。それは事故になる。 */
+console.log('\n  ② ★★塊のコードが名指ししている物(★★★書くとは限りません) ' + 盲点.length + '件:');
+for (const r of 盲点) console.log('     ・' + r
+  + '  ← 台帳に載っていません。★消してよいかは、書き手が在るかを見てから決めてください');
+if (!盲点.length) console.log('     (なし)');
+console.log('\n  ③ 現場の物(★期待どおり残す) ' + 現場の物.length + '件:');
+for (const r of 現場の物) console.log('     ・' + r);
+if (!現場の物.length) console.log('     (なし)');
+
+/* ★判定の対応(2026-09-03、会議で寄った線):
+ *   ★★変更あり(塊の物を人が触った) → CONFLICT
+ *   ★★★未分類(誰の物か決まっていない) → UNKNOWN ── ★不明は合格ではない
+ *   期待保持(現場の物)は PASS の邪魔をしない。
+ * ★直す前は、未分類が在っても PASS と出していた ── 測っていない物を、緑に数えていた。 */
+const 判定 = 衝突.length ? 'CONFLICT' : (盲点.length ? 'UNKNOWN' : 'PASS');
+console.log('\n判定: ★' + 判定);
+if (判定 === 'CONFLICT') {
+  console.log('  ★★塊の物のうち、人が触った物が在ります ── 消していません。人が見てください。');
+} else if (判定 === 'UNKNOWN') {
+  console.log('  ★★【台帳が知る】塊の持ち物は、★残り 0 件です(' + 消す.length + '件 外しました)。');
+  console.log('  ★★★ですが、誰の物か決まっていない物が ' + 盲点.length + '件 在ります(上の②)。');
+  console.log('  ★だから「残滓ゼロ」とは言いません ── ★★不明は合格ではありません。');
+  console.log('  ★★★②の各件に書き手が在るかを見て、塊の物なら消し、人の物なら③へ移してください。');
+} else {
+  console.log('  ★★【台帳が知る】塊の持ち物は、★残り 0 件です(' + 消す.length + '件 外しました)。誰の物か決まっていない物も在りません。');
+  console.log('  ★★★残っているのは③(現場の物)だけです。');
+}
+
+if (実行 && 判定 === 'PASS') {
+  try {
+    fs.rmSync(台帳の道, { force: true });
+    console.log('\n★台帳も最後に消しました(PASS なので)');
+    /* ★台帳を外して初めて .guardian は空になり得る ── だからここで畳む(2026-09-03) */
+    const g = path.join(ROOT, '.guardian');
+    try { if (fs.readdirSync(g).length === 0) { fs.rmdirSync(g); console.log('★.guardian/ も空になったので畳みました'); } } catch (_) {}
+  } catch (_) {}
+} else if (実行) {
+  console.log('\n★台帳は残しました(' + 判定 + ' なので ── 直してから、もう一度 回せます)');
+}
+/* ★出口も判定に揃える(0=PASS / 1=CONFLICT / 2=UNKNOWN) */
+process.exit(判定 === 'CONFLICT' ? 1 : (判定 === 'UNKNOWN' ? 2 : 0));
