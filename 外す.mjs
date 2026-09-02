@@ -43,39 +43,86 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
  *   ★★軸A 判定(0=PASS / 1=CONFLICT / 2=UNKNOWN)/ 軸B 判定器が成立したか。
  *   ★★★1 も 2 も判定で埋まっているので、引数の誤りは 3 を使うしかない。
  *   他の7口を 3 に揃えないのは、既に測定契約として 1 が使われているためである。 */
-const 知っている口 = ['--口一覧', '--外す', '--走査', '--root', '--json'];
-const 値を取る口 = { '--root': 1 };
+/* ★【口の宣言】── ★★名前と個数だけでなく【どの mode に属すか】まで持つ
+ *   (2026-09-03、会議で @codex と @kozo が寄せた形)。
+ *
+ *   ★★★22.1 では平らな一覧だったので、`--外す --dry` は「未知の口」として拒めた ──
+ *   ★だがそれは【偶然そうなった】だけで、mode の判断ではなかった(@kozo の指摘)。
+ *
+ * ★この塊は自分の他の道具で `--dry` / `--check` を「下見」の意味で使っている。
+ *   ★★人はそれを打つ。★★★だから【知らない口】ではなく【下見の別名】として受ける。
+ *
+ * ★矛盾は【拒否】で答える(3つの扉が3種類の答えを出していた ── @kozo が数えた:
+ *   外す=破壊側が勝つ / pull=安全側が勝つ / install=書いた順が勝つ)。
+ *   ★★ここは拒否にする ── ★★★打った人の意図を、道具が黙って選び直さない。 */
+const 口の宣言 = {
+  '--口一覧': { 個数: 0, mode: null },
+  '--dry':   { 個数: 0, mode: '下見', 別名: true },
+  '--check': { 個数: 0, mode: '下見', 別名: true },
+  '--外す':  { 個数: 0, mode: '外す' },
+  '--走査':  { 個数: 0, mode: '走査' },
+  '--root':  { 個数: 1, mode: null, 使えるmode: ['走査'] },
+  '--json':  { 個数: 0, mode: null, 使えるmode: ['下見', '走査'] },
+};
+const 知っている口 = Object.keys(口の宣言);
+const 値を取る口 = Object.fromEntries(Object.entries(口の宣言).map(([k, v]) => [k, v.個数]));
+let 選ばれたmode = null;
 {
   const 渡された = process.argv.slice(2);
-  const 知らない = [], 足りない = [], 重なり = [];
+  const 知らない = [], 足りない = [], 重なり = [], modeの衝突 = [], 場違い = [];
   const 見た = new Set();
+  const modeを出した口 = [];
   for (let i = 0; i < 渡された.length; i++) {
     const v = 渡された[i];
     if (!v.startsWith('--')) continue;
-    if (!知っている口.includes(v)) { 知らない.push(v); continue; }
-    /* ★同じ口が2回 来たら止める(2026-09-03)── ★★どちらが効いたか、打った人には分からない */
+    const 宣 = 口の宣言[v];
+    if (!宣) { 知らない.push(v); continue; }
     if (見た.has(v)) 重なり.push(v); else 見た.add(v);
-    const 要る = 値を取る口[v] || 0;
-    if (要る && i + 要る >= 渡された.length + 0)
-      足りない.push(v + '(値が ' + 要る + ' 個要りますが ' + (渡された.length - i - 1) + ' 個です)');
-    i += 要る;
+    if (宣.mode) modeを出した口.push(v);
+    if (宣.個数 && i + 宣.個数 >= 渡された.length + 0)
+      足りない.push(v + '(値が ' + 宣.個数 + ' 個要りますが ' + (渡された.length - i - 1) + ' 個です)');
+    i += 宣.個数;
+  }
+  /* ★mode は1つだけ ── ★★2つ来たら【どちらが勝つか】を道具が決めない */
+  const modes = [...new Set(modeを出した口.map((v) => 口の宣言[v].mode))];
+  if (modes.length > 1)
+    modeの衝突.push(modeを出した口.join(' と ') + ' は別のことを言っています(' + modes.join(' / ') + ')');
+  else if (modeを出した口.length > 1)
+    modeの衝突.push(modeを出した口.join(' と ') + ' は同じ mode を2度 指しています(どちらが効いたか分かりません)');
+  選ばれたmode = modes[0] || '下見';
+  /* ★★その mode で使えない口を拒む(★★★「無害だから通す」にしない ── 打った人の意図が捨てられる) */
+  for (const v of 見た) {
+    const 使える = 口の宣言[v]["使えるmode"];
+    if (使える && !使える.includes(選ばれたmode))
+      場違い.push(v + ' は ' + 使える.join(' / ') + ' でだけ使えます(いまは ' + 選ばれたmode + ')');
   }
   const 訴え = [];
   if (知らない.length) 訴え.push('この道具は、その口を知りません: ' + 知らない.join(', '));
   if (足りない.length) 訴え.push('口に渡す値が足りません: ' + 足りない.join(', '));
   if (重なり.length) 訴え.push('同じ口が2回 来ています: ' + 重なり.join(', '));
+  if (modeの衝突.length) 訴え.push(modeの衝突.join(' / '));
+  if (場違い.length) 訴え.push(場違い.join(' / '));
   if (訴え.length) {
     for (const t of 訴え) console.error('✗ ' + t);
     console.error('  知っている口: ' + 知っている口.join(' / '));
-    console.error('  ★黙って無視すると、打ったつもりと違う動きをしたまま報告することになります');
-    console.error('  ★★この道具は【消せる】口です ── 実測: --外す --dry は、直す前は消しました');
+    console.error('  ★下見(既定)= 引数なし / --dry / --check ・ 消す = --外す ・ 走査 = --走査');
+    console.error('  ★★黙って片方を選ぶと、打った人の意図が捨てられます ── だから拒みます');
     console.error('  ★★★出口3(引数の誤り)── 0/1/2 は判定で埋まっています');
     process.exit(3);
   }
 }
 if (process.argv.includes('--口一覧')) {
-  /* ★口の名前と【いくつ値を取るか】を出す(他の7口と同じ形) */
-  for (const k of 知っている口) process.stdout.write(k + ' ' + (値を取る口[k] || 0) + String.fromCharCode(10));
+  /* ★口の名前・値の個数・mode を出す(★★別名も、何の別名かを言う) */
+  for (const [k, v] of Object.entries(口の宣言)) {
+    /* ★【一緒に要る口】を、道具の側が答える(2026-09-03)。
+     *   ★★検査(B11)は mode を知らない ── 知らせるのではなく【答えさせる】(39条)。
+     *   ★★★これが無いと、B11 は --root を単独で叩いて「宣言と振る舞いが違う」と言う。 */
+    const 要る口 = { '走査': '--走査', '下見': null };
+    const 供 = v['使えるmode'] && !v['使えるmode'].includes('下見') ? 要る口[v['使えるmode'][0]] : null;
+    const 印 = (v.別名 ? ' 下見の別名' : (v.mode ? ' mode:' + v.mode : (v['使えるmode'] ? ' ' + v['使えるmode'].join('|') + ' で使える' : '')))
+      + (供 ? ' 要る:' + 供 : '');
+    process.stdout.write(k + " " + v.個数 + 印 + String.fromCharCode(10));
+  }
   process.exit(0);
 }
 
@@ -103,8 +150,19 @@ const ROOT = (() => {
   }
 })();
 
-const 実行 = process.argv.includes('--外す');
-const 走査だけ = process.argv.includes('--走査');
+/* ★mode から取る(2026-09-03)── ★★includes を各所で見ると、mode の判断と食い違う */
+const 実行 = (選ばれたmode === '外す');
+const 走査だけ = (選ばれたmode === '走査');
+/* ★--json は【下見】と【走査】の両方で使える(2026-09-03、@codex が mode 表を訂正した) */
+const JSONで出す = process.argv.includes('--json');
+/* ★下見の JSON は【人の文より後】でしか作れない ── ★★分類が終わるまで判定が出ないから。
+ *   ★★★だが人の文は分類より前に出る。だから【溜めて、出さない】。
+ *   ★捨てない: JSON の 人の文 欄に入れて渡す(片方だけ黙らない)。
+ *   ★★2つの分類器を並べないための形である ── 計算は1つ、出し方が2つ。 */
+const 人の文 = [];
+const 静かにする = (JSONで出す && 選ばれたmode === '下見');
+const 本当のlog = console.log;
+if (静かにする) console.log = (...a) => { 人の文.push(a.map(String).join(' ')); };
 
 /* ★指紋は【書き手.cjs に1本だけ】(2026-09-03)。ここで再実装しない ──
  *   ★★直す前は 台帳.mjs / 書き手.cjs / ここ の3つに同じ式が在った。
@@ -178,7 +236,7 @@ if (走査だけ) {
   const 根引数 = process.argv.indexOf('--root');
   const 走査の根 = 根引数 >= 0 && process.argv[根引数 + 1]
     ? path.resolve(process.argv[根引数 + 1]) : ROOT;
-  const JSONで出す = process.argv.includes('--json');
+  /* ★JSONで出す は上(門のすぐ後)で1本だけ決めている ── ここでは決め直さない */
 
   /* ★塊が置く【道】(exact)── ★★一致しなくても、そこに在れば証拠になる */
   const 既知の道 = new Set(['docs/CODEMAP.md', 'guardian.config.json', 'CLAUDE.md',
@@ -296,6 +354,9 @@ if (走査だけ) {
     console.log(JSON.stringify({
       版: 'guardian-走査 v1', 根: 走査の根,
       台帳: fs.existsSync(path.join(走査の根, 書き手.台帳の相対)),
+      /* ★走査は保持一覧を読まない ── ★★下見だけが読む(2026-09-03、@codex の線)。
+       *   ★★★片方だけが黙って保持の情報を捨てる形にしないため、ここで明示する。 */
+      retentionCoverage: "not-evaluated",
       束, 候補, 証拠なし, 見ていない, 読めない,
       数: {
         宇宙, 見た: 見た数, 見ていない: 見ていない.length,
@@ -850,6 +911,7 @@ if (実行) {
 const 消した道 = new Set(消す.filter((c) => c.種類 === 'ファイル').map((c) => c.rel));
 const retained = 走査.filter((p) => !消した道.has(p) && p !== 書き手.台帳の相対);
 
+
 console.log((実行 && !依存衝突.length ? '【外しました】'
   : 実行 ? '【★止めました ── 依存が切れるので、何も消していません】'
   : '【確かめただけ ── 何も消していません】') + String.fromCharCode(10));
@@ -962,6 +1024,45 @@ for (let i = 盲点.length - 1; i >= 0; i--) {
  *   ③ は【最初から現場の物】。混ぜると、宣言が要る物と要らない物の区別が消える。 */
 const 現場の物 = retained.filter((r) => !束.includes(r) && !盲点.includes(r) && !保持で上げた.includes(r));
 
+/* ★保持一覧の読み取りで言うことが在るなら、それは【不明】である(2026-09-03、@codex の線)。
+ *   ★★人が「残したい」と書いた物を、こちらが受け付けなかった ──
+ *   ★★★その物が守られているかどうか、こちらには分からない。
+ *   実測(直す前): 広すぎる指定・予約された道・理由の無い項の3通りとも、
+ *   言うだけ言って【判定は PASS】だった ── 16.5 で直したのと同じ形を、また作っていた。 */
+const 判定 = (衝突.length || 依存衝突.length) ? 'CONFLICT'
+  : ((盲点.length || 保持の訴え.length) ? 'UNKNOWN' : 'PASS');
+
+/* ★下見の JSON(2026-09-03、会議で @codex が求めた形)。
+ *   ★★人の文と【同じ計算】から出す ── 2つの分類器を並べない。
+ *   ★★★渡すのは分類と証拠だけで、消しはしない(下見なので当たり前だが、形でも守る)。
+ *
+ *   ★保持一覧を読むのは この道(下見)だけである。走査は読まない ──
+ *   ★★だから走査の JSON には retentionCoverage を "not-evaluated" と書く(片方だけ黙らない)。 */
+if (静かにする) {
+  console.log = 本当のlog;
+  console.log(JSON.stringify({
+    形: 'guardian-撤去計画 v1',
+    根: ROOT,
+    版: (() => { try { return fs.readFileSync(path.join(HERE, "KIT_VERSION"), "utf8").trim(); } catch (_) { return null; } })(),
+    台帳: { 在る: true, 走行: 台帳.走行.length, 合併した項: 項.length },
+    retentionCoverage: "evaluated",
+    保持一覧: [...保持.entries()].map(([rel, h]) => ({ rel, 理由: h.理由, 根拠: h.根拠, 出どころ: h.出どころ })),
+    保持の訴え,
+    計画: { 消す: 消す.map((c) => ({ rel: c.rel, 種類: c.種類 })), 触らない, 衝突, 依存切れ: 依存衝突 },
+    残る: {
+      束, 盲点, 保持で上げた, 育った, 現場の物,
+      _注: "束=塊の束(フォルダごと) / 盲点=塊が書き込む場所に在って台帳にも保持一覧にも無い"
+        + " / 保持で上げた=人が理由付きで残すと宣言した / 育った=案内が埋めてと言う物 / 現場の物=最初から現場の物",
+    },
+    依存の網: { 見た: 依存の網.見た, 飛ばした: 依存の網.飛ばした, 見ない形: 依存の網.見ない形.length },
+    判定,
+    出口: (判定 === "CONFLICT" ? 1 : (判定 === "UNKNOWN" ? 2 : 0)),
+    人の文,   /* ★人向けの報告も捨てずに渡す(片方だけ黙らない) */
+  }, null, 1));
+  process.exit(判定 === "CONFLICT" ? 1 : (判定 === "UNKNOWN" ? 2 : 0));
+}
+
+
 console.log('\n★retained(★★走査で在った物 − 消した物) ' + retained.length + '件 ── 3つに分けます:');
 console.log('\n  ① 塊の束(★フォルダごと消す場所) ' + 束.length + '件:');
 for (const r of 束) console.log('     ・' + r);
@@ -1005,13 +1106,6 @@ if (!現場の物.length) console.log('     (なし)');
  * ★直す前は、未分類が在っても PASS と出していた ── 測っていない物を、緑に数えていた。 */
 /* ★依存切れも CONFLICT である(2026-09-03)── ★★残滓は無くても【壊れている】から。
  *   ★★★実測(直す前): 現場のフックが guardian/hooks/no-reflex.js を呼ぶ現場で、判定は PASS だった。 */
-/* ★保持一覧の読み取りで言うことが在るなら、それは【不明】である(2026-09-03、@codex の線)。
- *   ★★人が「残したい」と書いた物を、こちらが受け付けなかった ──
- *   ★★★その物が守られているかどうか、こちらには分からない。
- *   実測(直す前): 広すぎる指定・予約された道・理由の無い項の3通りとも、
- *   言うだけ言って【判定は PASS】だった ── 16.5 で直したのと同じ形を、また作っていた。 */
-const 判定 = (衝突.length || 依存衝突.length) ? 'CONFLICT'
-  : ((盲点.length || 保持の訴え.length) ? 'UNKNOWN' : 'PASS');
 console.log('\n判定: ★' + 判定);
 if (判定 === 'CONFLICT') {
   console.log('  ★★塊の物のうち、人が触った物が在ります ── 消していません。人が見てください。');

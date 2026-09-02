@@ -2331,9 +2331,15 @@ if (process.argv.includes("--why")) {
         ずれ.push(t + ": 知らない口を拒みません(出口 " + z.status + " ── ★この道具は " + 誤りの出口(t) + " のはずです)");
       /* 出力は「口 個数」の2列。名前だけを取り出す(個数は下の叩き方が使う) */
       const 個数 = new Map();
+      const 供 = new Map();
       for (const 行 of String(r.stdout || "").split(NL2)) {
         const t = 行.trim(); if (!t) continue;
         const [名, 数] = t.split(/\s+/);
+        /* ★【一緒に要る口】も、道具に答えさせる(2026-09-03)。
+         *   ★★この検査は mode を知らない ── 知らせるのではなく、道具が「要る:--走査」と言う。
+         *   ★★★知らないと、mode を持つ道具の口を単独で叩いて「宣言と振る舞いが違う」と誤る。 */
+        const m2 = t.match(new RegExp("要る:([^ ]+)"));
+        if (m2) 供.set(名, m2[1]);
         個数.set(名, 数 === undefined ? "0" : 数);
       }
       const 実際 = new Set(個数.keys());
@@ -2350,7 +2356,7 @@ if (process.argv.includes("--why")) {
           : Array.from({ length: Math.max(1, Number(数) || 0) }, (_, n) => "--餌" + (n + 1));
         /* ★飲まない口に未知を渡せば【その道具の引数の誤りの出口】/ 飲む口なら出口0(2026-09-03) */
         const 期待 = (数 === "0") ? 誤りの出口(t) : 0;
-        const w = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧", 名, ...餌],
+        const w = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧", ...(供.get(名) ? [供.get(名)] : []), 名, ...餌],
           { encoding: "utf8", windowsHide: true, cwd: HERE, timeout: 60000 });
         if (w.status !== 期待)
           ずれ.push(t + ": " + 名 + " が値を " + 数 + " 個飲むと宣言していますが、振る舞いが違います(出口 " + w.status + " / 期待 " + 期待 + ")");
@@ -2361,7 +2367,7 @@ if (process.argv.includes("--why")) {
          *   ★`*`(残り全部)の口には、足りないという状態が無いので測らない。 */
         if (数 !== "*" && Number(数) >= 1) {
           const 短い = 餌.slice(0, Number(数) - 1);
-          const v2 = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧", 名, ...短い],
+          const v2 = spawnSync(process.execPath, [path.join(HERE, t), "--口一覧", ...(供.get(名) ? [供.get(名)] : []), 名, ...短い],
             { encoding: "utf8", windowsHide: true, cwd: HERE, timeout: 60000 });
           if (v2.status !== 誤りの出口(t))
             ずれ.push(t + ": " + 名 + " に値を " + 短い.length + " 個しか渡していないのに止まりません(出口 " + v2.status + ")");
@@ -2374,7 +2380,7 @@ if (process.argv.includes("--why")) {
          *   ★`*`(残り全部)の口は、後ろを全部飲むのが正しいので測らない。 */
         if (数 !== "*" && Number(数) >= 1) {
           const v3 = spawnSync(process.execPath,
-            [path.join(HERE, t), "--口一覧", 名, ...餌, "--この口は無い"],
+            [path.join(HERE, t), "--口一覧", ...(供.get(名) ? [供.get(名)] : []), 名, ...餌, "--この口は無い"],
             { encoding: "utf8", windowsHide: true, cwd: HERE, timeout: 60000 });
           if (v3.status !== 誤りの出口(t))
             ずれ.push(t + ": " + 名 + " が値の後ろの未知の口まで飲んでいます(出口 " + v3.status + ")");
