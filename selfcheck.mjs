@@ -30,7 +30,12 @@
 import fs from 'node:fs';
 import { createRequire as __cr2 } from 'node:module';
 /* ★git から道の一覧を取る唯一の口(2026-09-03)── ★★行では割れない(空白を持つ道が壊れる) */
-const 道 = __cr2(import.meta.url)('./道.cjs');
+/* ★取り込み名を 道の口 にする(2026-09-03)── ★★この現場には 道 という局所変数が別に在り(65行)、
+ * ★★★同じ名前だと影になる。名前で衝突する形は、後から足す人に見えない。 */
+const 道の口 = __cr2(import.meta.url)('./道.cjs');
+/* ★共通の書き手 ── ★★B14 の期待値(正本の綴り)を、ここから受け取る(2026-09-03、@codex の線)。
+ *   ★★★読み込んでも何も起きないことは、下の B16 が毎回 測る。 */
+const 書き手の口 = __cr2(import.meta.url)('./書き手.cjs');
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -1597,6 +1602,77 @@ if (process.argv.includes("--why")) {
   }
 }
 
+/* ---------- B16. 低い層の module は、読み込んだだけで何も起こさないか(2026-09-03、会議で @codex が出し @kozo が叩いた) ----------
+ *
+ * ★なぜ要るか: この検査は `書き手.cjs` と `道.cjs` を **import している**。
+ *   ★★読み込んだだけで何かが起きる module を import すると、
+ *   ★★★検査を回すこと自体が現場を変える ── 計器が対象を動かす形になる。
+ *
+ * ★静的に「top-level の文が在るか」を見る網では足りない(@kozo が2つ持っていた) ──
+ *   ★★require の先(fs / path / child_process)の副作用までは、叩かないと分からない。
+ *
+ * ★★★だから【隔離した子で実際に読み込む】(@codex の形):
+ *   一時の場所で全木を採る → node -e "require(絶対の道)" → もう一度 採る
+ *   出口0 / stdout 0バイト / stderr 0バイト / 木の差 0
+ *
+ * ★2回 読み込む ── ★★「初回だけ何か作る」形を落とさないため(@kozo が測っていないと書いた所)。
+ *
+ * ★★★この門の値打ちは【これから】に在る: 誰かが top-level に1行 足した瞬間に赤くなる。
+ *   その1行は、たぶん善意で足される(設定を読んでおこう / ログを1行)。
+ *   ★足す人は、この検査がその module を import している事を知らない。門なら、知らなくても止まる。 */
+{
+  const 低い層 = ['書き手.cjs', '道.cjs'];
+  const 汚した = [];
+  let 測れた = 0;
+  for (const rel of 低い層) {
+    const 絶対 = path.join(HERE, rel);
+    if (!fs.existsSync(絶対)) { 未測.push(rel + " が在りません(読み込みの門を回せません)"); continue; }
+    let 仮 = null;
+    try { 仮 = fs.mkdtempSync(path.join(os.tmpdir(), "guardian-load-")); } catch (_) {
+      未測.push("読み込みの門: 一時の場所が作れません"); continue;
+    }
+    try {
+      const 採る = () => {
+        const 出 = [];
+        const 歩く = (d, 相対) => {
+          let es = [];
+          try { es = fs.readdirSync(d, { withFileTypes: true }); } catch (_) { return; }
+          for (const e of es.sort((a, b) => (a.name < b.name ? -1 : 1))) {
+            const q = 相対 ? 相対 + "/" + e.name : e.name;
+            if (e.isDirectory()) { 出.push(q + "/"); 歩く(path.join(d, e.name), q); }
+            else { let n = -1; try { n = fs.statSync(path.join(d, e.name)).size; } catch (_) {} 出.push(q + " " + n); }
+          }
+        };
+        歩く(仮, "");
+        return 出.join(String.fromCharCode(10));
+      };
+      const 前 = 採る();
+      /* ★2回 読み込む(初回だけ何かする形を落とさない) */
+      const r = spawnSync(process.execPath, ["-e",
+        "require(" + JSON.stringify(絶対) + "); require(" + JSON.stringify(絶対) + ");"],
+        { cwd: 仮, encoding: "utf8", windowsHide: true, timeout: 60000 });
+      const 後 = 採る();
+      const 訴え = [];
+      if (r.status !== 0) 訴え.push("出口 " + r.status);
+      if ((r.stdout || "").length) 訴え.push("stdout " + r.stdout.length + "バイト");
+      if ((r.stderr || "").length) 訴え.push("stderr " + r.stderr.length + "バイト: "
+        + String(r.stderr).split(String.fromCharCode(10))[0].slice(0, 80));
+      if (前 !== 後) 訴え.push("読み込んだ場所の木が変わりました");
+      if (訴え.length) 汚した.push(rel + "(" + 訴え.join(" / ") + ")");
+      測れた++;
+    } finally {
+      try { fs.rmSync(仮, { recursive: true, force: true }); } catch (_) {}
+    }
+  }
+  if (汚した.length) {
+    ng.push("★読み込んだだけで何かが起きる module が在ります(" + 汚した.length + "件): " + 汚した.join(", ")
+      + " ── ★★この検査はその module を import しています。"
+      + "★★★読み込みで何かが起きると、検査を回すこと自体が現場を変えます(計器が対象を動かす)");
+  } else if (測れた) {
+    ok.push("低い層の module は、読み込んでも何も起こさない(" + 測れた + "件 ── ★出口0 / 出力0バイト / 木の差0、2回 読み込んで)");
+  }
+}
+
 /* ---------- B15. 道の一覧を、共通の口の外で取っていないか(2026-09-03、会議で @codex が形を出した) ----------
  *
  * ★事故は2つ、続けて起きた:
@@ -1658,9 +1734,11 @@ if (process.argv.includes("--why")) {
 {
   /* ★綴り → その綴りを持ってよい唯一のファイル */
   const 正本 = [
-    /* ★綴りを【切って持つ】── ★★そうしないと、この検査自身が写しとして引っかかる。
-     *   実測: 直す前は selfcheck.mjs が自分の表のせいで赤くなった。 */
-    { 綴り: '導入台帳' + '.json', 正本: '書き手.cjs', 名: '台帳の道' },
+    /* ★綴りは【正本から受け取る】(2026-09-03、@codex の線)。
+     *   ★★直す前は '導入台帳' + '.json' と切って書いていた ── 検査自身が写しにならないための逃げ。
+     *   ★★★逃げも写しである: 正本の綴りが変わっても、この文字列は変わらない。
+     *   import すれば、正本が変わった瞬間にこの検査も一緒に変わる。 */
+    { 綴り: 書き手の口.台帳の相対.split('/').pop(), 正本: '書き手.cjs', 名: '台帳の道' },
   ];
   const 写し = [];
   for (const 件 of 正本) {
@@ -2140,7 +2218,7 @@ if (process.argv.includes("--why")) {
         /* ★道の一覧は 道.cjs から取る(2026-09-03、会議で @codex と @kozo が形を出した)。
          *   ★★直す前は split(改行).map(trim) で、★★★空白を持つ道が【全件】壊れた
          *   (実測: " leading.mjs" → "leading.mjs" = 実在しない道。エラーは出ない)。 */
-        const d = 道.道を取る(HERE, "diff", "--name-only", c, "--");
+        const d = 道の口.道を取る(HERE, "diff", "--name-only", c, "--");
         const 一覧 = d.道;
         /* ★読めなかった道を黙って落とさない ── 保存則(発見 = 読めた + 読めなかった) */
         if (d.読めなかった.length) 未測.push("公開後の中身の照合: git が返した道 "
@@ -2515,7 +2593,7 @@ if (process.argv.includes("--why")) {
       /* 大番号が動いた ── その版の中で SPEC.md も動いているか(作業木まで含めて見る) */
       /* ★ここも 道.cjs を通す(2026-09-03)── ★★使うのは真偽だが、
        *   ★★★「道の一覧を返す git を、共通の口の外で叩かない」を1本の規則にするため。 */
-      const d = 道.道を取る(HERE, "diff", "--name-only", 前sha, "--", "SPEC.md");
+      const d = 道の口.道を取る(HERE, "diff", "--name-only", 前sha, "--", "SPEC.md");
       if (d.道.length) {
         ok.push("版の上げ方は宣言どおり(大番号 " + 前.大 + " → " + いま.大 + " ── SPEC.md も一緒に変わっている)");
       } else {
