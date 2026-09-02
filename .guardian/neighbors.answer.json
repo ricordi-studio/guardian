@@ -1,5 +1,5 @@
 {
- "range": "HEAD",
+ "range": "HEAD~1..HEAD",
  "answers": {
   "docs/CODEMAP.md::案内:外す.mjs": {
    "判定": "触れた",

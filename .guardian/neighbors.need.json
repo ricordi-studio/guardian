@@ -1,5 +1,5 @@
 {
- "range": "HEAD",
+ "range": "HEAD~1..HEAD",
  "need": [
   {
    "key": "docs/CODEMAP.md::案内:外す.mjs",
