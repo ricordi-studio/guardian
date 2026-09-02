@@ -228,9 +228,10 @@ if (process.argv.includes('--由来')) {
   const 道 = 一覧(HERE).sort();
   const crypto = await import('node:crypto');
   const 出 = 道.map((rel) => {
-    let h = null, 大きさ = null;
+    let h = null, 大きさ = null, 改行だけ = null, 素 = null;
     try {
-      const b = fs.readFileSync(path.join(HERE, rel));
+      素 = fs.readFileSync(path.join(HERE, rel));
+      const b = 素;
       h = crypto.createHash('sha256').update(b).digest('hex');
       大きさ = b.length;
     } catch (_) { h = '(読めません)'; }
@@ -249,9 +250,18 @@ if (process.argv.includes('--由来')) {
         { encoding: "buffer", windowsHide: true, timeout: 60000 });
       if (!g.error && g.status === 0 && g.stdout) {
         同 = crypto.createHash("sha256").update(g.stdout).digest("hex") === h;
+        /* ★違う時は【改行だけか】まで言う(24.1、2026-09-03、会議で @kozo が39点を1件ずつ数えた)。
+         *   ★★「違う」だけだと、人は【この現場で直した】と読む。実際は 16点が改行だけだった ──
+         *   ★★★監査の場を cp(作業木)で建てたために出た差で、直した物では無い。
+         *   ★意味が違うのは【中身も違う】方だけなので、道具に分けさせる(人に数えさせない)。 */
+        if (同 === false) {
+          const CR = 13;
+          const 抜く = (buf) => Buffer.from([...buf].filter((c) => c !== CR));
+          if (素) 改行だけ = Buffer.compare(抜く(素), 抜く(g.stdout)) === 0;
+        }
       }
     }
-    return { rel, sha256: h, バイト: 大きさ, commitと同じ: 同 };
+    return { rel, sha256: h, バイト: 大きさ, commitと同じ: 同, 改行だけ };
   });
   console.log(JSON.stringify({
     形: 'guardian-由来 v1',
@@ -265,9 +275,13 @@ if (process.argv.includes('--由来')) {
       const 測 = 出.filter((e) => e.commitと同じ === null).map((e) => e.rel);
       return {
         件数: 違.length, 道: 違,
+        改行だけ: 出.filter((e) => e.改行だけ === true).map((e) => e.rel),
+        中身も違う: 出.filter((e) => e.commitと同じ === false && e.改行だけ !== true).map((e) => e.rel),
         測れなかった: 測.length, 測れなかった道: 測,
         注: 違.length
-          ? '★この commit を取り直しても、上の指紋には なりません ── ★★git の改行の正規化が入っています'
+          ? '★この commit を取り直しても、上の指紋には なりません。'
+            + '★★【改行だけ】は git の正規化(監査の場を作業木から写すと出る ── git archive で建てれば消えます)。'
+            + '★★★【中身も違う】は この現場で直した物です。'
           : (測.length ? '★不明 ── 一部が測れませんでした(★★不明は「同じ」ではありません)'
                        : '★全件 commit と同じバイトでした'),
       };

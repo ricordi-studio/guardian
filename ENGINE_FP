@@ -1,4 +1,4 @@
-24.0
+24.1
 METHOD.md 1kv4bye-22912
 PROTOCOL.json aajo32-354
 README.md cw0tbr-8361
@@ -19,7 +19,7 @@ install.md a9q5zm-4942
 install.mjs 1oai3jx-32594
 neighbors.mjs 1w3ub5g-53147
 package.json zx7jrx-416
-pull.mjs 1fbv0uk-30746
+pull.mjs 1qp99yb-31485
 selfcheck.mjs 1t302t1-128979
 templates/CLAUDE-snippet.md 1y7ghqv-1478
 templates/CODEMAP.md 1iwybyg-827
@@ -29,6 +29,6 @@ templates/nightly-check.yml 1ybpxvw-2843
 verdict.mjs 1khv7yf-10356
 保持一覧.json tfn9m3-1146
 台帳.mjs kl8ahu-3737
-外す.mjs mcu9ge-50428
+外す.mjs 138zcdb-51718
 書き手.cjs 18bc76y-4834
 道.cjs 1mpvcnl-2966
