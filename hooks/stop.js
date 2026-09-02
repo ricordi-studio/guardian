@@ -59,7 +59,23 @@ process.stdin.on('end', () => {
   let ev = {};
   /* ★入力が読めない時だけは通す ── 止めた事すら分からない(stop_hook_active が読めない)ので、
    *   ★★閉じ込めない方を選ぶ。ここは残った穴として HANDOVER に書く。 */
-  try { ev = JSON.parse(input || '{}'); } catch (_) { return pass(); }
+  try { ev = JSON.parse(input || '{}'); } catch (e) {
+    /* ★通すなら【通したと言う】(24.3、2026-09-03、@codex の条文の後半・@kozo が測った)。
+     *
+     *   ★★ここは この塊で【唯一 fail-open を認めた道】である。
+     *   認めた以上、通った事がどこにも残らないと、次に誰かが同じ形を見つけた時に
+     *   ★★★「fail-open が在る」のか「たまたま黙った」のかを区別できない。
+     *
+     *   ★実測(直す前): 入力に JSON でない物を流す → stdout 0バイト・stderr 0バイト。
+     *   ★★診断が1文字も出なかった。 */
+    console.error('★Guardian: hook入力が読めないので、合否を【測れませんでした】。'
+      + String.fromCharCode(10) + '★★ここは通します ── 止めた事すら分からない'
+      + '(stop_hook_active が読めない)ので、閉じ込めない方を選んでいます。'
+      + String.fromCharCode(10) + '★★★これは【通した】であって【合格】ではありません。'
+      + String.fromCharCode(10) + '  訳: ' + String((e && e.message) || e)
+      + String.fromCharCode(10) + '  手元で見るには: node guardian/verdict.mjs --fast --json');
+    return pass();
+  }
   if (ev.stop_hook_active) return pass();
   try { main(ev); }
   catch (e) { 測れなかった('門の中で例外が出ました', (e && (e.stack || e.message)) || String(e)); }
