@@ -2,100 +2,12 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "check.mjs::子として回す:neighbors.mjs",
-   "記号": "子として回す:neighbors.mjs",
-   "場所": "check.mjs",
-   "環": 1,
-   "根": "proc:neighbors.mjs",
-   "きっかけ": "neighbors.mjs を子として回し、その出口を読んでいる"
-  },
-  {
-   "key": "check.mjs::子として回す:selfcheck.mjs",
-   "記号": "子として回す:selfcheck.mjs",
-   "場所": "check.mjs",
-   "環": 1,
-   "根": "proc:selfcheck.mjs",
-   "きっかけ": "selfcheck.mjs から子として回されている"
-  },
-  {
-   "key": "docs/CODEMAP.md::案内:check.mjs",
-   "記号": "案内:check.mjs",
-   "場所": "docs/CODEMAP.md",
-   "環": 1,
-   "根": "proc:check.mjs",
-   "きっかけ": "docs/CODEMAP.md が check.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "docs/CODEMAP.md::案内:in-loop.js",
-   "記号": "案内:in-loop.js",
-   "場所": "docs/CODEMAP.md",
-   "環": 1,
-   "根": "proc:hooks/in-loop.js",
-   "きっかけ": "docs/CODEMAP.md が in-loop.js を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
    "key": "docs/CODEMAP.md::案内:install.mjs",
    "記号": "案内:install.mjs",
    "場所": "docs/CODEMAP.md",
    "環": 1,
    "根": "proc:install.mjs",
    "きっかけ": "docs/CODEMAP.md が install.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "docs/CODEMAP.md::案内:neighbors.mjs",
-   "記号": "案内:neighbors.mjs",
-   "場所": "docs/CODEMAP.md",
-   "環": 1,
-   "根": "proc:neighbors.mjs",
-   "きっかけ": "docs/CODEMAP.md が neighbors.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "docs/CODEMAP.md::案内:pull.mjs",
-   "記号": "案内:pull.mjs",
-   "場所": "docs/CODEMAP.md",
-   "環": 1,
-   "根": "proc:pull.mjs",
-   "きっかけ": "docs/CODEMAP.md が pull.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "docs/CODEMAP.md::案内:selfcheck.mjs",
-   "記号": "案内:selfcheck.mjs",
-   "場所": "docs/CODEMAP.md",
-   "環": 1,
-   "根": "proc:selfcheck.mjs",
-   "きっかけ": "docs/CODEMAP.md が selfcheck.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "docs/CODEMAP.md::案内:stop.js",
-   "記号": "案内:stop.js",
-   "場所": "docs/CODEMAP.md",
-   "環": 1,
-   "根": "proc:hooks/stop.js",
-   "きっかけ": "docs/CODEMAP.md が stop.js を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "docs/CODEMAP.md::案内:verdict.mjs",
-   "記号": "案内:verdict.mjs",
-   "場所": "docs/CODEMAP.md",
-   "環": 1,
-   "根": "proc:verdict.mjs",
-   "きっかけ": "docs/CODEMAP.md が verdict.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "hooks/stop.js::子として回す:verdict.mjs",
-   "記号": "子として回す:verdict.mjs",
-   "場所": "hooks/stop.js",
-   "環": 1,
-   "根": "proc:verdict.mjs",
-   "きっかけ": "verdict.mjs を子として回し、その出口を読んでいる"
-  },
-  {
-   "key": "install.md::案内:check.mjs",
-   "記号": "案内:check.mjs",
-   "場所": "install.md",
-   "環": 1,
-   "根": "proc:check.mjs",
-   "きっかけ": "install.md が check.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
    "key": "install.md::案内:install.mjs",
@@ -106,260 +18,28 @@
    "きっかけ": "install.md が install.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
-   "key": "install.md::案内:neighbors.mjs",
-   "記号": "案内:neighbors.mjs",
-   "場所": "install.md",
-   "環": 1,
-   "根": "proc:neighbors.mjs",
-   "きっかけ": "install.md が neighbors.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "install.md::案内:pull.mjs",
-   "記号": "案内:pull.mjs",
-   "場所": "install.md",
-   "環": 1,
-   "根": "proc:pull.mjs",
-   "きっかけ": "install.md が pull.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "install.md::案内:selfcheck.mjs",
-   "記号": "案内:selfcheck.mjs",
-   "場所": "install.md",
-   "環": 1,
-   "根": "proc:selfcheck.mjs",
-   "きっかけ": "install.md が selfcheck.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "install.md::案内:stop.js",
-   "記号": "案内:stop.js",
-   "場所": "install.md",
-   "環": 1,
-   "根": "proc:hooks/stop.js",
-   "きっかけ": "install.md が stop.js を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "install.md::案内:verdict.mjs",
-   "記号": "案内:verdict.mjs",
-   "場所": "install.md",
-   "環": 1,
-   "根": "proc:verdict.mjs",
-   "きっかけ": "install.md が verdict.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
    "key": "install.mjs::CC",
    "記号": "CC",
    "場所": "install.mjs",
    "環": 1,
-   "根": "ROOT",
-   "きっかけ": "「ROOT」を呼んでいる"
+   "根": "claude",
+   "きっかけ": "「claude」を呼んでいる"
   },
   {
-   "key": "install.mjs::claudePath",
-   "記号": "claudePath",
+   "key": "install.mjs::findInstallRoot",
+   "記号": "findInstallRoot",
    "場所": "install.mjs",
    "環": 1,
-   "根": "ROOT",
-   "きっかけ": "「ROOT」を呼んでいる"
+   "根": "claude",
+   "きっかけ": "「claude」を呼んでいる"
   },
   {
-   "key": "install.mjs::mapPath",
-   "記号": "mapPath",
+   "key": "install.mjs::setPath",
+   "記号": "setPath",
    "場所": "install.mjs",
    "環": 1,
-   "根": "ROOT",
-   "きっかけ": "「ROOT」を呼んでいる"
-  },
-  {
-   "key": "install.mjs::rel",
-   "記号": "rel",
-   "場所": "install.mjs",
-   "環": 1,
-   "根": "ROOT",
-   "きっかけ": "「ROOT」を呼んでいる"
-  },
-  {
-   "key": "install.mjs::settings",
-   "記号": "settings",
-   "場所": "install.mjs",
-   "環": 1,
-   "根": "setPath",
-   "きっかけ": "「setPath」を呼んでいる"
-  },
-  {
-   "key": "install.mjs::残りを全部取る口",
-   "記号": "残りを全部取る口",
-   "場所": "install.mjs",
-   "環": 1,
-   "根": "write",
-   "きっかけ": "「write」を呼んでいる"
-  },
-  {
-   "key": "install.mjs::子として回す:selfcheck.mjs",
-   "記号": "子として回す:selfcheck.mjs",
-   "場所": "install.mjs",
-   "環": 1,
-   "根": "proc:selfcheck.mjs",
-   "きっかけ": "selfcheck.mjs を子として回し、その出口を読んでいる"
-  },
-  {
-   "key": "install.mjs::人が書いた開発規範",
-   "記号": "人が書いた開発規範",
-   "場所": "install.mjs",
-   "環": 1,
-   "根": "ROOT",
-   "きっかけ": "「ROOT」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::answers",
-   "記号": "answers",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "read",
-   "きっかけ": "「read」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::cfg",
-   "記号": "cfg",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "read",
-   "きっかけ": "「read」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::corpus",
-   "記号": "corpus",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "read",
-   "きっかけ": "「read」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::frontier",
-   "記号": "frontier",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "isExported",
-   "きっかけ": "「isExported」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::外した件を言う",
-   "記号": "外した件を言う",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "read",
-   "きっかけ": "「read」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::根の印",
-   "記号": "根の印",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "read",
-   "きっかけ": "「read」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::子として回す:check.mjs",
-   "記号": "子として回す:check.mjs",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "proc:check.mjs",
-   "きっかけ": "check.mjs から子として回されている"
-  },
-  {
-   "key": "neighbors.mjs::子として回す:selfcheck.mjs",
-   "記号": "子として回す:selfcheck.mjs",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "proc:selfcheck.mjs",
-   "きっかけ": "selfcheck.mjs から子として回されている"
-  },
-  {
-   "key": "neighbors.mjs::報告",
-   "記号": "報告",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "一覧",
-   "きっかけ": "「一覧」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::欄名",
-   "記号": "欄名",
-   "場所": "neighbors.mjs",
-   "環": 1,
-   "根": "read",
-   "きっかけ": "「read」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::子として回す:selfcheck.mjs",
-   "記号": "子として回す:selfcheck.mjs",
-   "場所": "pull.mjs",
-   "環": 1,
-   "根": "proc:selfcheck.mjs",
-   "きっかけ": "selfcheck.mjs から子として回されている"
-  },
-  {
-   "key": "pull.mjs::消える",
-   "記号": "消える",
-   "場所": "pull.mjs",
-   "環": 1,
-   "根": "配るもの",
-   "きっかけ": "「配るもの」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::新しい",
-   "記号": "新しい",
-   "場所": "pull.mjs",
-   "環": 1,
-   "根": "一覧",
-   "きっかけ": "「一覧」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::新版",
-   "記号": "新版",
-   "場所": "pull.mjs",
-   "環": 1,
-   "根": "配るもの",
-   "きっかけ": "「配るもの」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::走る",
-   "記号": "走る",
-   "場所": "pull.mjs",
-   "環": 1,
-   "根": "配るもの",
-   "きっかけ": "「配るもの」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::中の消える",
-   "記号": "中の消える",
-   "場所": "pull.mjs",
-   "環": 1,
-   "根": "配るもの",
-   "きっかけ": "「配るもの」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::読む",
-   "記号": "読む",
-   "場所": "pull.mjs",
-   "環": 1,
-   "根": "配るもの",
-   "きっかけ": "「配るもの」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::表を読む",
-   "記号": "表を読む",
-   "場所": "pull.mjs",
-   "環": 1,
-   "根": "配るもの",
-   "きっかけ": "「配るもの」を呼んでいる"
-  },
-  {
-   "key": "README.md::案内:check.mjs",
-   "記号": "案内:check.mjs",
-   "場所": "README.md",
-   "環": 1,
-   "根": "proc:check.mjs",
-   "きっかけ": "README.md が check.mjs を名指ししている(中身が変わったので、案内が古くないか)"
+   "根": "claude",
+   "きっかけ": "「claude」を呼んでいる"
   },
   {
    "key": "README.md::案内:install.mjs",
@@ -370,100 +50,12 @@
    "きっかけ": "README.md が install.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
-   "key": "README.md::案内:pull.mjs",
-   "記号": "案内:pull.mjs",
-   "場所": "README.md",
-   "環": 1,
-   "根": "proc:pull.mjs",
-   "きっかけ": "README.md が pull.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "README.md::案内:selfcheck.mjs",
-   "記号": "案内:selfcheck.mjs",
-   "場所": "README.md",
-   "環": 1,
-   "根": "proc:selfcheck.mjs",
-   "きっかけ": "README.md が selfcheck.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "README.md::案内:stop.js",
-   "記号": "案内:stop.js",
-   "場所": "README.md",
-   "環": 1,
-   "根": "proc:hooks/stop.js",
-   "きっかけ": "README.md が stop.js を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "README.md::案内:verdict.mjs",
-   "記号": "案内:verdict.mjs",
-   "場所": "README.md",
-   "環": 1,
-   "根": "proc:verdict.mjs",
-   "きっかけ": "README.md が verdict.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "selfcheck.mjs::FP_SKIP",
-   "記号": "FP_SKIP",
-   "場所": "selfcheck.mjs",
-   "環": 1,
-   "根": "ENGINE_FILES",
-   "きっかけ": "「ENGINE_FILES」を呼んでいる"
-  },
-  {
-   "key": "selfcheck.mjs::個人情報の見張り",
-   "記号": "個人情報の見張り",
-   "場所": "selfcheck.mjs",
-   "環": 1,
-   "根": "ENGINE_FILES",
-   "きっかけ": "「ENGINE_FILES」を呼んでいる"
-  },
-  {
-   "key": "selfcheck.mjs::子として回す:check.mjs",
-   "記号": "子として回す:check.mjs",
-   "場所": "selfcheck.mjs",
-   "環": 1,
-   "根": "proc:check.mjs",
-   "きっかけ": "check.mjs を子として回し、その出口を読んでいる"
-  },
-  {
    "key": "selfcheck.mjs::子として回す:install.mjs",
    "記号": "子として回す:install.mjs",
    "場所": "selfcheck.mjs",
    "環": 1,
    "根": "proc:install.mjs",
    "きっかけ": "install.mjs を子として回し、その出口を読んでいる"
-  },
-  {
-   "key": "selfcheck.mjs::子として回す:neighbors.mjs",
-   "記号": "子として回す:neighbors.mjs",
-   "場所": "selfcheck.mjs",
-   "環": 1,
-   "根": "proc:neighbors.mjs",
-   "きっかけ": "neighbors.mjs を子として回し、その出口を読んでいる"
-  },
-  {
-   "key": "selfcheck.mjs::子として回す:pull.mjs",
-   "記号": "子として回す:pull.mjs",
-   "場所": "selfcheck.mjs",
-   "環": 1,
-   "根": "proc:pull.mjs",
-   "きっかけ": "pull.mjs を子として回し、その出口を読んでいる"
-  },
-  {
-   "key": "SPEC.md::案内:check.mjs",
-   "記号": "案内:check.mjs",
-   "場所": "SPEC.md",
-   "環": 1,
-   "根": "proc:check.mjs",
-   "きっかけ": "SPEC.md が check.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "SPEC.md::案内:in-loop.js",
-   "記号": "案内:in-loop.js",
-   "場所": "SPEC.md",
-   "環": 1,
-   "根": "proc:hooks/in-loop.js",
-   "きっかけ": "SPEC.md が in-loop.js を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
    "key": "SPEC.md::案内:install.mjs",
@@ -474,188 +66,28 @@
    "きっかけ": "SPEC.md が install.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
-   "key": "SPEC.md::案内:neighbors.mjs",
-   "記号": "案内:neighbors.mjs",
-   "場所": "SPEC.md",
-   "環": 1,
-   "根": "proc:neighbors.mjs",
-   "きっかけ": "SPEC.md が neighbors.mjs を名指ししている(中身が変わったので、案内が古くないか)"
+   "key": "install.mjs::ROOT",
+   "記号": "ROOT",
+   "場所": "install.mjs",
+   "環": 2,
+   "根": "claude",
+   "きっかけ": "「findInstallRoot」を呼んでいる"
   },
   {
-   "key": "SPEC.md::案内:pull.mjs",
-   "記号": "案内:pull.mjs",
-   "場所": "SPEC.md",
-   "環": 1,
-   "根": "proc:pull.mjs",
-   "きっかけ": "SPEC.md が pull.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "SPEC.md::案内:selfcheck.mjs",
-   "記号": "案内:selfcheck.mjs",
-   "場所": "SPEC.md",
-   "環": 1,
-   "根": "proc:selfcheck.mjs",
-   "きっかけ": "SPEC.md が selfcheck.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "SPEC.md::案内:stop.js",
-   "記号": "案内:stop.js",
-   "場所": "SPEC.md",
-   "環": 1,
-   "根": "proc:hooks/stop.js",
-   "きっかけ": "SPEC.md が stop.js を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "SPEC.md::案内:verdict.mjs",
-   "記号": "案内:verdict.mjs",
-   "場所": "SPEC.md",
-   "環": 1,
-   "根": "proc:verdict.mjs",
-   "きっかけ": "SPEC.md が verdict.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "verdict.mjs::push",
-   "記号": "push",
-   "場所": "verdict.mjs",
-   "環": 1,
-   "根": "code",
-   "きっかけ": "「code」を呼んでいる"
-  },
-  {
-   "key": "verdict.mjs::子として回す:hooks/stop.js",
-   "記号": "子として回す:hooks/stop.js",
-   "場所": "verdict.mjs",
-   "環": 1,
-   "根": "proc:hooks/stop.js",
-   "きっかけ": "hooks/stop.js から子として回されている"
+   "key": "install.mjs::settings",
+   "記号": "settings",
+   "場所": "install.mjs",
+   "環": 2,
+   "根": "claude",
+   "きっかけ": "「setPath」を呼んでいる"
   },
   {
    "key": "install.mjs::snippet",
    "記号": "snippet",
    "場所": "install.mjs",
    "環": 2,
-   "根": "ROOT",
+   "根": "claude",
    "きっかけ": "「CC」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::callersOf",
-   "記号": "callersOf",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "read",
-   "きっかけ": "「corpus」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::enclosing",
-   "記号": "enclosing",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "read",
-   "きっかけ": "「corpus」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::lineOfIndex",
-   "記号": "lineOfIndex",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "read",
-   "きっかけ": "「corpus」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::井桁がコメントの言語",
-   "記号": "井桁がコメントの言語",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "read",
-   "きっかけ": "「cfg」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::多重定義",
-   "記号": "多重定義",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "read",
-   "きっかけ": "「corpus」を呼んでいる"
-  },
-  {
-   "key": "neighbors.mjs::本体",
-   "記号": "本体",
-   "場所": "neighbors.mjs",
-   "環": 2,
-   "根": "read",
-   "きっかけ": "「corpus」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::依頼SHA",
-   "記号": "依頼SHA",
-   "場所": "pull.mjs",
-   "環": 2,
-   "根": "配るもの",
-   "きっかけ": "「走る」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::旧版",
-   "記号": "旧版",
-   "場所": "pull.mjs",
-   "環": 2,
-   "根": "配るもの",
-   "きっかけ": "「読む」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::取得SHA",
-   "記号": "取得SHA",
-   "場所": "pull.mjs",
-   "環": 2,
-   "根": "一覧",
-   "きっかけ": "「新しい」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::受領証を書く",
-   "記号": "受領証を書く",
-   "場所": "pull.mjs",
-   "環": 2,
-   "根": "配るもの",
-   "きっかけ": "「走る」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::食い違い",
-   "記号": "食い違い",
-   "場所": "pull.mjs",
-   "環": 2,
-   "根": "配るもの",
-   "きっかけ": "「走る」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::全消える",
-   "記号": "全消える",
-   "場所": "pull.mjs",
-   "環": 2,
-   "根": "一覧",
-   "きっかけ": "「新しい」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::変わる",
-   "記号": "変わる",
-   "場所": "pull.mjs",
-   "環": 2,
-   "根": "一覧",
-   "きっかけ": "「新しい」を呼んでいる"
-  },
-  {
-   "key": "pull.mjs::無効にできなければ止める",
-   "記号": "無効にできなければ止める",
-   "場所": "pull.mjs",
-   "環": 2,
-   "根": "一覧",
-   "きっかけ": "「新しい」を呼んでいる"
-  },
-  {
-   "key": "selfcheck.mjs::whyLoose",
-   "記号": "whyLoose",
-   "場所": "selfcheck.mjs",
-   "環": 2,
-   "根": "ENGINE_FILES",
-   "きっかけ": "「FP_SKIP」を呼んでいる"
   }
  ]
 }

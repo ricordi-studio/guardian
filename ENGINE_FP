@@ -1,4 +1,4 @@
-17.0
+17.1
 METHOD.md 1kv4bye-22912
 PROTOCOL.json aajo32-354
 README.md 14uvj7j-8132
@@ -16,7 +16,7 @@ hooks/stop.js 150rfzx-4362
 hunch.md ukokyc-2956
 index.mjs xos40e-6741
 install.md 138e9vw-4443
-install.mjs 2nup7z-32330
+install.mjs plq8cq-32575
 neighbors.mjs 1ko0fkf-51386
 package.json zx7jrx-416
 pull.mjs 3c1x62-24644
@@ -27,6 +27,6 @@ templates/guardian-audit-command.md hyfuh-175
 templates/guardian.config.json 128yym3-2262
 templates/nightly-check.yml 1ybpxvw-2843
 verdict.mjs 1khv7yf-10356
-台帳.mjs ce55bp-3457
-外す.mjs 9odk6g-14084
+台帳.mjs kl8ahu-3737
+外す.mjs yxv5th-15462
 書き手.cjs du8qlt-4382

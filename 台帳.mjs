@@ -48,13 +48,19 @@ export function 台帳を作る({ 塊の版, TARGET, BUNDLE }) {
     /* ★置いた/触った物を1件 記録する。
      *   rootKind … TARGET(入れられる現場) / BUNDLE(塊そのもの)
      *   作った   … この導入が作ったか(false = 元から在った。allowlist の起点になる) */
-    記す({ rootKind = 'TARGET', 道, rel, 種類, 作った, 中身, writer }) {
+    /* ★元 ── 【入れる前のファイル全文】(2026-09-03)。
+     *   ★★元から在ったファイルに塊が書き足したとき、外すあとで【バイトで戻す】ために持つ。
+     *   実測: 直す前は、区間を外した CLAUDE.md に空行が1つ増え、
+     *   ★★★settings.json は塊が入れた整形(2字下げ)のまま戻らなかった ──
+     *   見た目は同じでも git は差分を出す。**それは残滓である。** */
+    記す({ rootKind = 'TARGET', 道, rel, 種類, 作った, 中身, 元, writer }) {
       項.push({
         rootKind,
         rel: rel != null ? rel : 相対(rootKind, 道),
         種類,                    /* ファイル / フォルダ / 区間 / JSON要素 */
         作った: !!作った,
         hash: 中身 == null ? null : 指紋(中身),
+        元: 元 == null ? null : String(元),
         writer,
         時刻: new Date().toISOString(),
       });

@@ -79,11 +79,17 @@ const 消す = [];
 const 衝突 = [];
 const 触らない = [];
 const フォルダ = [];  /* ★塊が作ったフォルダ(2026-09-03) */
+const 戻す = [];    /* ★入れる前の中身を持っている物(2026-09-03) */
+const 戻した = [];
 const 畳んだ = [];   /* ★空になって畳んだフォルダ(2026-09-03) */
 
 for (const x of 項) {
   if (x.rootKind !== 'TARGET') continue;   /* BUNDLE 側はフォルダごと消える */
   const 先 = path.join(ROOT, x.rel);
+  /* ★入れる前の中身を持っているなら、外したあと【バイトで戻す】対象にする(2026-09-03)。
+   *   ★★所有の判定とは別の話 ── 元から在ったファイルでも、塊が書き足した所を抜いたあと
+   *   整形や空行が残ることが在る。★★★見た目が同じでも git は差分を出す。それは残滓である。 */
+  if (x.元 != null && !戻す.some((r) => r.rel === x.rel)) 戻す.push({ rel: x.rel, 道: 先, 元: x.元 });
   if (!x.作った) { 触らない.push(x.rel + '(' + x.種類 + ' ── 入れる前から在った)'); continue; }
 
   /* ★走行中に増えた物(2026-09-03、共通の書き手が載せた分)。
@@ -221,6 +227,26 @@ if (実行) {
     }
   }
 
+  /* ★入れる前の中身に【バイトで】戻す(2026-09-03)。
+   *
+   *   ★実測(直す前、GitHub の枝から取って往復した現場):
+   *     git status → ★★M CLAUDE.md(空行が1つ増えた) / M .claude/settings.json(2字下げのまま)
+   *     ★★★どちらも cat では同じに見える。**見えない残滓である。**
+   *
+   *   ★戻すのは【意味が変わっていないとき】だけ ── 人がその後に書き足していたら、
+   *   ★★戻すことは人の仕事を消すことになる。だから比べてから決める。 */
+  for (const r of 戻す) {
+    const 今 = 読む(r.道);
+    if (今 == null || 今 === r.元) continue;
+    let 同じ = false;
+    const 解く = (t) => { try { return JSON.stringify(JSON.parse(t)); } catch (_) { return null; } };
+    const A = 解く(今), Bt = 解く(r.元);
+    if (A != null && Bt != null) 同じ = (A === Bt);                       /* JSON は【意味】で比べる */
+    else 同じ = (今.trimEnd() === r.元.trimEnd());   /* ★文書は末尾の空きを除いて比べる(正規表現を書かない ── 逃がしを1つ落とすと黙って外れる) */
+    if (!同じ) { 触らない.push(r.rel + '(★入れたあとに人が書き足しています ── 元へは戻しません)'); continue; }
+    try { fs.writeFileSync(r.道, r.元); 戻した.push(r.rel); } catch (_) {}
+  }
+
   /* ★作ったフォルダを畳む(2026-09-03)。★★手で並べた一覧は持たない ──
    *   直す前は ['.claude/commands', ...] と書いていた。それは【書き込みを足した人が
    *   一覧を直し忘れると黙って漏れる】形で、★★★共通の書き手を作った理由と同じ穴である。
@@ -278,6 +304,10 @@ const retained = 走査.filter((p) => !消した道.has(p) && p !== '.guardian/�
 console.log((実行 ? '【外しました】' : '【確かめただけ ── 何も消していません】') + '\n');
 console.log('外す物 ' + 消す.length + '件:');
 for (const c of 消す) console.log('  ・' + c.rel + '(' + c.種類 + ')');
+if (戻した.length) {
+  console.log(String.fromCharCode(10) + "★入れる前の中身に戻したファイル " + 戻した.length + "件(バイトで一致):");
+  for (const r of 戻した) console.log('  ・' + r);
+}
 if (畳んだ.length) {
   console.log(String.fromCharCode(10) + "★空になったので畳んだフォルダ " + 畳んだ.length + "件:");
   for (const d of 畳んだ) console.log('  ・' + d);

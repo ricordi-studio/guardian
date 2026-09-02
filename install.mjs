@@ -370,6 +370,11 @@ const setPath = path.join(ROOT, '.claude', 'settings.json');
 /* ★このファイルが【元から在ったか】を、書き換える前に取る(2026-09-03)。
  *   ★★外すときの判定が変わる ── 元から在れば混ぜた要素だけ外す / 無ければファイルごと消せる。 */
 const 設定が元から在った = fs.existsSync(setPath);
+/* ★★元の生テキストも取る(2026-09-03)── ★★★外すあとで【バイトで戻す】ため。
+ *   実測: 直す前は、現場の1行 JSON を塊が2字下げに整形し、外しても整形のまま残った。
+ *   見た目は同じでも git は差分を出す ── **それは残滓である。** */
+let 設定の元 = null;
+try { 設定の元 = fs.readFileSync(setPath, 'utf8'); } catch (_) {}
 let settings = {};
 try { settings = JSON.parse(fs.readFileSync(setPath, 'utf8')); } catch (_) {}
 settings.hooks = settings.hooks || {};
@@ -401,7 +406,7 @@ if (added) {
   /* ★ファイル自体が【元から在ったか】も残す(2026-09-03)。
    *   ★★元から在れば、外すとき消してよいのは【混ぜた要素】だけ。
    *   ★★★無かったなら、外すときファイルごと消せる ── そこで判定が変わる。 */
-  台帳.記す({ 道: setPath, 種類: 'ファイル', 作った: !設定が元から在った, 中身: null, writer: 'install.mjs' });
+  台帳.記す({ 道: setPath, 種類: 'ファイル', 作った: !設定が元から在った, 中身: null, 元: 設定の元, writer: 'install.mjs' });
   if (!DRY) {
     /* ★ここも【作ったフォルダ】を台帳へ(2026-09-03)。直す前はここだけ素の mkdirSync だったので、
      *   ★★.claude/ が誰の物か決まらず、外したあと【空のまま残っていた】(実測。
@@ -555,7 +560,7 @@ if (!DRY && body !== claude) fs.writeFileSync(claudePath, body);
      *   ★★直す前は 作った: !claude としていた。人が書いた CLAUDE.md が在る現場では false になり、
      *   ★★★外す側が「元から在った」と読んで、区間を残したまま PASS と出した。 */
     台帳.記す({ rel: 'CLAUDE.md', 種類: '区間', 作った: !claude.includes(始),
-      中身: 区間, writer: 'install.mjs' });
+      中身: 区間, 元: claude, writer: 'install.mjs' });
   }
 }
 
