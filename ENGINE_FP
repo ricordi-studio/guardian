@@ -1,11 +1,11 @@
-18.1
+18.2
 METHOD.md 1kv4bye-22912
 PROTOCOL.json aajo32-354
 README.md 14uvj7j-8132
 RULES.md t55p66-12134
 SPEC.md 14m16ls-10802
 audit.md 78qkl6-2162
-check.mjs qxfesi-57023
+check.mjs 11egthp-57599
 githooks/pre-commit zijic4-1499
 hooks/clock.js 1ejybp4-3513
 hooks/codemap.js 2csawn-10496
@@ -17,10 +17,10 @@ hunch.md ukokyc-2956
 index.mjs xos40e-6741
 install.md 138e9vw-4443
 install.mjs 1oai3jx-32594
-neighbors.mjs v0jezs-52341
+neighbors.mjs 1w3ub5g-53147
 package.json zx7jrx-416
 pull.mjs 4tf374-24713
-selfcheck.mjs 1rwxei9-124294
+selfcheck.mjs 1egsipy-124777
 templates/CLAUDE-snippet.md 1y7ghqv-1478
 templates/CODEMAP.md 1iwybyg-827
 templates/guardian-audit-command.md hyfuh-175

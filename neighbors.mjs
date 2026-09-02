@@ -680,16 +680,31 @@ if (!BASE_OVERRIDE && dirty !== '') {
   if (u.読めなかった.length) 測れなかった.push('git ls-files … 道 ' + u.読めなかった.length
     + '件が UTF-8 として読めません(この門は、その道を見ていません)');
   if (u.落ちた) 測れなかった.push('git ls-files … ' + u.落ちた);
+  /* ★保存則(2026-09-03、会議で @codex が形を出した)── 入った道は、
+   *   ★★【使われた】か【理由付きで外れた】かの、どちらかでなければならない。
+   *   ★★★直す前は、この4つの continue のうち3つが【理由を残さず】落としていた:
+   *   器のコードでない / skip_touched に当たる / コーパスに無い。
+   *   宣言 skip_dirs だけが 宣言で外した に残っていた ── 見えない失敗が3通り在った。 */
+  const 使った道 = new Set();
+  const 理由付きで外した = new Map();   /* 道 → 理由 */
   for (const f of untracked) {
-    if (isCode(f) && inSkipped(f)) { 宣言で外した.push(f); continue; }
-    if (!isCode(f) || SKIP_TOUCHED.some((re) => re.test(f))) continue;
+    if (isCode(f) && inSkipped(f)) { 宣言で外した.push(f); 理由付きで外した.set(f, '宣言 skip_dirs'); continue; }
+    if (!isCode(f)) { 理由付きで外した.set(f, '器のコードではない(宣言 code / ext の外)'); continue; }
+    if (SKIP_TOUCHED.some((re) => re.test(f))) { 理由付きで外した.set(f, '宣言 skip_touched'); continue; }
     const c = corpus.get(f);
-    if (!c) continue;
+    if (!c) { 理由付きで外した.set(f, 'コーパスに無い(読めなかった / 消された)'); continue; }
+    使った道.add(f);
     for (const d of c.defs) {
       if (IGNORE.has(d.name) || 局所の癖(f, d.name)) continue;
       if (!touched.has(d.name)) touched.set(d.name, new Set());
       touched.get(d.name).add(f);
     }
+  }
+  {
+    const 行方不明 = untracked.filter((f) => !使った道.has(f) && !理由付きで外した.has(f));
+    if (行方不明.length) 測れなかった.push('git ls-files --others … 入った道 ' + untracked.length
+      + '件のうち ' + 行方不明.length + '件が、使われも外れもしていません(例: '
+      + 行方不明.slice(0, 3).join(', ') + ')── 黙って消えた形です');
   }
 }
 for (const [f, lines] of changed) {

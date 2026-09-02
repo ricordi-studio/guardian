@@ -2224,7 +2224,19 @@ if (process.argv.includes("--why")) {
         if (d.読めなかった.length) 未測.push("公開後の中身の照合: git が返した道 "
           + d.読めなかった.length + "件が UTF-8 として読めません(その道は見ていません)");
         if (d.落ちた) 未測.push("公開後の中身の照合: " + d.落ちた);
-        for (const f of 一覧) if (ENGINE_FILES.includes(f)) 変わった.push(f);
+        /* ★保存則(2026-09-03、会議で @codex が形を出した)── 入った道は、
+         *   ★★使われたか、理由付きで外れたかの どちらかでなければならない。
+         *   ここで外れるのは【この現場の物】── ★★★配る中身ではないので、見なくてよい。
+         *   だが「見なくてよい」と【言う】ことが要る(見落としと区別がつかないため)。 */
+        const 外した = [];
+        for (const f of 一覧) {
+          if (ENGINE_FILES.includes(f)) 変わった.push(f);
+          else 外した.push(f);
+        }
+        if (変わった.length + 外した.length !== 一覧.length) {
+          未測.push("公開後の中身の照合: 入った道 " + 一覧.length + "件のうち "
+            + (一覧.length - 変わった.length - 外した.length) + "件が、使われも外れもしていません");
+        }
         if (変わった.length) {
           ng.push("★版 " + いまの版 + " は既に公開されていて、その後に配る中身が変わっています: "
             + 変わった.slice(0, 6).join(", ") + (変わった.length > 6 ? " ほか" + (変わった.length - 6) + "件" : "")
