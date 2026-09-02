@@ -107,7 +107,18 @@ function main() {
         if (!r.落ちた) 候補.push(...r.道);
       }
       for (const rel of [...new Set(候補)]) {
+        /* ★【塊が自分で書いた物】では起きない(2026-09-03、会議で @kozo が実測)。
+         *
+         *   ★★実測(直す前): .claude/ が git から見える現場で、何も変えずに3回 叩くと
+         *   ★★★毎回 門が回った ── git が「.claude/verdict_at(印そのもの)が新しい」と言うため。
+         *   **門が、自分の押した印で、自分を起こしていた。**
+         *
+         *   ★★台帳も同じ(書き手が走行中の分を書き足す)。
+         *   ★★★門の札は「実装が変わっていなければ回さない」である ──
+         *   .guardian/ の中と印は【実装】ではなく、**道具の出力**なので、ここでは数えない。 */
         if (rel === ".git" || rel.startsWith(".git/") || rel.startsWith("node_modules/")) continue;
+        if (rel === ".guardian" || rel.startsWith(".guardian/")) continue;
+        if (rel === ".claude/verdict_at") continue;
         let st = null;
         try { st = fs.statSync(path.join(ROOT, rel)); } catch (_) { continue; }
         if (st.mtimeMs > last) { changed = true; break; }
