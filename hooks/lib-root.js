@@ -22,9 +22,22 @@ function findRoot(start) {
   return start;
 }
 
+/* ★【無い】と【壊れている】を分ける(24.2、2026-09-03、会議で @kozo が踏み方まで出した)。
+ *
+ *   ★★直す前は どちらも {} を返した。門は「証拠が宣言されていない現場」と読んで通した。
+ *   ★★★実測: guardian.config.json のカンマを1つ落とす → 門は【無言で出口0】。
+ *   **設定が壊れているのに、緑になる。**
+ *
+ *   ★読む口は1つのまま(同じ問いを2箇所で読まない)。返す物に印を1つ足すだけなので、
+ *   ★★.evidence 等を読む他のフックの振る舞いは変わらない。 */
 function loadConfig(root) {
   for (const p of ['guardian.config.json', path.join('tools', 'guardian', 'guardian.config.json')]) {
-    try { return JSON.parse(fs.readFileSync(path.join(root, p), 'utf8')); } catch (_) {}
+    const 先 = path.join(root, p);
+    let 生 = null;
+    try { 生 = fs.readFileSync(先, 'utf8'); } catch (_) { continue; }   /* 無い → 次を見る */
+    try { return JSON.parse(生); } catch (e) {
+      return { 壊れている: p, 壊れた訳: String((e && e.message) || e) };  /* ★在るが読めない */
+    }
   }
   return {};
 }

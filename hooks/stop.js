@@ -49,19 +49,30 @@ const 測れなかった = (何, 詳しく) => {
 
 let input = '';
 process.stdin.on('data', (c) => { input += c; });
+/* ★門の中で例外が出たら【通さない】(24.2、2026-09-03)。
+ *   ★★直す前は catch (_) { pass() } で、★★★どんな壊れ方をしても無言の緑になった。
+ *   この塊の掟は「見えない失敗を作らない」で、その門が自分で作っていた。
+ *
+ *   ★輪を切る判定(stop_hook_active)は try の【外】で先にやる ──
+ *   ★★中でやると、止めた後の再入も同じ所で例外になり、人を閉じ込める。 */
 process.stdin.on('end', () => {
-  try { main(); } catch (_) { pass(); }
+  let ev = {};
+  /* ★入力が読めない時だけは通す ── 止めた事すら分からない(stop_hook_active が読めない)ので、
+   *   ★★閉じ込めない方を選ぶ。ここは残った穴として HANDOVER に書く。 */
+  try { ev = JSON.parse(input || '{}'); } catch (_) { return pass(); }
+  if (ev.stop_hook_active) return pass();
+  try { main(ev); }
+  catch (e) { 測れなかった('門の中で例外が出ました', (e && (e.stack || e.message)) || String(e)); }
 });
 
-function main() {
-  let ev = {};
-  try { ev = JSON.parse(input || '{}'); } catch (_) { return pass(); }
-
-  /* すでに一度止めた後なら、もう止めない(堂々巡りを作らない) */
-  if (ev.stop_hook_active) return pass();
+function main(ev) {
 
   const ROOT = findRoot(__dirname);
   const CFG = loadConfig(ROOT);
+  /* ★設定が【在るのに読めない】時は通さない(24.2)── 「無い」とは別の話。
+   *   ★★実測(@kozo の踏み方): guardian.config.json のカンマを1つ落とす → 直す前は無言で出口0。 */
+  if (CFG.壊れている)
+    return 測れなかった('設定が読めません: ' + CFG.壊れている, CFG.壊れた訳);
   if (!(CFG.evidence || []).length) return pass();      // 証拠が宣言されていない現場では何もしない
 
   /* ---- 実装が変わっていなければ回さない ---- */
