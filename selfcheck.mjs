@@ -1602,6 +1602,68 @@ if (process.argv.includes("--why")) {
   }
 }
 
+/* ---------- B17. git のフック(pre-commit)は、文書の約束どおり振る舞うか(2026-09-03、外の監査で見つかった) ----------
+ *
+ * ★事故: `githooks/pre-commit` の先頭に `set -e` が在り、
+ *   ★★`node verdict.mjs --fast` が非0で終わった瞬間にスクリプトが死んでいた。
+ *   その直後の `code=$?` に到達しないので、★★★下の2つの枝が【両方とも死にコード】だった:
+ *     差戻(1) … 止まるが、理由も --no-verify の案内も1行も出ない
+ *     不明(2) … ★文書は「止めない」と約束しているのに、止まる
+ *
+ *   ★★導入直後の verdict は(private と context が空なので)必ず 出口2 を返す。
+ *   ★★★案内どおり core.hooksPath を有効にした現場は、その時点から【一切コミットできなくなる】。
+ *
+ * ★なぜ生き延びたか: この門は ENGINE_FP に指紋が載っているのに、
+ *   ★★この検査が【一度も実行していなかった】── バイトは見張られ、振る舞いは見張られていなかった。
+ *   ★★★SPEC の「双子のいない門を足さない」に、この門だけが反していた。
+ *
+ * ★測り方: にせの verdict(出口 0 / 1 / 2 を返すだけ)を一時の場所に置いて、門を叩く。
+ *   ★★本物の合否は回さない ── 測りたいのは【出口の受け取り方】だけだから。 */
+{
+  const 門 = path.join(HERE, 'githooks', 'pre-commit');
+  if (!fs.existsSync(門)) {
+    未測.push("git のフック(githooks/pre-commit)が在りません(振る舞いを測れません)");
+  } else {
+    let 仮 = null;
+    try { 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-pc-')); } catch (_) {}
+    if (!仮) 未測.push("git のフックの振る舞い: 一時の場所が作れません");
+    else {
+      try {
+        fs.mkdirSync(path.join(仮, 'guardian'), { recursive: true });
+        fs.copyFileSync(門, path.join(仮, 'pc'));
+        /* ★文書の約束(SPEC 3節 / install.md / 門の注)をそのまま表にする */
+        const 約束 = [
+          { 出口: 0, 門の出口: 0, 言う: null,   何: '通過 … 通す' },
+          { 出口: 1, 門の出口: 1, 言う: '差戻', 何: '差戻 … 止める + 理由と --no-verify の案内' },
+          { 出口: 2, 門の出口: 0, 言う: '不明', 何: '不明 … ★止めない + 何が測れていないかを返す' },
+        ];
+        const 外れ = [];
+        for (const 約 of 約束) {
+          fs.writeFileSync(path.join(仮, 'guardian', 'verdict.mjs'),
+            "console.log('にせの合否');" + String.fromCharCode(10) + "process.exit(" + 約.出口 + ");" + String.fromCharCode(10));
+          const r = spawnSync('sh', ['pc'], { cwd: 仮, encoding: 'utf8', windowsHide: true, timeout: 60000 });
+          const 出 = String(r.stdout || '') + String(r.stderr || '');
+          if (r.status !== 約.門の出口)
+            外れ.push(約.何 + " → 門の出口が " + r.status + "(約束は " + 約.門の出口 + ")");
+          if (約.言う && !出.includes(約.言う))
+            外れ.push(約.何 + " → 「" + 約.言う + "」を1行も言いません");
+        }
+        if (外れ.length) {
+          ng.push("★git のフック(pre-commit)が、文書の約束どおりに振る舞いません(" + 外れ.length + "件): "
+            + 外れ.join(" / ") + " ── ★★この門は他の道具の現場向けの唯一の代替経路です。"
+            + "★★★『不明は止めない』が破れると、案内どおり入れた現場が一切コミットできなくなります");
+        } else {
+          ok.push("git のフックは文書の約束どおり(通過=通す / 差戻=止めて理由を言う / ★不明=止めずに言う)");
+        }
+      } catch (e) {
+        未測.push("git のフックの振る舞い: 測れませんでした(" + String(e && e.message).slice(0, 60) + ")");
+      } finally {
+        try { fs.rmSync(仮, { recursive: true, force: true }); } catch (_) {}
+      }
+    }
+  }
+}
+
 /* ---------- B16. 低い層の module は、読み込んだだけで何も起こさないか(2026-09-03、会議で @codex が出し @kozo が叩いた) ----------
  *
  * ★なぜ要るか: この検査は `書き手.cjs` と `道.cjs` を **import している**。
