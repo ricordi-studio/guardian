@@ -79,6 +79,17 @@ if (process.argv.includes('--口一覧')) {
   process.exit(0);
 }
 
+/* ★【塊が書き込む場所】── ★★ここが正本(2026-09-03、会議で @kozo が「一覧が2つ在る」と数えた)。
+ *
+ *   ★★★直す前は 走査の道(既知の場所)と 通常の道(塊が書き込む場所)に2つ在り、
+ *   片方だけ .claude/commands/ を持っていた。★今日は前置きで飲まれるので振る舞いは同じ ──
+ *   ★★だからこそ、誰も気づかずに ずれ続けられる。
+ *   ★★★「前置きで飲まれない場所」が1つ足された日に、片方だけに入る。
+ *
+ * ★場所は所有の証明ではない(輪の線)。★★「分からない」と言うには足りる、という使い方だけをする。 */
+const 塊が書き込む場所 = ['.guardian/', '.claude/', '.github/workflows/'];
+
+
 /* ★根は【塊の1つ上】から探す(install と同じ作法)。塊は現場の中に在る前提。 */
 const ROOT = (() => {
   let d = path.resolve(HERE, '..');
@@ -174,7 +185,8 @@ if (走査だけ) {
     '.claude/settings.json', '.claude/commands/guardian-audit.md',
     '.github/workflows/guardian-nightly.yml']);
   /* ★★塊が作る【場所】── ★★★場所だけでは所有の証明にならない(輪の線) */
-  const 既知の場所 = ['.guardian/', '.claude/', '.claude/commands/', '.github/workflows/'];
+  /* ★★塊が作る【場所】── 正本は上の 塊が書き込む場所(写しを持たない) */
+  const 既知の場所 = 塊が書き込む場所;
 
   const 候補 = [];          /* { rel, 証拠: [{型, 詳細}] } */
   const 証拠なし = [];
@@ -927,7 +939,7 @@ const 束 = retained.filter((r) => r.startsWith('guardian/'));
  *
  *   ★これは うるさくなる方へ倒す判断である: 現場自身の .claude/commands/*.md も、
  *   ★★宣言するまで UNKNOWN になる。★★★だが「分からない物を、現場の物だと言う」よりは良い。 */
-const 塊が書き込む場所 = ['.guardian/', '.claude/', '.github/workflows/'];
+/* ★塊が書き込む場所 は、上(門のすぐ後)で1本だけ決めている ── ここでは決め直さない */
 /* ★台帳が知っている道は、盲点ではない(2026-09-03、札と実装がずれていた)。
  *   ★★札には「台帳にも保持一覧にも無い物」と書いていたが、★★★実装は場所しか見ていなかった。
  *   実測: 台帳が 作った:false で持つ .claude/settings.json が、盲点に出ていた。 */

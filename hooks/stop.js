@@ -26,6 +26,27 @@ const { findRoot, loadConfig } = require('./lib-root');
 
 const pass = () => process.exit(0);
 
+/* ★【測れなかった】を、合格と同じ動きにしない(2026-09-03、会議で @codex が指摘)。
+ *
+ *   ★★実測(直す前): verdict.mjs を壊す / JSON でない物を出させる
+ *     → ★★★どちらも この門は【黙って通した】(出口0・出力なし)。
+ *
+ *   ★この門の仕事は「完了を名乗る手前で止める」ことである。
+ *   ★★測れないときに通すと、**測れないことが、いちばん通りやすい道**になる。
+ *   ★★★この塊の一行目(不明は合格ではない)を、門そのものが破っていた。
+ *
+ * ★止める側に倒す。堂々巡りは stop_hook_active が既に止めている(上の行) ──
+ *   ★★一度 止めたあとの2回目は通るので、人が verdict を直す間に閉じ込められることはない。 */
+const 測れなかった = (何, 詳しく) => {
+  const reason = '★合否が【測れませんでした】── ' + 何 + String.fromCharCode(10)
+    + (詳しく ? '  ' + String(詳しく).split(String.fromCharCode(10)).slice(0, 6).join(String.fromCharCode(10) + '  ') + String.fromCharCode(10) : '')
+    + '★★測れないことを【通した】ことにはしません(不明は合格ではありません)。' + String.fromCharCode(10)
+    + '手元で見るには: node guardian/verdict.mjs --fast --json' + String.fromCharCode(10)
+    + '★★★この門を一度 止めたあとは通ります ── 直す間に閉じ込められることはありません。';
+  process.stdout.write(JSON.stringify({ decision: 'block', reason }));
+  return process.exit(0);
+};
+
 let input = '';
 process.stdin.on('data', (c) => { input += c; });
 process.stdin.on('end', () => {
@@ -68,9 +89,17 @@ function main() {
   /* ---- 合否を集める ---- */
   const r = spawnSync(process.execPath, [path.join(__dirname, '..', 'verdict.mjs'), '--fast', '--json'],
     { cwd: ROOT, encoding: 'utf8', timeout: 15 * 60 * 1000, windowsHide: true });
+  /* ★4通りに分ける(2026-09-03)── ★★どれも「合格」ではない */
+  if (r.error) return 測れなかった('合否の道具を起動できません', r.error.message);
+  if (!String(r.stdout || '').trim())
+    return 測れなかった('合否の道具が何も言いませんでした(出口 ' + r.status + ')', r.stderr);
   let v = null;
-  try { v = JSON.parse(r.stdout || '{}'); } catch (_) { return pass(); }
-  if (!v || !v.results) return pass();
+  try { v = JSON.parse(r.stdout); } catch (e) {
+    return 測れなかった('合否の出力が JSON として読めません(出口 ' + r.status + ')',
+      String(r.stdout).slice(0, 300));
+  }
+  if (!v || !Array.isArray(v.results))
+    return 測れなかった('合否の出力に results が在りません(出口 ' + r.status + ')', JSON.stringify(v).slice(0, 300));
 
   /* ★共通の書き手を通す(2026-09-03) ── ここは【現場の .claude/ に塊が書く】唯一の場所。
    *   ★★台帳に載せないと、外すとき「誰の物か決まっていない」に落ちる。 */
