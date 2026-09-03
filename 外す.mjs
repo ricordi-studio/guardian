@@ -563,6 +563,11 @@ if (走査だけ) {
     const 消す名 = [], 断った = [];
     for (const r of 名) {
       if (!見た.has(r)) { 断った.push(r + '(★走査が見た集合に在りません ── 打ち間違いか、走査の外)'); continue; }
+      /* ★受け取りは名指しさせない(27.2、@codex)── ★★履歴を消してから書き直す動きになるため。
+       *   ★★★予約名として断る。 */
+      if (r === '.guardian/名指しで消した.jsonl' || r === '.guardian/名指しで消した.json') {
+        断った.push(r + '(★受け取りそのものです ── 履歴が消えるので、この口では消しません)'); continue;
+      }
       if (!fs.existsSync(path.join(走査の根, r))) { 断った.push(r + '(もう在りません)'); continue; }
       消す名.push(r);
     }
@@ -581,11 +586,17 @@ if (走査だけ) {
       catch (e) { 消せない.push(r + '(' + String(e && e.message).slice(0, 60) + ')'); }
     }
     /* ★消した物を受け取りに書く ── 黙って消さない */
-    const 受け取り = path.join(走査の根, '.guardian', '名指しで消した.json');
+    /* ★受け取りは【追記】する(27.2、2026-09-03、@codex 15:40)。
+     *   ★★直す前は毎回 上書きだった ── 2回目の撤去で、1回目の記録が消える。
+     *   ★★★現場B のように git が無い現場では、消えたら戻せない。
+     *   1行1走行の JSONL にして、appendFileSync で足す。 */
+    const 受け取り = path.join(走査の根, '.guardian', '名指しで消した.jsonl');
     try {
       書き手.親を作る(走査の根, 受け取り);
-      fs.writeFileSync(受け取り, JSON.stringify({
-        形: 'guardian-名指しで消した v1',
+      fs.appendFileSync(受け取り, JSON.stringify({
+        形: 'guardian-名指しで消した v2(1行1走行)',
+        走行: (() => { try { return 書き手.指紋(String(Date.now()) + String(Math.random())); }
+          catch (_) { return String(Date.now()); } })(),
         時刻: new Date().toISOString(),
         根: 走査の根,
         一覧: 一覧の道,
@@ -593,7 +604,7 @@ if (走査だけ) {
         注: '★台帳が無い現場なので、機械は所有を決めていません。'
           + '★★ここに在るのは【人が名指しし、走査が見た集合に在り、実際に消せた物】です。'
           + '★★★消し漏れが無いことは、この記録では言えません(走査の外は見ていません)。',
-      }, null, 1));
+      }) + String.fromCharCode(10));   /* ★1行1走行(JSONL)── 前の走行を消さない */
       /* ★道は【走査の根から】出す ── rel() は塊の根からなので、外の現場では読めない道になる */
       console.log(String.fromCharCode(10) + '★受け取りを書きました: ' + path.relative(走査の根, 受け取り).split(path.sep).join('/'));
     } catch (e) {
