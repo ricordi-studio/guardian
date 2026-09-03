@@ -163,8 +163,28 @@ if (!cfg) {
      *   ENOENT … 実行そのものができなかった
      *   127    … POSIX の「そんなコマンドは無い」
      *   ERR_MODULE_NOT_FOUND … Node 自身が出す符号(言語に依らない) */
+    /* ★Windows では この3つが【一度も当たらない】(26.0、2026-09-03、@codex が指し、叩いて確かめた)。
+     *
+     *   ★★実測: spawnSync("在りません", {shell:true}) → status 1 / error.code は undefined。
+     *   ENOENT も 127 も出ない ── ★★★だから「動かせません」が【差戻】に化けていた。
+     *   **測れなかったが、違反を機械で示せた、に化ける** ── この道具が一番 嫌う形である。
+     *
+     *   ★直しも【文言を使わない】(元の注釈の線を守る)── 落ちたときだけ、
+     *   命令の頭の語が【そもそも在るか】を機械に聞く。在れば「落ちた」、無ければ「動かせなかった」。
+     *
+     *   ★★聞ける形は【許す形を並べない】── ASCII だけの網は この塊では必ず嘘をつく。
+     *   ★★★実測: 命令名が日本語だと ASCII の網に当たらず、聞きに行かなかった(今夜3度目)。
+     *   だから【聞けない形】(引用符・パイプ・道の区切りなど)だけを並べる。 */
+    const 頭の語 = String(e.run || "").trim().split(/\s+/)[0] || "";
+    const 聞ける = 頭の語.length > 0 && !new RegExp("[\\x22\\x27\\x7c\\x26\\x3c\\x3e\\x28\\x29\\x24\\x60\\x3b\\x5c\\x2f]").test(頭の語);
+    const 命令が無い = (r.status !== 0 && 聞ける) ? (() => {
+      const 窓 = process.platform === "win32";
+      const w = spawnSync(窓 ? "where" : "command", 窓 ? [頭の語] : ["-v", 頭の語],
+        { encoding: "utf8", shell: !窓, windowsHide: true, timeout: 15000 });
+      return !(!w.error && w.status === 0);
+    })() : false;
     const cantRun = (r.error && r.error.code === 'ENOENT') || r.status === 127
-      || /ERR_MODULE_NOT_FOUND/.test(out);
+      || /ERR_MODULE_NOT_FOUND/.test(out) || 命令が無い;
     const timedOut = r.error && /ETIMEDOUT|timed out/i.test(String(r.error.code || r.error.message));
     const unknownRe = e.unknownIf ? new RegExp(e.unknownIf, 'i') : null;
 
