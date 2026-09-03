@@ -173,8 +173,8 @@ function 宣言を読む() {
 function 拾えたか(名, 実際, 必ず在る) {
   const 欠け = 必ず在る.filter((x) => !実際.has(x));
   if (!欠け.length) return true;
-  ng.push(名 + ': 拾い方が当たっていません(' + 欠け.join(', ') + ' が見つからない)'
-    + ' ── 相手の書き方が変わった可能性があります。**この照合は何も見ていないので、緑にできません**');
+  判定({ 対象: "拾えたか(見本の綴り)", 状態: '赤', 根拠: "見本の綴りが1つも拾えなかった(網の空振り)", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: 名 + ': 拾い方が当たっていません(' + 欠け.join(', ') + ' が見つからない)'
+    + ' ── 相手の書き方が変わった可能性があります。**この照合は何も見ていないので、緑にできません**' });
   return false;
 }
 const ROOT_DIR = (() => {
@@ -656,9 +656,9 @@ for (const c of CASES) {
   const r = run(c.files);
   const got = r.code === 0 ? '緑' : '赤';
   const why = () => r.out.split('\n').filter((l) => l.includes('✗')).slice(0, 3).join('\n      ');
-  if (got !== c.expect) { ng.push(`${c.name}: ${c.expect}になるはずが${got}だった\n      ` + why()); continue; }
+  if (got !== c.expect) { 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "${c.name}", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: `${c.name}: ${c.expect}になるはずが${got}だった\n      ` + why() }); continue; }
   if (c.want && !r.out.includes(c.want)) {
-    ng.push(`${c.name}: ${got}にはなったが、理由が「${c.want}」ではない\n      ` + why());
+    判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "${c.name}", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: `${c.name}: ${got}にはなったが、理由が「${c.want}」ではない\n      ` + why() });
     continue;
   }
   ok.push(`${c.name} … ${got}`);
@@ -697,13 +697,13 @@ for (const c of CASES) {
   ];
   for (const t of V) {
     const r = runTool('verdict.mjs', ev(t.ev));
-    if (r.code !== t.code) { ng.push(`${t.name}: 出口が ${t.code} になるはずが ${r.code} だった\n      ` + r.out.trim().split('\n').slice(-3).join('\n      ')); continue; }
-    if (t.want && !r.out.includes(t.want)) { ng.push(`${t.name}: 「${t.want}」が出ていません\n      ` + r.out.trim().split('\n').slice(-3).join('\n      ')); continue; }
+    if (r.code !== t.code) { 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "${t.name}", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: `${t.name}: 出口が ${t.code} になるはずが ${r.code} だった\n      ` + r.out.trim().split('\n').slice(-3).join('\n      ') }); continue; }
+    if (t.want && !r.out.includes(t.want)) { 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "${t.name}", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: `${t.name}: 「${t.want}」が出ていません\n      ` + r.out.trim().split('\n').slice(-3).join('\n      ') }); continue; }
     ok.push(`${t.name} … 出口${r.code}`);
   }
   /* --fast は速いものだけを回す(完了を名乗る手前で使うため) */
   const r = runTool('verdict.mjs', ev([OK, NG]), ['--fast']);
-  if (r.code !== 0) ng.push('合否 --fast: 速いものだけ回すはずが、遅いものまで回っています');
+  if (r.code !== 0) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "合否 --fast", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: '合否 --fast: 速いものだけ回すはずが、遅いものまで回っています' });
   else ok.push('合否 --fast: 速いものだけを回す … 出口0');
 }
 
@@ -716,9 +716,9 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
 {
   const ver = kit('KIT_VERSION').trim();
   const head = kit('CHANGELOG.md').match(/^##\s*v?([0-9][0-9.]*)/m);
-  if (!ver) ng.push('KIT_VERSION が読めません');
-  else if (!head) ng.push('CHANGELOG.md の先頭に版の見出し(## 7.0 の形)がありません');
-  else if (head[1] !== ver) ng.push(`版が食い違っています: KIT_VERSION=${ver} / CHANGELOG の先頭=${head[1]}`);
+  if (!ver) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "KIT_VERSION が読めません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: 'KIT_VERSION が読めません' });
+  else if (!head) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "CHANGELOG.md の先頭に版の見出し", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: 'CHANGELOG.md の先頭に版の見出し(## 7.0 の形)がありません' });
+  else if (head[1] !== ver) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "版が食い違っています", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: `版が食い違っています: KIT_VERSION=${ver} / CHANGELOG の先頭=${head[1]}` });
   else ok.push(`版は KIT_VERSION と CHANGELOG の先頭で一致(${ver})`);
 }
 
@@ -827,10 +827,10 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
      *   バグを直した現場にはそのまま当てはまるように読める ── だから道具の側で止める。
      * ★正本では --stamp は普通の作業なので止めない。止めるのは【還す道がまだ在る所】だけ。 */
     if (!塊が単独のリポジトリ && 違う.length) {
-      ng.push("★ここは配布先です。--stamp を押すと、この現場で直した分(" + 違う.join(", ") + ")が"
+      判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "ここは配布先です。--stamp を押すと、この現場で直した分", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★ここは配布先です。--stamp を押すと、この現場で直した分(" + 違う.join(", ") + ")が"
         + "**記録ごと消えます** ── 次の `pull.mjs` が黙って上書きするようになります。"
         + "先に `--report` で1枚を作り、正本へ渡してください。"
-        + "(正本で取り込んでから配り直せば、指紋は正しく揃います)");
+        + "(正本で取り込んでから配り直せば、指紋は正しく揃います)" });
     } else {
       /* 何を押すのかを必ず出す ── 黙って押す道具は、押した人にも何をしたか残らない */
       console.log(違う.length
@@ -896,13 +896,13 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
       });
       if (壊れている.length) {
         const 名 = 正本の名前();
-        ng.push("★この塊は【壊れています】(構文が通りません): " + 壊れている.join(", ")
+        判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "この塊は【壊れています】", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★この塊は【壊れています】(構文が通りません): " + 壊れている.join(", ")
           + " ── **直したのではなく、壊れています。**`--report` で正本へ還そうとしないでください"
           + "(壊れた中身を還すことになります)。"
           + (名
               ? "外から1ファイルだけ入れ直してください:" + NL2 + "     curl -fsSL https://raw.githubusercontent.com/"
                 + 名 + "/main/" + 壊れている[0] + " -o <塊>/" + 壊れている[0]
-              : "外から1ファイルだけ入れ直してください(正本のアドレスが読めませんでした)"));
+              : "外から1ファイルだけ入れ直してください(正本のアドレスが読めませんでした)") });
       }
       const 直り = 違う.filter((f) => !壊れている.includes(f));
       if (直り.length) {
@@ -974,8 +974,8 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
     個人情報の見張り.見つかった = 見つかった;
     個人情報の見張り.現場の文書 = 現場の文書;
     if (見つかった.length)
-      ng.push("★塊にこの現場の個人情報が混ざっています: " + 見つかった.slice(0, 8).join(" / ")
-        + "(配る前に伏せること)");
+      判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "塊にこの現場の個人情報が混ざっています", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★塊にこの現場の個人情報が混ざっています: " + 見つかった.slice(0, 8).join(" / ")
+        + "(配る前に伏せること)" });
     else ok.push("宣言した " + 語.length + " 語は、塊の中に見つかりません"
       + "(**未宣言の情報は見ていません** ── 鍵・token・メール・顧客名・宣言外の人名は、この検査の外です)");
     /* ★【現場の文書に乗っているのは、正常である】(2026-08-31、配布先の実測で判明)。
@@ -1017,7 +1017,7 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
 {
   const SPEC = (() => { try { return fs.readFileSync(path.join(HERE, "SPEC.md"), "utf8"); } catch (_) { return ""; } })();
   if (!SPEC) {
-    ng.push("SPEC.md がありません(要件を書く文書。何を満たし、何を満たさないかの正本)");
+    判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "SPEC.md がありません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "SPEC.md がありません(要件を書く文書。何を満たし、何を満たさないかの正本)" });
   } else {
     /* ① 口 ── argv を見ている行からだけ取る(git のオプションや区切り線を拾わないため) */
     const 口 = new Set();
@@ -1029,8 +1029,8 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
     }
     const 載っていない口 = [...口].filter((o) => !SPEC.includes(o)).sort();
     if (載っていない口.length)
-      ng.push("★SPEC.md に載っていない口があります: " + 載っていない口.join(" ")
-        + "(新しい口を足したら SPEC.md の『口の一覧』に書くこと ── 書くまで通れません)");
+      判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "SPEC.md に載っていない口があります", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★SPEC.md に載っていない口があります: " + 載っていない口.join(" ")
+        + "(新しい口を足したら SPEC.md の『口の一覧』に書くこと ── 書くまで通れません)" });
     else ok.push("SPEC.md が実装の口を全部載せている(" + 口.size + "個)");
 
     /* ② エンジンのファイル ── SPEC のどこかで名指しされているか */
@@ -1038,15 +1038,15 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
       ...fs.readdirSync(path.join(HERE, "hooks")).map((x) => "hooks/" + x)];
     const 載っていない = 本体.filter((f) => !SPEC.includes(f)).sort();
     if (載っていない.length)
-      ng.push("★SPEC.md が名指ししていないエンジンがあります: " + 載っていない.join(" ")
-        + "(何を満たすために在るのかを SPEC.md に書くこと)");
+      判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "SPEC.md が名指ししていないエンジンがあります", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★SPEC.md が名指ししていないエンジンがあります: " + 載っていない.join(" ")
+        + "(何を満たすために在るのかを SPEC.md に書くこと)" });
     else ok.push("SPEC.md がエンジンを全部名指ししている(" + 本体.length + "本)");
 
     /* ③ 境界(満たさないこと)が空になっていないか ── ここだけは中身を測れないので、在ることだけ見る */
     ok.push(/満たさないこと/.test(SPEC)
       ? "SPEC.md に【満たさないこと】の節がある(中身は機械には測れない ── 監査で人が読み直す)"
       : "★SPEC.md に【満たさないこと】が無い");
-    if (!/満たさないこと/.test(SPEC)) ng.push("★SPEC.md に【満たさないこと】の節がありません(境界を書かないと、期待されて裏切ります)");
+    if (!/満たさないこと/.test(SPEC)) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "SPEC.md に【満たさないこと】の節がありません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★SPEC.md に【満たさないこと】の節がありません(境界を書かないと、期待されて裏切ります)" });
   }
 }
 
@@ -1061,13 +1061,13 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
  * ★中身の良し悪しは測れない。**名指しされているか**だけを数える。 */
 {
   const R = (() => { try { return fs.readFileSync(path.join(HERE, "README.md"), "utf8"); } catch (_) { return ""; } })();
-  if (!R) ng.push("README.md がありません(この塊の入口。公開時に最初に見られる)");
+  if (!R) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "README.md がありません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "README.md がありません(この塊の入口。公開時に最初に見られる)" });
   else {
     const 文書 = fs.readdirSync(HERE).filter((f) => f.endsWith(".md") && f !== "README.md");
     const 案内なし = 文書.filter((f) => !R.includes(f)).sort();
     if (案内なし.length)
-      ng.push("★README が案内していない文書があります: " + 案内なし.join(" ")
-        + "(入口に載らない文書は、無いのと同じです)");
+      判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "README が案内していない文書があります", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★README が案内していない文書があります: " + 案内なし.join(" ")
+        + "(入口に載らない文書は、無いのと同じです)" });
     else ok.push("README が塊の文書を全部案内している(" + 文書.length + "枚)");
   }
 }
@@ -1089,8 +1089,8 @@ if (process.argv.includes("--why")) {
     try { return new Set(fs.readFileSync(path.join(HERE, "WHY_SEEN"), "utf8").split(/\r?\n/).filter(Boolean)); }
     catch (_) { return null; }
   })();
-  if (!読WHY) ng.push("WHY.md が読めません");
-  else if (!既知) ng.push("WHY_SEEN がありません(配られたときに何の事故があったかの記録)。`--stamp` で作れます");
+  if (!読WHY) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "WHY.md が読めません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "WHY.md が読めません" });
+  else if (!既知) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "WHY_SEEN がありません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "WHY_SEEN がありません(配られたときに何の事故があったかの記録)。`--stamp` で作れます" });
   else {
     /* 見出しで節に切り、記録に無いものだけを取る */
     const 節 = 読WHY.split(/^(?=## \[)/m).filter((s) => s.startsWith("## ["));
@@ -1108,8 +1108,8 @@ if (process.argv.includes("--why")) {
       const 本文 = 足された.join("");
       const 混入 = 語.filter((w) => 本文.includes(w));
       if (混入.length) {
-        ng.push("★足した事故に、この現場の個人情報が混ざっています: " + 混入.join(" / ")
-          + "。**送る1枚は作りませんでした** ── WHY.md 側を伏せてから、もう一度 --why してください");
+        判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "足した事故に、この現場の個人情報が混ざっています", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★足した事故に、この現場の個人情報が混ざっています: " + 混入.join(" / ")
+          + "。**送る1枚は作りませんでした** ── WHY.md 側を伏せてから、もう一度 --why してください" });
       } else {
         const 出 = ["# 事故レポート(Guardian へ)", "",
           "この現場で新しく記録した事故を、正本へ還します。**塊の本体は事故の記録**なので、",
@@ -1163,9 +1163,9 @@ if (process.argv.includes("--why")) {
           + " / 中身: " + fs.statSync(先).size + "バイト・事故 " + 足された.length + "件"
           + " / 見張り: " + 個人情報の見張り.語数 + "語を通しました");
         if (process.argv.includes("--send") && 出せない) {
-          ng.push("★送りませんでした: " + 出せない + "。**公開リポジトリへ出す前に伏せてください**。"
+          判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "送りませんでした", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★送りませんでした: " + 出せない + "。**公開リポジトリへ出す前に伏せてください**。"
             + "1枚は " + 先 + " に在ります(private を書いてもう一度 `--why --send`、"
-            + "または中身を読んでから手で `" + 送る + "`)");
+            + "または中身を読んでから手で `" + 送る + "`)" });
         } else if (process.argv.includes("--send") && 下見) {
           見せる();
           ok.push("【下見】送りませんでした。この命令が走ります:\n     " + 送る
@@ -1175,8 +1175,8 @@ if (process.argv.includes("--why")) {
           見せる();
           const r = spawnSync(送る, { shell: true, encoding: "utf8", timeout: 60000 });
           if (r.status === 0) ok.push("事故レポートを送りました: " + String(r.stdout || "").trim());
-          else ng.push("送れませんでした(gh が要ります / gh auth login で認証): "
-            + String(r.stderr || "").slice(0, 200) + " ── 1枚は " + 先 + " に在ります");
+          else 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "送れませんでした", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "送れませんでした(gh が要ります / gh auth login で認証): "
+            + String(r.stderr || "").slice(0, 200) + " ── 1枚は " + 先 + " に在ります" });
         } else {
           ok.push("事故レポートを書きました: " + 先 + "(" + 足された.length + "件)");
           ok.push("中身を読んで**承認**したら、これで送れます:\n     " + 送る
@@ -1193,8 +1193,8 @@ if (process.argv.includes("--why")) {
 {
   const nums = [...kit('RULES.md').matchAll(/^##\s*(\d+)\.\s/gm)].map((m) => Number(m[1]));
   const bad = nums.filter((n, i) => n !== i + 1);
-  if (!nums.length) ng.push('RULES.md から条が1つも読めません');
-  else if (bad.length) ng.push(`RULES.md の条番号が通っていません(${nums.length}条・最初のずれ: ${bad[0]})`);
+  if (!nums.length) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "RULES.md から条が1つも読めません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: 'RULES.md から条が1つも読めません' });
+  else if (bad.length) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "RULES.md の条番号が通っていません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: `RULES.md の条番号が通っていません(${nums.length}条・最初のずれ: ${bad[0]})` });
   else ok.push(`RULES.md の条番号は 1〜${nums.length} で通っている`);
 }
 
@@ -1380,7 +1380,7 @@ if (process.argv.includes("--why")) {
     測れない.push('この現場の文書のうち ' + 読めなかった.join(' / ') + ' は**在りません**(数の照合をしていません)');
   }
 
-  if (bad.length) ng.push('文書が書いている件数が実数と合っていません:\n      ' + bad.join('\n      '));
+  if (bad.length) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "文書が書いている件数が実数と合っていません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: '文書が書いている件数が実数と合っていません:\n      ' + bad.join('\n      ') });
   else ok.push(`文書の件数は実数と一致(RULES ${real.RULES}条 / WHY ${real.WHY}件`
     + ` / この現場の文書 ${OUT.length - 読めなかった.length}/${OUT.length} 件も見ました)`);
 }
@@ -1393,23 +1393,23 @@ if (process.argv.includes("--why")) {
 {
   const why = kit('WHY.md');
   const head = why.indexOf('# 事故の記録');
-  if (head < 0) ng.push('WHY.md に「# 事故の記録」の区切りがありません(道具の由来と事故が混ざります)');
+  if (head < 0) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "WHY.md に「# 事故の記録」の区切りがありません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: 'WHY.md に「# 事故の記録」の区切りがありません(道具の由来と事故が混ざります)' });
   else {
     const body = why.slice(head);
     const all = [...body.matchAll(/^## (.*)$/gm)];
     const tagged = [...body.matchAll(/^## \[(検査|門|計器|規律)\/(事故|予防)\] /gm)];
     const naked = all.filter((m) => !/^\[(検査|門|計器|規律)\/(事故|予防)\] /.test(m[1]));
     if (naked.length) {
-      ng.push(`WHY.md に札の無い事故が ${naked.length} 件あります ── どの層まで届いたかを書くこと`
-        + `(例: ## [規律/事故] …):\n      ` + naked.slice(0, 5).map((m) => m[1].slice(0, 50)).join('\n      '));
+      判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "WHY.md に札の無い事故が ${naked.length} 件あります ── どの層まで届い", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: `WHY.md に札の無い事故が ${naked.length} 件あります ── どの層まで届いたかを書くこと`
+        + `(例: ## [規律/事故] …):\n      ` + naked.slice(0, 5).map((m) => m[1].slice(0, 50)).join('\n      ') });
     } else {
       const n = (k) => tagged.filter((m) => m[1] === k).length;
       const held = n('検査') + n('門');
       const floor = Number((why.match(/守られている:\s*(\d+)\s*件/) || [])[1]);
       const line = `事故 ${tagged.length}件 ── 守り ${held}(検査${n('検査')}/門${n('門')})`
         + ` / 計器 ${n('計器')} / **文章だけ ${n('規律')}**`;
-      if (!Number.isFinite(floor)) ng.push('WHY.md に「守られている: N件」の下限がありません');
-      else if (held < floor) ng.push(`守りが後退しています: ${held}件(下限 ${floor}件)。${line}`);
+      if (!Number.isFinite(floor)) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "WHY.md に「守られている", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: 'WHY.md に「守られている: N件」の下限がありません' });
+      else if (held < floor) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "守りが後退しています", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: `守りが後退しています: ${held}件(下限 ${floor}件)。${line}` });
       else {
         if (held > floor) whyLoose = { floor, held };
         ok.push(line + (held > floor ? ` ← 増えました。--tighten で下限を上げられます` : ''));
@@ -1425,8 +1425,8 @@ if (process.argv.includes("--why")) {
   const impl = new Set([...kit('check.mjs').matchAll(/c\.kind === '(\w+)'/g)].map((m) => m[1]));
   const tried = new Set(BASE_CFG.checks.map((c) => c.kind));
   const dead = [...impl].filter((k) => !tried.has(k));
-  if (dead.length) ng.push(`一度も試されていない検査の種類があります: ${dead.join(', ')}`
-    + ' ── 見本に足すか、エンジンから消すこと(動くか誰も知らない検査は、無い検査より悪い)');
+  if (dead.length) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "一度も試されていない検査の種類があります", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: `一度も試されていない検査の種類があります: ${dead.join(', ')}`
+    + ' ── 見本に足すか、エンジンから消すこと(動くか誰も知らない検査は、無い検査より悪い)' });
   else ok.push(`エンジンの検査の種類 ${impl.size} 種は全て見本で試されている`);
 }
 
@@ -1445,7 +1445,7 @@ if (process.argv.includes("--why")) {
         if (!ALLOW.has(m[1])) bad.push(`${f}:L${i + 1} '${m[1]}'`);
     });
   }
-  if (bad.length) ng.push('エンジンが特定の宛先を直に持っています(宣言へ移すこと):\n      ' + bad.join('\n      '));
+  if (bad.length) 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "エンジンが特定の宛先を直に持っています", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: 'エンジンが特定の宛先を直に持っています(宣言へ移すこと):\n      ' + bad.join('\n      ') });
   else ok.push('エンジンは特定の宛先を1つも持っていない(どの現場へ持って行っても同じ中身)');
 }
 
@@ -1471,7 +1471,7 @@ if (process.argv.includes("--why")) {
     && 拾えたか('配るもの', 配るもの, ['check.mjs', 'selfcheck.mjs'])
     && 拾えたか('現場のもの', 現場のもの, ['guardian.config.json', 'docs']);
   if (!拾えた) {
-    if (配るもの && 現場のもの) { /* 見本が落としたので、ここでは何も言わない */ } else ng.push('pull.mjs の【配るもの】【現場のもの】が読めません。書き方を変えたならこの検査も直すこと');
+    if (配るもの && 現場のもの) { /* 見本が落としたので、ここでは何も言わない */ } else 判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "pull.mjs の【配るもの】【現場のもの】が読めません。書き方を変えたならこの検査も直すこと", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: 'pull.mjs の【配るもの】【現場のもの】が読めません。書き方を変えたならこの検査も直すこと' });
   } else {
     /* B6a: 分類の網羅(この現場が正本であるときだけ意味がある ── 塊がリポジトリそのもの) */
     const 正本か = fs.existsSync(path.join(HERE, '..', '.git')) || fs.existsSync(path.join(HERE, '.git'));
@@ -1482,10 +1482,10 @@ if (process.argv.includes("--why")) {
       const 未分類 = 直下.filter((n) => !配るもの.has(n) && !現場のもの.has(n));
       const 両方 = 直下.filter((n) => 配るもの.has(n) && 現場のもの.has(n));
       if (未分類.length) {
-        ng.push('【配るものとも現場のものとも決まっていない】ものがあります: ' + 未分類.join(', ')
-          + ' ── pull.mjs のどちらかに書くこと。決めないと、混入か欠落のどちらかが黙って起きます');
+        判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "【配るものとも現場のものとも決まっていない】ものがあります", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: '【配るものとも現場のものとも決まっていない】ものがあります: ' + 未分類.join(', ')
+          + ' ── pull.mjs のどちらかに書くこと。決めないと、混入か欠落のどちらかが黙って起きます' });
       } else if (両方.length) {
-        ng.push('配るものと現場のものの両方に書かれています(どちらか一方に): ' + 両方.join(', '));
+        判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "配るものと現場のものの両方に書かれています", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: '配るものと現場のものの両方に書かれています(どちらか一方に): ' + 両方.join(', ') });
       } else {
         ok.push('直下 ' + 直下.length + ' 項目は全て分類済み(配る ' + 配るもの.size
           + ' / 現場 ' + 現場のもの.size + ')');
@@ -1496,9 +1496,9 @@ if (process.argv.includes("--why")) {
     const 抜け = ENGINE_FILES.filter((f) => !配るもの.has(f.split('/')[0]));
     const 紛れ = ENGINE_FILES.filter((f) => 現場のもの.has(f.split('/')[0]));
     if (抜け.length) {
-      ng.push('エンジンが【配るもの】に入っていません(配布先へ届きません。エラーも出ません): ' + 抜け.join(', '));
+      判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "エンジンが【配るもの】に入っていません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: 'エンジンが【配るもの】に入っていません(配布先へ届きません。エラーも出ません): ' + 抜け.join(', ') });
     } else if (紛れ.length) {
-      ng.push('エンジンが【現場のもの】に分類されています(配布されません): ' + 紛れ.join(', '));
+      判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "エンジンが【現場のもの】に分類されています", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: 'エンジンが【現場のもの】に分類されています(配布されません): ' + 紛れ.join(', ') });
     } else {
       ok.push('エンジン(' + ENGINE_FILES.length + '件)は【配るもの】に入り、【現場のもの】と重ならない');
     }
@@ -1520,8 +1520,8 @@ if (process.argv.includes("--why")) {
     } else {
     const 漏れ = [...作る].filter((p) => !現場のもの.has(p));
     if (漏れ.length) {
-      ng.push('install.mjs が配布先に作るものが【現場のもの】に入っていません(配ると配布先のものを壊します): '
-        + 漏れ.join(', '));
+      判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "install.mjs が配布先に作るものが【現場のもの】に入っていません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: 'install.mjs が配布先に作るものが【現場のもの】に入っていません(配ると配布先のものを壊します): '
+        + 漏れ.join(', ') });
     } else {
       ok.push('install が配布先に作るもの(' + 作る.size + '件)は、全て【現場のもの】に入っている');
     }
@@ -1560,8 +1560,8 @@ if (process.argv.includes("--why")) {
     if (根 === fs.realpathSync(仮) || 根 === 仮) {
       ok.push('塊のフォルダを根と取り違えない(混入した目印があっても1つ上を指す)');
     } else {
-      ng.push('根の判定が塊のフォルダで止まりました(' + 根 + ')。'
-        + 'フックと導入が【配布先ではない場所】を見ます ── 報告は成功と出るので気づけません');
+      判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "根の判定が塊のフォルダで止まりました", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: '根の判定が塊のフォルダで止まりました(' + 根 + ')。'
+        + 'フックと導入が【配布先ではない場所】を見ます ── 報告は成功と出るので気づけません' });
     }
   } finally {
     try { fs.rmSync(仮, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) { /* ★残ったことは、走り終わりの検査が赤で言う(黙らせていない) */ }
@@ -1594,10 +1594,10 @@ if (process.argv.includes("--why")) {
   } else {
     const 届かない = ENGINE_FILES.filter((f) => !配られる.has(f));
     if (届かない.length) {
-      ng.push("★指紋の対象なのに【配られない】ものがあります: " + 届かない.join(", ")
+      判定({ 対象: "selfcheck(帯の外)", 状態: '赤', 根拠: "指紋の対象なのに【配られない】ものがあります", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★指紋の対象なのに【配られない】ものがあります: " + 届かない.join(", ")
         + " ── 配布先は取り直した直後に「配られたときの中身と違います」と言われ、"
         + "**1文字も直していないのに pull も stamp も拒否されます**(出口の無い部屋)。"
-        + "pull.mjs の配布一覧が、場所ではなく**名前**で弾いていないか見てください");
+        + "pull.mjs の配布一覧が、場所ではなく**名前**で弾いていないか見てください" });
     } else {
       ok.push("配ると宣言したものは、本当に配られる(指紋の対象 " + ENGINE_FILES.length
         + "件すべてが、pull.mjs 自身の配布一覧に在る)");
@@ -2341,10 +2341,10 @@ if (process.argv.includes("--why")) {
       if (!依存) 理由なし.push(rel);
     }
     if (理由なし.length) {
-      ng.push("★配らない道 に、理由が無くなった物が在ります(" + 理由なし.length + "件): "
+      判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "配らない道 に、理由が無くなった物が在ります", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★配らない道 に、理由が無くなった物が在ります(" + 理由なし.length + "件): "
         + 理由なし.join(", ") + " ── ★★現場の物に依存しなくなっています。"
         + "★★★配ってよいなら pull.mjs の 配らない道 から外してください。"
-        + "外さない理由が別に在るなら、その理由をコメントに書き直してください");
+        + "外さない理由が別に在るなら、その理由をコメントに書き直してください" });
     } else {
       ok.push("配らない道の理由は、まだ生きている(" + 道一覧.length + "件とも、現場の物に依存している)");
     }
@@ -2431,7 +2431,7 @@ if (process.argv.includes("--why")) {
     if (!入った(一式の結果)) 外れ.push('.claude が在る現場で入らなかった');
     if (!入った(強制の結果)) 外れ.push('--hooks を付けても入らなかった');
     if (入った(拒否の結果)) 外れ.push('--no-hooks を付けたのに入った');
-    if (外れ.length) ng.push('install の Claude Code 判定が期待どおりではありません: ' + 外れ.join(' / '));
+    if (外れ.length) 判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "install の Claude Code 判定が期待どおりではありません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: 'install の Claude Code 判定が期待どおりではありません: ' + 外れ.join(' / ') });
     else ok.push('install は2回目でも判断を変えない(他所の道具の現場に、回すたびにフックが増えない)');
   } catch (e) {
     /* ★見本が建てられなかったことを【緑にしない】(何も見ていないので) */
@@ -2510,14 +2510,14 @@ if (process.argv.includes("--why")) {
         + String(e && e.message).slice(0, 120) + ')');
     }
     if (中身が出ない.length) {
-      ng.push('★フックは【起動するが、仕事をしていません】: ' + 中身が出ない.join(', ')
-        + ' ── 起動と中身は別です。main() の中で落ちて握り潰されている疑い');
+      判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "フックは【起動するが、仕事をしていません】", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: '★フックは【起動するが、仕事をしていません】: ' + 中身が出ない.join(', ')
+        + ' ── 起動と中身は別です。main() の中で落ちて握り潰されている疑い' });
     }
     if (落ちた.length) {
-      ng.push('★フックが【その現場では起動しません】: ' + 落ちた.join(', ')
+      判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "フックが【その現場では起動しません】", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: '★フックが【その現場では起動しません】: ' + 落ちた.join(', ')
         + ' ── 配布先の package.json に "type": "module" が在ると .js が ESM 扱いになります。'
         + '**フックは失敗しても黙って通すので、静かに全滅します**(報告は成功と出る)。'
-        + '直しは、塊の直下に package.json を置いて type を commonjs にする(1枚で済む)');
+        + '直しは、塊の直下に package.json を置いて type を commonjs にする(1枚で済む)' });
     } else {
       ok.push('フックは type:module の現場でも起動する(package.json で CommonJS に固定)');
     }
@@ -2606,13 +2606,13 @@ if (process.argv.includes("--why")) {
       if (/CODEMAP 該当項/.test(出)) 誤って当たる = "記名札束 → 『名札』の項に当たった";
     }
     if (誤って当たる)
-      ng.push("★実名を含むだけの語で、地図の項に当たっています: " + 誤って当たる
+      判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "実名を含むだけの語で、地図の項に当たっています", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★実名を含むだけの語で、地図の項に当たっています: " + 誤って当たる
         + " ── 語境界が ASCII の文字クラスに戻っている疑い(日本語では境界が定義できず部分一致に落ちます)。"
-        + "**誤ヒットは慣れを作り、慣れは読み飛ばしを作ります**(7条)");
+        + "**誤ヒットは慣れを作り、慣れは読み飛ばしを作ります**(7条)" });
     if (届かない.length)
-      ng.push("★記号名の長さ・言語で地図への到達が変わります: " + 届かない.join(" / ")
+      判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "記号名の長さ・言語で地図への到達が変わります", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★記号名の長さ・言語で地図への到達が変わります: " + 届かない.join(" / ")
         + " ── 同じ形の項が、名前の書き方だけで届かなくなっています"
-        + "(語境界の文字クラス / 実名の長さ閾値 / 括弧の前を拾うか、のどれかです)");
+        + "(語境界の文字クラス / 実名の長さ閾値 / 括弧の前を拾うか、のどれかです)" });
     else if (!誤って当たる) ok.push("記号名の長さと言語で到達が変わらない ── 英6字・日1字・日2字・日3字の4項(うち1つは呼び出し形)は届き、実名を含むだけの語(記名札束)では当たらない【両向き】");
   } catch (e) {
     未測.push("長さと言語の不変条件は見ていません(見本を建てられませんでした: "
@@ -2670,9 +2670,9 @@ if (process.argv.includes("--why")) {
     const 変わった = [];
     for (const c of 場合) { const 訳 = c.r(); if (訳) 変わった.push(c.名 + "(" + 訳 + ")"); }
     if (変わった.length)
-      ng.push("★パスの書き方や改行で、地図への到達が変わります: " + 変わった.join(" / ")
+      判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "パスの書き方や改行で、地図への到達が変わります", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★パスの書き方や改行で、地図への到達が変わります: " + 変わった.join(" / ")
         + " ── 同じ意味の書き方で結果が変わってはいけません"
-        + "(配布先は改行が混在した現場です: 最大のファイルだけ CRLF・他93本が LF)");
+        + "(配布先は改行が混在した現場です: 最大のファイルだけ CRLF・他93本が LF)" });
     else ok.push("パスの書き方と改行で判定が変わらない(地図と編集文の LF・CRLF、パスの区切り2種、相対/絶対、空白入りパスの6通り)");
   } catch (e) {
     未測.push("パスと改行の不変条件は見ていません(見本を建てられませんでした: "
@@ -2714,17 +2714,17 @@ if (process.argv.includes("--why")) {
     /* ★どちらの回も、取り直しが始まっていないこと(始まっていたら測り方が危ない) */
     const 始まった = /正本を取れませんでした|取り直しました|変わるもの:/.test(a.出 + b.出);
     if (始まった) {
-      ng.push("★約束を測るはずの空回しが、**取り直しを始めています** ── "
-        + "この検査はネットに出ない前提で書かれています(口の門がクローンより後ろへ動いた疑い)");
+      判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "約束を測るはずの空回しが、**取り直しを始めています** ──", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★約束を測るはずの空回しが、**取り直しを始めています** ── "
+        + "この検査はネットに出ない前提で書かれています(口の門がクローンより後ろへ動いた疑い)" });
     }
     const 宣言だけ = 宣言した.filter((c) => !実際.includes(c));
     const 実際だけ = 実際.filter((c) => !宣言した.includes(c));
     if (宣言だけ.length)
-      ng.push("★宣言しているのに、実際にはできません: " + 宣言だけ.join(", ")
-        + " ── 配布先はこの宣言を見て `--at` を許します。**嘘の宣言は、嘘の受領証と同じ**です");
+      判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "宣言しているのに、実際にはできません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★宣言しているのに、実際にはできません: " + 宣言だけ.join(", ")
+        + " ── 配布先はこの宣言を見て `--at` を許します。**嘘の宣言は、嘘の受領証と同じ**です" });
     if (実際だけ.length)
-      ng.push("★できるのに宣言していません: " + 実際だけ.join(", ")
-        + " ── 配布先はこの塊を『約束を持たない』として拒否します(PROTOCOL.json に足してください)");
+      判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "できるのに宣言していません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★できるのに宣言していません: " + 実際だけ.join(", ")
+        + " ── 配布先はこの塊を『約束を持たない』として拒否します(PROTOCOL.json に足してください)" });
     if (!宣言だけ.length && !実際だけ.length && !始まった)
       ok.push("約束の宣言が実際の振る舞いと合っている(" + 実際.join(" / ") + " ── 綴りではなく出口で測った)");
   }
@@ -2782,10 +2782,10 @@ if (process.argv.includes("--why")) {
             + (一覧.length - 変わった.length - 外した.length) + "件が、使われも外れもしていません");
         }
         if (変わった.length) {
-          ng.push("★版 " + いまの版 + " は既に公開されていて、その後に配る中身が変わっています: "
+          判定({ 対象: "B1 版が嘘をついていないか", 状態: '赤', 根拠: "公開済みの版と、いま配る中身が違う", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★版 " + いまの版 + " は既に公開されていて、その後に配る中身が変わっています: "
             + 変わった.slice(0, 6).join(", ") + (変わった.length > 6 ? " ほか" + (変わった.length - 6) + "件" : "")
             + " ── **同じ版が2つの中身を指します**。人は版で報告するので、版が嘘をつくと会話が壊れます"
-            + "(実際に「9.35 を測って」と依頼して、別の中身が測られました)。KIT_VERSION を上げてください");
+            + "(実際に「9.35 を測って」と依頼して、別の中身が測られました)。KIT_VERSION を上げてください" });
         } else {
           ok.push("版 " + いまの版 + " と中身が1対1(公開してから配る中身は変わっていません)");
         }
@@ -2946,9 +2946,9 @@ if (process.argv.includes("--why")) {
     }
   }
     if (ずれ.length) {
-      ng.push("★案内と口が食い違っています: " + ずれ.join(" / ")
+      判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "案内と口が食い違っています", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★案内と口が食い違っています: " + ずれ.join(" / ")
         + " ── **案内された口が存在しないのは、黙る事故より質が悪い**"
-        + "(案内どおり打った人が、打ったつもりのまま別の動きを受け取ります)");
+        + "(案内どおり打った人が、打ったつもりのまま別の動きを受け取ります)" });
     } else {
       ok.push("案内されている口は、全部その道具が口として答え、知らない口を拒む(" + 測れた.join(" / ")
         + " ── 綴りではなく --口一覧 に答えさせて突き合わせた)");
@@ -2992,9 +2992,9 @@ if (process.argv.includes("--why")) {
     if (!/触れた記号:[^\n]*名札/.test(出)) 外れ.push('interface を【触れた記号】と見なせていない');
     if (!/出す/.test(出)) 外れ.push('その型を受け取る 出す が近傍に出ていない');
     if (外れ.length) {
-      ng.push('門が型で書かれた現場で鳴りません: ' + 外れ.join(' / ')
+      判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "門が型で書かれた現場で鳴りません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: '門が型で書かれた現場で鳴りません: ' + 外れ.join(' / ')
         + ' ── TS の現場では**型が接点そのもの**なので、そこが盲目だと波及がいちばん広い所を見落とします'
-        + '(出力: ' + 出.split(NL2).slice(0, 3).join(' / ').slice(0, 200) + ')');
+        + '(出力: ' + 出.split(NL2).slice(0, 3).join(' / ').slice(0, 200) + ')' });
     } else {
       ok.push('門は型で書かれた現場でも鳴る(interface の変更を捉え、それを受け取る側を近傍に出す)');
     }
@@ -3121,9 +3121,9 @@ if (process.argv.includes("--why")) {
       if (r !== 期待) 外れ.push(名 + ': ' + r + '(期待=' + 期待 + ')');
     }
     if (外れ.length) {
-      ng.push('★門が期待どおりに働いていません: ' + 外れ.join(' / ')
+      判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "門が期待どおりに働いていません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: '★門が期待どおりに働いていません: ' + 外れ.join(' / ')
         + ' ── **止めるべきものを止めるか**を見本で測っています。'
-        + 'エンジンが固有名を持っていないか(宣言から読んでいるか)を疑ってください');
+        + 'エンジンが固有名を持っていないか(宣言から読んでいるか)を疑ってください' });
     } else {
       ok.push('門は見本で期待どおりに働く(固有名は宣言から読み、形は形で見る・' + (例.length + 宣言なし.length) + '通り ── ★うち ' + 宣言なし.length + '通りは【宣言が無い現場では何もしない】を測っている)');
     }
@@ -3175,8 +3175,8 @@ if (process.argv.includes("--why")) {
       if (d.道.length) {
         ok.push("版の上げ方は宣言どおり(大番号 " + 前.大 + " → " + いま.大 + " ── SPEC.md も一緒に変わっている)");
       } else {
-        ng.push("★大番号を上げたのに SPEC.md が変わっていません(" + 前.大 + "." + 前.小
-          + " → " + いま.大 + "." + いま.小 + ")。**大番号は【口が変わった / 出口の語が変わった / 配る構成が変わった】ときだけ**です(SPEC.md「版の付け方」)。★小番号は繰り上げません ── " + 前.大 + "." + (前.小 + 1) + " にしてください");
+        判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "大番号を上げたのに SPEC.md が変わっていません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★大番号を上げたのに SPEC.md が変わっていません(" + 前.大 + "." + 前.小
+          + " → " + いま.大 + "." + いま.小 + ")。**大番号は【口が変わった / 出口の語が変わった / 配る構成が変わった】ときだけ**です(SPEC.md「版の付け方」)。★小番号は繰り上げません ── " + 前.大 + "." + (前.小 + 1) + " にしてください" });
       }
     }
   }
@@ -3223,8 +3223,8 @@ if (process.argv.includes("--why")) {
     if (!/触れた記号:[^\n]*\bCart\b/.test(出)) 外れ.push('クラス Cart を【触れた記号】と見なせていない');
     if (!/\bCheckout\b/.test(出)) 外れ.push('Cart を使う Checkout が近傍に出ていない');
     if (外れ.length) {
-      ng.push('門がクラスで書かれた現場で鳴りません: ' + 外れ.join(' / ')
-        + ' ── そこでは**門が丸ごと盲目**になります(出力: ' + 出.split('\n').slice(0, 3).join(' / ').slice(0, 200) + ')');
+      判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "門がクラスで書かれた現場で鳴りません", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: '門がクラスで書かれた現場で鳴りません: ' + 外れ.join(' / ')
+        + ' ── そこでは**門が丸ごと盲目**になります(出力: ' + 出.split('\n').slice(0, 3).join(' / ').slice(0, 200) + ')' });
     } else {
       ok.push('門はクラスで書かれた現場でも鳴る(class の変更を捉え、それを使う側を近傍に出す)');
     }
@@ -3314,11 +3314,11 @@ if (process.argv.includes('--tighten')) {
   } catch (_) { 他所 = null; }
   const 但し = 他所 ? "(★別に " + 他所 + " 個ありますが、★★この走行の台帳に無いので触っていません ── 他の走行のものか、前から在るものです)" : "";
   if (残り) {
-    ng.push("★この走行が建てた見本が " + 残り + " 個 残っています"
+    判定({ 対象: "B13b 除外の理由が、まだ生きているか", 状態: '赤', 根拠: "この走行が建てた見本が", 走査集合: null, 件数: null, issueCount: 1, 正本由来: null, 文: "★この走行が建てた見本が " + 残り + " 個 残っています"
       + "(建てた " + 建てた.length + " 個 / 1段目で消えなかった " + 残っている.length
       + " 個のうち、拾い直しで " + 拾えた + " 個は消せました)"
       + " ── **見本を建てた検査が、後始末をしていません**。"
-      + "★配布先で 202,086個(推定61.5GB)まで溜まった実績があります(2026-09-01)" + 但し);
+      + "★配布先で 202,086個(推定61.5GB)まで溜まった実績があります(2026-09-01)" + 但し });
   } else if (残っている.length) {
     ok.push("この走行が建てた見本 " + 建てた.length + " 個は、全部 片づきました ── ★ただし "
       + 残っている.length + " 個は【1段目では消えず、拾い直しで消えました】。"
