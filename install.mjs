@@ -445,13 +445,38 @@ if (added) {
   const 塊の道具 = /(check|verdict|selfcheck|neighbors|index)\.mjs/;
   let already = '';
   const ほかの仕掛け = [];
+  const 壊れた参照 = [];   /* ★名前は当たるが、指す道が無い workflow(27.1) */
   try {
     for (const f of fs.readdirSync(ワークフローの置き場)) {
       const t = fs.readFileSync(path.join(ワークフローの置き場, f), 'utf8');
-      if (塊の道具.test(t) || t.includes(KIT + '/')) { if (!already) already = f; continue; }
+      /* ★「名前が在る」と「その道が在る」は別(27.1、2026-09-03、@codex が見つけた)。
+       *
+       *   ★★直す前は `verdict.mjs` という【文字列】が在るだけで「既に回っている」と決めていた。
+       *   ★★★実測: tools/guardian/verdict.mjs(もう無い道)を指す古い workflow が在ると、
+       *   install は自分の nightly を**置かず、何も言わなかった** ──
+       *   現場には【動かない夜間検査】だけが残る。
+       *
+       *   ★直し: 名前が当たったら、その【道が実在するか】まで見る。
+       *   ★★実在しなければ「既に回っている」とは言わない ── 壊れた参照として名指しする。
+       *   ★★★中身は触らない(直すか撤去するかは人が決める)。 */
+      if (塊の道具.test(t) || t.includes(KIT + '/')) {
+        const 指す道 = [...t.matchAll(new RegExp("[A-Za-z0-9_./\-]*(?:check|verdict|selfcheck|neighbors|index)" + "\.mjs", "g"))]
+          .map((m) => m[0].replace(/^[.][/]/, ""));
+        const 生きている = 指す道.filter((p) => { try { return fs.existsSync(path.join(ROOT, p)); } catch (_) { return false; } });   // guardian:read
+        if (生きている.length) { if (!already) already = f; continue; }
+        壊れた参照.push({ f, 指す道 });
+        continue;
+      }
       ほかの仕掛け.push(f);
     }
   } catch (_) { /* .github が無ければ置く */ }
+  for (const x of 壊れた参照) {
+    todo.push('★`.github/workflows/' + x.f + '` は塊の道具を名指ししていますが、'
+      + '**その道が この現場に在りません**: ' + x.指す道.join(', ')
+      + ' ── ★★昔の置き場(tools/guardian など)を指したまま残っている形です。'
+      + '★★★この夜間検査は【動きません】。直すか撤去するかを決めてください'
+      + '(この塊は中身を触っていません)。');
+  }
   if (already) skipped.push(`.github/workflows/${already} が既に塊の検査を回しているので触っていません`);
   else if (ほかの仕掛け.length) {
     todo.push('★`.github/workflows/` に既に ' + ほかの仕掛け.length + '本あります('
