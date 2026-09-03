@@ -20,7 +20,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { findRoot, loadConfig, 設定が壊れていたら言う } = require('./lib-root');
+const { findRoot, loadConfig, 設定が壊れていたら言う, 既定の見る所 } = require('./lib-root');
 
 const ROOT = findRoot(__dirname);
 const CFG = loadConfig(ROOT);
@@ -39,7 +39,7 @@ let msg = '現在時刻: ' + stamp(now)
 
 const AUDIT_FILE = path.join(ROOT, '.guardian', 'audit_at');
 const LIMIT_MS = (Number(CFG.auditHours) || 3) * 60 * 60 * 1000;
-const WATCH = CFG.watch || ['site', 'worker', 'gas', 'src', 'app', 'lib'];
+const WATCH = CFG.watch || 既定の見る所;   /* ★正本は lib-root(24.8) */
 const SKIP_DIR = new Set(['node_modules', '.wrangler', 'dist', 'build', '.git', 'img', 'avatar', 'vendor']);
 
 // 指定フォルダ以下で、最後に変更されたファイルの時刻(ミリ秒)。見つからなければ0

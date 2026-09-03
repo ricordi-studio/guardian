@@ -37,6 +37,21 @@ function findRoot(start) {
  *
  *   ★読む口は1つのまま(同じ問いを2箇所で読まない)。返す物に印を1つ足すだけなので、
  *   ★★.evidence 等を読む他のフックの振る舞いは変わらない。 */
+/* ★【見る所】の既定値は、ここが正本(24.8、2026-09-03、会議で @kozo が「測っていない」と挙げた)。
+ *
+ *   ★★直す前は3箇所に在り、しかも【値が違った】:
+ *     clock.js / codemap.js … site worker gas src app lib
+ *     stop.js               … src app lib server web
+ *
+ *   ★★★実測(watch を宣言していない現場):
+ *     server/a.js … 合否の門は見るのに、★地図は差し込まれない(codemap 0バイト)
+ *     gas/a.js    … ★★地図は差し込まれるのに、合否の門が見ない
+ *   **同じ塊の2つの半分が、「コードとは何か」で食い違っていた。**
+ *
+ *   ★寄せる向きは【広い方】── 狭める方向は、見張りを黙って減らすことになる。
+ *   ★★watch を宣言している現場は、いままで通り その宣言が勝つ(何も変わらない)。 */
+const 既定の見る所 = ['site', 'worker', 'gas', 'src', 'app', 'lib', 'server', 'web'];
+
 function loadConfig(root) {
   for (const p of ['guardian.config.json', path.join('tools', 'guardian', 'guardian.config.json')]) {
     const 先 = path.join(root, p);
@@ -69,4 +84,4 @@ function 設定が壊れていたら言う(cfg, 誰) {
   return true;
 }
 
-module.exports = { findRoot, loadConfig, 設定が壊れていたら言う };
+module.exports = { findRoot, loadConfig, 設定が壊れていたら言う, 既定の見る所 };

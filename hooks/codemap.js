@@ -30,7 +30,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { findRoot, loadConfig, 設定が壊れていたら言う } = require('./lib-root');
+const { findRoot, loadConfig, 設定が壊れていたら言う, 既定の見る所 } = require('./lib-root');
 
 const ROOT = findRoot(__dirname);
 const CFG = loadConfig(ROOT);
@@ -56,7 +56,7 @@ const MAP_PATH = path.join(ROOT, 地図の名);
  *   ★**渡し方だけで結果が変わっていた**。しかも壊れ方は黙る方に出る(いちばん質が悪い形)。
  *   実際に Claude Code が渡すのは絶対パスなので日常では出ないが、
  *   **出ない理由が「呼び手の都合」なのは、性質としては壊れている**。 */
-const WATCH = new RegExp('(^|/)(' + (CFG.watch || ['site', 'worker', 'gas', 'src', 'app', 'lib']).join('|') + ')/', 'i');
+const WATCH = new RegExp('(^|/)(' + (CFG.watch || 既定の見る所).join('|') + ')/', 'i');   /* ★正本は lib-root(24.8) */
 const MAX_SECTIONS = 3;   // 本文を出す項の上限(これ以上は名前だけ。出しすぎは慣れを作る)
 const MAX_BODY = 1800;    // 1項あたりの本文の上限文字数
 

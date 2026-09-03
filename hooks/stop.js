@@ -30,7 +30,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { findRoot, loadConfig } = require('./lib-root');
+const { findRoot, loadConfig, 既定の見る所 } = require('./lib-root');
 
 const pass = () => process.exit(0);
 
@@ -101,7 +101,7 @@ function main(ev) {
 
   /* ---- 実装が変わっていなければ回さない ---- */
   const MARK = path.join(ROOT, '.claude', 'verdict_at');
-  const WATCH = CFG.watch || ['src', 'app', 'lib', 'server', 'web'];
+  const WATCH = CFG.watch || 既定の見る所;   /* ★正本は lib-root(24.8)── 直す前はここだけ別の値だった */
   const SKIP = new Set(['node_modules', '.wrangler', 'dist', 'build', '.git', 'img', 'avatar', 'vendor']);
   const newest = (dir, depth = 0) => {
     let n = 0;

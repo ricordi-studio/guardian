@@ -1664,6 +1664,72 @@ if (process.argv.includes("--why")) {
   }
 }
 
+/* ---------- B20. 塊の半分どうしが【コードとは何か】で食い違っていないか(2026-09-03、会議で @kozo が「測っていない」と挙げた) ----------
+ *
+ * ★事故: 見る所の既定値が【3箇所】に在り、しかも値が違った。
+ *   clock / codemap … site worker gas src app lib
+ *   stop            … src app lib server web
+ *
+ *   ★★実測(watch を宣言していない現場):
+ *     server/a.js … 合否の門は見るのに、地図は差し込まれない(codemap 0バイト)
+ *     gas/a.js    … 地図は差し込まれるのに、合否の門が見ない
+ *   ★★★**同じ塊の2つの半分が、「コードとは何か」で食い違っていた。**
+ *
+ * ★測り方は【綴りを読まない】── 正本(lib-root の 既定の見る所)を読み、
+ *   ★★その全部の場所で 合図のフックが実際に反応するかを叩く。
+ *   ★★★どこか1つでも黙れば、そのフックは正本より狭い所を見ている。
+ *   (stop の側は同じ正本を import しているので構造で揃うが、**振る舞いは測っていない** ── HANDOVER に書く) */
+{
+  let 仮 = null, 既定 = null;
+  /* ★ここは ESM なので createRequire を通す(2026-09-03、双子で未測が出て気づいた) */
+  try { 既定 = __cr2(import.meta.url)('./hooks/lib-root.js').既定の見る所; } catch (_) {}
+  if (!Array.isArray(既定) || !既定.length) {
+    未測.push("見る所の正本: hooks/lib-root.js が 既定の見る所 を出しません");
+  } else {
+    try { 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-watch-')); } catch (_) {}
+    if (!仮) 未測.push("見る所の正本: 一時の場所が作れません");
+    else {
+      try {
+        fs.mkdirSync(path.join(仮, 'guardian', 'hooks'), { recursive: true });
+        fs.mkdirSync(path.join(仮, 'docs'), { recursive: true });
+        for (const f of fs.readdirSync(path.join(HERE, 'hooks')))
+          fs.copyFileSync(path.join(HERE, 'hooks', f), path.join(仮, 'guardian', 'hooks', f));
+        fs.writeFileSync(path.join(仮, 'docs', 'CODEMAP.md'),
+          '# 地図' + String.fromCharCode(10,10) + '## 何か' + String.fromCharCode(10,10) + '接点: `どこにも無い.js`');
+        fs.writeFileSync(path.join(仮, 'guardian.config.json'),
+          JSON.stringify({ evidence: [{ name: "x", run: "node -e 0" }] }));   /* ★watch を宣言しない */
+        const 黙 = [];
+        for (const d of 既定) {
+          fs.mkdirSync(path.join(仮, d), { recursive: true });
+          fs.writeFileSync(path.join(仮, d, 'a.js'), 'x');
+          const r = spawnSync(process.execPath, [path.join(仮, "guardian", "hooks", "codemap.js")],
+            { cwd: 仮, input: JSON.stringify({ tool_input: { file_path: d + "/a.js", content: "x" } }),
+              encoding: "utf8", windowsHide: true, timeout: 60000 });
+          if (!String(r.stdout || "").trim()) 黙.push(d);
+        }
+        /* ★正本に無い所では黙る事も見る(広すぎないか) */
+        fs.mkdirSync(path.join(仮, 'どこにも無い所'), { recursive: true });
+        fs.writeFileSync(path.join(仮, 'どこにも無い所', 'a.js'), 'x');
+        const r外 = spawnSync(process.execPath, [path.join(仮, "guardian", "hooks", "codemap.js")],
+          { cwd: 仮, input: JSON.stringify({ tool_input: { file_path: "どこにも無い所/a.js", content: "x" } }),
+            encoding: "utf8", windowsHide: true, timeout: 60000 });
+        const 外も反応 = !!String(r外.stdout || "").trim();
+        if (黙.length) {
+          ng.push("★塊の半分どうしが【コードとは何か】で食い違っています ── 正本(既定の見る所)に在るのに、地図が差し込まれない所が " + 黙.length + "件: " + 黙.join(", ") + ' ── ★★合否の門は見るのに地図は来ない、という現場が生まれます。' + '★★★既定値は hooks/lib-root.js の 既定の見る所 が正本です。');
+        } else if (外も反応) {
+          ng.push("★正本に無い場所でも地図が差し込まれます ── 見る所の絞りが効いていません");
+        } else {
+          ok.push("塊の半分どうしが同じ【見る所】を使っている(正本 " + 既定.length + " 箇所ぶん叩いた・外では黙る)");
+        }
+      } catch (e) {
+        未測.push("見る所の正本: 測れませんでした(" + String(e && e.message).slice(0, 80) + ")");
+      } finally {
+        try { fs.rmSync(仮, { recursive: true, force: true }); } catch (_) {}
+      }
+    }
+  }
+}
+
 /* ---------- B19. 宣言で道を変えた現場で、出力が【既定値の名前】を言わないか(2026-09-03、会議で @kozo が見つけた) ----------
  *
  * ★事故: hooks/codemap.js は CFG.map を読んで地図を開くのに、
