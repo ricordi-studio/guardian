@@ -1,9 +1,9 @@
-27.14
+27.15
 METHOD.md 1kv4bye-22912
 PROTOCOL.json aajo32-354
 README.md cw0tbr-8361
 RULES.md t55p66-12134
-SPEC.md hmbr3t-17740
+SPEC.md 1kmhzfw-18003
 audit.md 78qkl6-2162
 check.mjs 57gj7-59914
 githooks/pre-commit 1y3b1ae-2062
@@ -26,7 +26,7 @@ templates/CODEMAP.md 1iwybyg-827
 templates/guardian-audit-command.md hyfuh-175
 templates/guardian.config.json 128yym3-2262
 templates/nightly-check.yml 1ybpxvw-2843
-verdict.mjs 1yr1egr-11423
+verdict.mjs xwuosd-12137
 保持一覧.json tfn9m3-1146
 台帳.mjs kl8ahu-3737
 外す.mjs cnj58i-65629
