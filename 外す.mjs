@@ -148,6 +148,30 @@ const 塊が書き込む場所 = ['.guardian/', '.claude/', '.github/workflows/'
  *
  *   ★★install.mjs は昔の名前を【5つ】知っている(改名の事故から)。走査は 0 だった。
  *   ★★★写経しない ── install の宣言を読む(pull の 配るもの を読むのと同じ作法)。 */
+/* ★区間の印は【install の宣言】から読む(27.16、2026-09-03、@kozo が実測・@codex が①を優先と言った)。
+ *
+ *   ★★実測(@kozo): 同じ「区間」という言葉に、2つの物差しが在った。
+ *     install … const 始 = '<!-- guardian:begin 修繕の仕組み(…) -->'  ★ラベルまで含む【全文】
+ *     外す   … 中.indexOf('<!-- guardian:begin')                      ★★★接頭辞【だけ】
+ *
+ *   ★実測(@kozo・二重区間の現場): 後ろに別のラベルの対を手で足すと、
+ *   ★★外す側は「begin と読める最初の物」を取り、★★★別の対を残したまま PASS で終わった。
+ *
+ *   ★写経しない ── 昔の名前 と同じ作法で、install の宣言を読む。
+ *   ★★読めなければ 接頭辞に落ちる(いまと同じ)── そのことも言えるように、読めたかを持つ。 */
+const 区間の印 = (() => {
+  try {
+    const src = fs.readFileSync(path.join(HERE, 'install.mjs'), 'utf8');
+    const h = src.indexOf('const 始 = ');
+    if (h < 0) return null;
+    const q = src.indexOf(String.fromCharCode(39), h);
+    const e = src.indexOf(String.fromCharCode(39), q + 1);
+    if (q < 0 || e < 0) return null;
+    const 全文 = src.slice(q + 1, e);
+    return 全文.startsWith('<!-- guardian:begin') ? 全文 : null;
+  } catch (_) { return null; }
+})();
+
 const 昔の名前 = (() => {
   try {
     const src = fs.readFileSync(path.join(HERE, 'install.mjs'), 'utf8');
@@ -838,7 +862,7 @@ const 育つ物 = new Set(['guardian.config.json', 'docs/CODEMAP.md']);
 const 育った = [];
 const 所有未確定 = [];  /* ★今回の導入は作っていないが、いま在る物(2026-09-03) */
 const 戻す = [];    /* ★入れる前の中身を持っている物(2026-09-03) */
-const 塊の跡が残る = [];   /* ★所有が false で触らなかった区間(27.11)── 現場の物の【中】に残る跡 */
+const 塊の跡が残る = [];   /* ★{ rel, 訳 } ── 現場の物の【中】に残る跡(27.11 / 27.16) */
 const 戻した = [];
 const 畳んだ = [];   /* ★空になって畳んだフォルダ(2026-09-03) */
 
@@ -885,7 +909,8 @@ for (const x of 項) {
       触らない.push(x.rel + '(' + x.種類 + ' ── ★この導入が書き足した先ですが、'
         + '台帳は【今回の導入が作った物ではない】と言っています ── ★★だから触りません。'
         + '★★★元へも戻しません(戻すと、この導入の物ではない中身を書き換えることになるので))');
-      if (x.種類 === '区間') 塊の跡が残る.push(x.rel);
+      if (x.種類 === '区間') 塊の跡が残る.push({ rel: x.rel,
+        訳: '台帳が【今回の導入が作った物ではない】と言っているので、この口は触りません' });
       continue;
     }
     if (!所有未確定.includes(x.rel)) 所有未確定.push(x.rel);
@@ -917,15 +942,31 @@ for (const x of 項) {
   } else if (x.種類 === '区間') {
     const 中 = 読む(先);
     if (中 == null) { 触らない.push(x.rel + '(もう在りません)'); continue; }
-    const 始 = 中.indexOf('<!-- guardian:begin');
+    /* ★install と同じ物差しで探す(27.16)── ★★宣言が読めた時だけ【全文】で当てる。
+     *   ★★★読めなければ 接頭辞に落ちる(前と同じ動き)。落ちた事は、下で言う。 */
+    const 始 = 区間の印 ? 中.indexOf(区間の印) : 中.indexOf(String.fromCharCode(60) + "!-- guardian:begin");
     const 終印 = '<!-- guardian:end -->';
-    const 終 = 中.indexOf(終印);
-    if (始 < 0 || 終 < 始) { 衝突.push(x.rel + ' ── 区間の印が対で見つかりません'); continue; }
+    const 終 = 始 < 0 ? -1 : 中.indexOf(終印, 始);   /* ★始より後ろの end を取る(前の対を掴まない) */
+    if (始 < 0 || 終 < 始) {
+      衝突.push(x.rel + ' ── 区間の印が対で見つかりません'
+        + (区間の印 && 中.includes(String.fromCharCode(60) + '!-- guardian:begin')
+            ? '(★begin は在りますが、この塊が書く印【そのもの】では ありません ── '
+              + '★★別の道具か、別の版が書いた区間かもしれません。だから触りません)' : ''));
+      continue;
+    }
     const 区間 = 中.slice(始, 終 + 終印.length);
     if (x.hash && 指紋(区間) !== x.hash) {
       衝突.push(x.rel + ' ── 区間の中が変わっています(人が書き足した可能性)');
     } else {
       消す.push({ 種類: '区間', 道: 先, rel: x.rel, 始, 終: 終 + 終印.length });
+      /* ★見えた印を全部 数えて、切る分を引く(27.16、@kozo の案②)。
+       *   ★★実測(@kozo): 対が2組ある現場で1組だけ切り、★★★残った1組は報告に1行も出なかった。
+       *   ★今日の保存則と同じ形 ── **見た数 − 消す数 = 残る数**。 */
+      const 印の数 = (中.split(String.fromCharCode(60) + '!-- guardian:begin').length - 1);
+      if (印の数 > 1) 塊の跡が残る.push({ rel: x.rel,
+        訳: "この道には begin が " + 印の数 + " 組 在ります ── "
+          + "★この塊が書く印【そのもの】に当たった1組だけを切ります。"
+          + "★★残りは 別の道具か 別の版が書いた物かもしれないので、触りません" });
     }
   } else if (x.種類 === 'JSON要素') {
     const 中 = 読む(先);
@@ -1242,7 +1283,12 @@ if (実行) {
       if (fs.existsSync(c.道)) 衝突.push(c.rel + ' ── 外したはずが、まだ在ります');
     } else if (c.種類 === '区間') {
       const 中 = 読む(c.道);
-      if (中 != null && 中.includes('<!-- guardian:begin')) {
+      /* ★見張りも【同じ物差し】で見る(27.16)── ★★接頭辞で見ると、
+       *   ★★★他の道具が書いた区間が残っているだけで「外せていない」と言ってしまう。
+       *   実測: 別ラベルの対を足した現場で、自分の区間は正しく切れたのに CONFLICT になった。 */
+      const 残り = 中 == null ? null
+        : (区間の印 ? 中.indexOf(区間の印) : 中.indexOf(String.fromCharCode(60) + "!-- guardian:begin"));
+      if (残り != null && 残り >= 0) {
         衝突.push(c.rel + ' ── 区間を外したはずが、まだ在ります');
       }
     } else if (c.種類 === 'JSON要素') {
@@ -1563,11 +1609,12 @@ if (判定 === 'CONFLICT') {
  *   ★★CLAUDE.md は現場の物なので ③ に入るが、★★★その中には塊が書いた区間が残っている。
  *   一覧を数えるだけでは「現場の物だけ残った」と読めてしまう ── だから名指しで言う。 */
 if (塊の跡が残る.length) {
-  console.log(String.fromCharCode(10) + '★★★ただし ── 次のファイルの【中】には、塊が書いた区間が残ります('
+  console.log(String.fromCharCode(10) + '★★★ただし ── 次のファイルの【中】には、区間の印が残ります('
     + 塊の跡が残る.length + '件):');
-  for (const r of 塊の跡が残る) console.log('  ・' + r + '(区間 guardian:begin/end)');
-  console.log('  ★台帳が【今回の導入が作った物ではない】と言っているので、この口は触りません。'
-    + '★★ファイルは現場の物として残りますが、★★★中身は完全には元に戻っていません。');
+  for (const r of 塊の跡が残る) console.log('  ・' + r.rel + '(区間 guardian:begin/end)'
+    + String.fromCharCode(10) + '      ── ' + r.訳);
+  console.log('  ★ファイルは現場の物として残りますが、'
+    + '★★中身は完全には元に戻っていません。');
 }
 if (実行 && 判定 === 'PASS') {
   try {
