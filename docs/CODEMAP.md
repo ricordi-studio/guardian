@@ -76,6 +76,8 @@ install.mjs       … ★★★書き込み5箇所が 台帳.記す を通る:
 ```
 書き手.cjs … ★CommonJS(hooks も engines も使うため。ESM 側は createRequire で読む)
   書く(ROOT, 相対の道, 中身, writer)       … 新しく置く。★親フォルダも所有として載せる
+  ★追記(ROOT, 相対の道, 行, writer)         … 1行 足す(JSONL)。★★親を作る/完全行/台帳を1つの口が持つ
+     戻り: { 載った, 前の行が壊れていた } ── ★★★載らなかったら 呼んだ側が【黙って成功にしない】
   書き換える(ROOT, 相対の道, 中身, writer) … ★★塊の物を塊が直す。台帳の指紋も直す
   更新 / 登録 / 親を作る / 指紋
 
@@ -85,10 +87,15 @@ install.mjs       … ★★★書き込み5箇所が 台帳.記す を通る:
 
 ★**繋いだ口(全接点)** ── ここに無い書き込みが現場に増えたら、台帳に載らない:
 
+★★**この一覧は手で持つ物なので、機械側でも見張る**(27.6)── `selfcheck` の B24 が
+**配る物の中の【追記】が 書き手.cjs 以外に在ったら赤くする**。
+★★★上書き(writeFileSync)の迂回は まだ見ていない ── 見ていない物を「無い」と言わない。
+
 ```
 check.mjs      … .guardian/予想.json(書く) / guardian.config.json(★書き換える)  ★予想.json は `人が書いた: true` を持ち、外す.mjs が消す前に読む(27.5)
 verdict.mjs    … .guardian/coverage(書く)
 neighbors.mjs  … 書き出す() = need / answer / 台帳(書く)
+外す.mjs       … .guardian/名指しで消した.jsonl(★追記。27.6 まで【迂回】していた)
 hooks/stop.js  … .claude/verdict_at(書く)★★ここが【現場の .claude/ に塊が書く】唯一の場所
 install.mjs    … write() と settings の書き込みで【作った親フォルダ】を台帳へ(種類: フォルダ)
 ```
