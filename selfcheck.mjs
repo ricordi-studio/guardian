@@ -1664,6 +1664,56 @@ if (process.argv.includes("--why")) {
   }
 }
 
+/* ---------- B19. 宣言で道を変えた現場で、出力が【既定値の名前】を言わないか(2026-09-03、会議で @kozo が見つけた) ----------
+ *
+ * ★事故: hooks/codemap.js は CFG.map を読んで地図を開くのに、
+ *   ★★文には CODEMAP.md をべた書きしていた(5行)。
+ *   ★★★実測(map: "docs/私の地図.md" の現場): 「… 項は CODEMAP.md に無い」と出た ──
+ *   **その現場に存在しない道**を、人に見に行かせる形だった。
+ *
+ * ★書き手は分かっていた ── 読めない時の文だけは実際の道を出していた。他に届いていなかった。
+ *
+ * ★★測り方は【綴りを読まない】── それがこの塊の掟である。
+ *   ★★★珍しい名前を宣言した現場で実際に叩き、**出力に既定値の名前が出ないか**を見る。
+ *   (綴りで測ると、注釈や履歴の記述まで拾って偽陽性になる) */
+{
+  let 仮 = null;
+  try { 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-map-')); } catch (_) {}
+  if (!仮) 未測.push("宣言で道を変えた現場の出力: 一時の場所が作れません");
+  else {
+    try {
+      fs.mkdirSync(path.join(仮, 'guardian', 'hooks'), { recursive: true });
+      fs.mkdirSync(path.join(仮, 'docs'), { recursive: true });
+      fs.mkdirSync(path.join(仮, 'src'), { recursive: true });
+      for (const f of fs.readdirSync(path.join(HERE, 'hooks')))
+        fs.copyFileSync(path.join(HERE, 'hooks', f), path.join(仮, 'guardian', 'hooks', f));
+      const 珍 = "docs/この現場だけの地図.md";
+      fs.writeFileSync(path.join(仮, 'guardian.config.json'),
+        JSON.stringify({ evidence: [{ name: "x", run: "node -e 0" }], map: 珍, watch: ["src"] }));
+      fs.writeFileSync(path.join(仮, ...珍.split('/')), '# 地図' + String.fromCharCode(10, 10)
+        + '## 何かの機能' + String.fromCharCode(10, 10) + '接点: `src/b.js`' + String.fromCharCode(10));
+      fs.writeFileSync(path.join(仮, 'src', 'a.js'), 'x' + String.fromCharCode(10));
+      const r = spawnSync(process.execPath, [path.join(仮, "guardian", "hooks", "codemap.js")],
+        { cwd: 仮, input: JSON.stringify({ tool_input: { file_path: "src/a.js" } }),
+          encoding: "utf8", windowsHide: true, timeout: 60000 });
+      const 出 = String(r.stdout || "") + String(r.stderr || "");
+      if (!出.trim()) {
+        未測.push("宣言で道を変えた現場の出力: 何も出ませんでした(この作り物では測れません)");
+      } else if (出.includes("CODEMAP.md")) {
+        ng.push("★宣言で地図の道を変えた現場なのに、出力が【既定値の名前】CODEMAP.md を言っています" + ' ── ★★この現場が読んでいるのは ' + 珍 + ' です。' + '★★★人は【存在しないかもしれない道】を見に行きます(実際に 5行 在りました)。');
+      } else if (!出.includes(珍)) {
+        未測.push("宣言で道を変えた現場の出力: 既定値も宣言した道も出ませんでした(この道は通っていません)");
+      } else {
+        ok.push("宣言で地図の道を変えた現場では、出力も【その道】の名で言う(既定値をべた書きしていない)");
+      }
+    } catch (e) {
+      未測.push("宣言で道を変えた現場の出力: 測れませんでした(" + String(e && e.message).slice(0, 60) + ")");
+    } finally {
+      try { fs.rmSync(仮, { recursive: true, force: true }); } catch (_) {}
+    }
+  }
+}
+
 /* ---------- B18. 通した道は【通したと言う】か(2026-09-03、会議で @kozo が形にした) ----------
  *
  * ★@kozo の一言がこの検査を作った:

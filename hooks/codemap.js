@@ -29,7 +29,16 @@ const ROOT = findRoot(__dirname);
 const CFG = loadConfig(ROOT);
 /* ★続けるなら【続けたと言う】(24.4)── 壊れた設定で既定値に落ちた事を、踏んだ人に見せる */
 設定が壊れていたら言う(CFG, path.basename(__filename));  /* ★名は自分に答えさせる(写経しない) */
-const MAP_PATH = path.join(ROOT, CFG.map || 'docs/CODEMAP.md');
+/* ★出力は【実際に読んだ道】の名で言う(24.6、2026-09-03、会議で @kozo が見つけた)。
+ *
+ *   ★★直す前、道具は CFG.map を読みながら、文には CODEMAP.md をべた書きしていた。
+ *   ★★★実測(map: "docs/私の地図.md" の現場): 「… 項は CODEMAP.md に無い」と出た ──
+ *   **この現場に存在しない道**を、人に見に行かせる形だった。
+ *
+ *   ★書き手は分かっていた ── 読めない時の文は MAP_PATH を出している。
+ *   ★★他の4行に届いていなかっただけ。★★★「綴りで所有を決めない」の、出力の側である。 */
+const 地図の名 = CFG.map || 'docs/CODEMAP.md';
+const MAP_PATH = path.join(ROOT, 地図の名);
 
 /* 地図が指している実装(手足)。ここ以外の編集では黙る(docs/ の更新等で鳴らさない) */
 /* 見張る場所はプロジェクトごとに違うので宣言(guardian.config.json の watch)から読む。
@@ -140,7 +149,7 @@ function touched(sym, text) {
  *  小文字語も、項が別の記号で引かれれば一覧には載る) */
 function distinctive(sym) { return !/^[a-z]+$/.test(sym); }
 function short(f) { return f.split('/').slice(-2).join('/'); }
-function clip(s, n) { return s.length <= n ? s : s.slice(0, n) + '\n…(以下略。全文は docs/CODEMAP.md)'; }
+function clip(s, n) { return s.length <= n ? s : s.slice(0, n) + '\n…(以下略。全文は ' + 地図の名 + ')'; }
 
 /* CODEMAP.md を「## 見出し」単位に割り、各項が名指ししている実名を拾う。
  * バッククォートで囲まれた語のうち、拡張子つきの相対パスをファイル、それ以外を記号として扱う。
@@ -209,7 +218,7 @@ function main() {
   try {
     md = fs.readFileSync(MAP_PATH, 'utf8');
   } catch (_) {
-    return emit('CODEMAP.md が読めない(' + MAP_PATH + ')。地図が無いまま実装が進んでいる状態。');
+    return emit(地図の名 + ' が読めない(' + MAP_PATH + ')。地図が無いまま実装が進んでいる状態。');
   }
 
   const sections = parseMap(md);
@@ -218,7 +227,7 @@ function main() {
   /* 地図に載っていない場所を編集した ── 沈黙させない。
    * 「異常なし」と「見ていない」が外から区別できなくなるのを避けるため、短く一言だけ出す。 */
   if (!named.length) {
-    return emit('CODEMAP: 地図の外 ── ' + short(file) + ' を名指ししている項は CODEMAP.md に無い。'
+    return emit('CODEMAP: 地図の外 ── ' + short(file) + ' を名指ししている項は ' + 地図の名 + ' に無い。'
       + '些細な変更なら無視してよい。別の層に接点があるなら地図の穴なので項を足すこと。');
   }
 
@@ -232,7 +241,7 @@ function main() {
   if (!strong.length) {
     const list = named.map((s) => (s.trap ? '⚠ ' : '') + s.title).join(' / ');
     return emit('CODEMAP: ' + short(file) + ' は次の項に載っている ── ' + list
-      + '。該当するものがあれば docs/CODEMAP.md の当該項を開いて接点を照合すること'
+      + '。該当するものがあれば ' + 地図の名 + ' の当該項を開いて接点を照合すること'
       + '(⚠ は過去に片方だけ直した実績がある項)。');
   }
 
@@ -244,7 +253,7 @@ function main() {
     + uniq(show.flatMap((s) => s.hit)).join(', ') + ')\n'
     + 'この概念の接点は ' + contacts.length + ' ファイルに跨っている: ' + contacts.join(', ') + '\n'
     + '── 下は地図の本文。**別の層のゲート・性質表・消費箇所に触れ残しが無いか**を、書いた後ではなく'
-    + '**この編集を含む一連の改修の中で**必ず潰すこと。新しい接点を作った/構造を変えたなら CODEMAP.md も更新する。\n';
+    + '**この編集を含む一連の改修の中で**必ず潰すこと。新しい接点を作った/構造を変えたなら ' + 地図の名 + ' も更新する。\n';
 
   for (const s of show) {
     msg += '\n## ' + s.title + (s.trap ? '  ⚠過去に片方だけ直した実績あり' : '') + '\n'
