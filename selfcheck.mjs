@@ -1725,39 +1725,84 @@ if (process.argv.includes("--why")) {
   }
 }
 
-/* ---------- B21. 「正本で測った」と書いた数が、古くなっていないか(2026-09-03、会議で @kozo が求めた) ----------
+/* ---------- B21. 「正本で測った」と書いた数が、古くなっていないか(2026-09-03、会議で @kozo が求め、@codex が P0 を出した) ----------
  *
  * ★外す.mjs の profileCoverage は「install.mjs が変わった版 23」と書いている。
- *   ★★これは正本の git でしか測れない数で、★★★書いた瞬間から古くなり始める。
+ *   これは正本の git でしか測れない数で、書いた瞬間から古くなり始める。
  *
- *   @kozo の求め: 「次に install.mjs が変わった時、24版目になる = 数がずれる = 気づける」
+ * ★★最初の実装は【配布先で偽の赤】を出した(@codex の P0、実測で再現した):
+ *   (a) git なし                    … 未測 ○
+ *   (b) guardian の中で git init    … ✗ 赤「いま git は 1 版です」
+ *   (c) 親が guardian を追跡        … ✗ 赤(同上)
+ *   (d) 別の親 repo(未追跡)        … ✗ 赤(同上)★別のリポジトリの履歴を正本として測っていた
  *
- * ★測り方: 綴りから数を1つ取り、git に同じ問いを投げて突き合わせる。
- *   ★★合わないなら【数え直して書き直す】── 数字を直すのではなく、9件の側を測り直すこと。
- *   ★★★配布先には正本の履歴が無い(pull が guardian/ の .git を落とす)ので、そこでは未測。 */
+ * ★★★@codex の契約:「正本由来を証明できない現場では、合否比較をせず【未測】。
+ *   検出した根・問うた相対の道・現場の版数は【診断としてだけ】出し、赤の理由には使わない」
+ *
+ * ★ここで出来る証明(署名の仕組みは無いので、次の2つを重ねる):
+ *   ① その git が【この install.mjs そのもの】を追っている
+ *      = HEAD の中身が手元とバイトで一致する(別の repo なら そもそも無い)
+ *   ② 履歴が、書いてある数以上に長い
+ *      = 短ければ「この塊自身の歴史ではない」(配布先で git init した現場が これに当たる)
+ *
+ * ★★残る穴を、はっきり書く: 正本ではないのに、バイト一致する install.mjs を
+ *   24回以上 触った repo が在れば、まだ偽の赤になる。★★★署名の仕組みが要る。 */
 {
   let 書いた = null;
   try {
-    const src = fs.readFileSync(path.join(HERE, '外す.mjs'), 'utf8');
-    const m = src.match(new RegExp("install\\.mjs が変わった版 (\\d+)"));
+    const m = kit('外す.mjs').match(new RegExp('install' + String.fromCharCode(92) + '.mjs が変わった版 (' + String.fromCharCode(92) + 'd+)'));
     if (m) 書いた = Number(m[1]);
   } catch (_) {}
+  const 診断 = [];
   if (書いた === null) {
-    未測.push("正本で測った数: 外す.mjs に「install.mjs が変わった版 N」が在りません(書き方が変わった?)");
+    未測.push('正本で測った数: 外す.mjs に「install.mjs が変わった版 N」が在りません(書き方が変わった?)');
   } else {
-    const r = spawnSync('git', ['-C', HERE, 'log', '--format=%H', '--follow', '--', 'install.mjs'],
-      { encoding: "utf8", windowsHide: true, timeout: 60000 });
-    const 実 = (!r.error && r.status === 0)
-      ? String(r.stdout || '').split(String.fromCharCode(10)).filter((x) => x.trim()).length : null;
-    if (実 === null || 実 === 0) {
-      未測.push("正本で測った数: この現場には install.mjs の履歴が在りません(配布先では正常 ── 書いてある数 " + 書いた + " は確かめられません)");
-    } else if (実 !== 書いた) {
-      ng.push("★「正本で測った」と書いた数が古くなっています ── 書いてあるのは " + 書いた + " 版、いま git は " + 実 + " 版です" + ' ── ★★install.mjs が変わったので、置く道が増えているかもしれません。' + '★★★数字だけ直さないこと。**9件の側を測り直して**から書き直してください' + '(git log --format=%H --reverse --follow -- install.mjs で各版を出し、path.join(ROOT, …) の字面を拾う)。');
+    const g = (...a) => spawnSync('git', ['-C', HERE, ...a],
+      { encoding: 'utf8', windowsHide: true, timeout: 60000 });
+    const gB = (...a) => spawnSync('git', ['-C', HERE, ...a],
+      { encoding: 'buffer', windowsHide: true, timeout: 60000 });
+    const top = (() => { const r = g('rev-parse', '--show-toplevel');
+      return (!r.error && r.status === 0) ? String(r.stdout || '').trim() : null; })();
+    const 相対 = (() => { const r = g('ls-files', '--full-name', '--', 'install.mjs');
+      return (!r.error && r.status === 0) ? String(r.stdout || '').trim().split(String.fromCharCode(10))[0] : ''; })();
+    診断.push('根=' + (top || '(git なし)'), '問うた道=' + (相対 || '(追跡されていません)'));
+    let 同じバイト = false;
+    if (相対) {
+      const r = gB('cat-file', 'blob', 'HEAD:' + 相対);
+      if (!r.error && r.status === 0 && r.stdout) {
+        try {
+          同じバイト = Buffer.compare(r.stdout, fs.readFileSync(path.join(HERE, 'install.mjs'))) === 0;
+        } catch (_) {}
+      }
+    }
+    const 実 = (() => {
+      if (!相対) return null;
+      const r = g('log', '--format=%H', '--follow', '--', 相対);
+      if (r.error || r.status !== 0) return null;
+      return String(r.stdout || '').split(String.fromCharCode(10)).filter((x) => x.trim()).length;
+    })();
+    診断.push('現場の版数=' + (実 === null ? '(取れません)' : 実), 'バイト一致=' + (同じバイト ? 'はい' : 'いいえ'));
+    if (!相対 || 実 === null) {
+      未測.push('正本で測った数: 正本由来を証明できません(この現場は install.mjs を追跡していません)'
+        + ' ── 書いてある数 ' + 書いた + ' は確かめられません【' + 診断.join(' / ') + '】');
+    } else if (!同じバイト) {
+      未測.push('正本で測った数: 正本由来を証明できません(追跡されている install.mjs が手元と別のバイトです)'
+        + ' ── 別のリポジトリの履歴かもしれないので、比べません【' + 診断.join(' / ') + '】');
+    } else if (実 < 書いた) {
+      未測.push('正本で測った数: 正本由来を証明できません(履歴が ' + 実 + ' 版しかなく、書いてある ' + 書いた + ' 版より短い)'
+        + ' ── ★配布先で git init した現場などが これに当たります。比べません【' + 診断.join(' / ') + '】');
+    } else if (実 > 書いた) {
+      ng.push('★「正本で測った」と書いた数が古くなっています ── 書いてあるのは ' + 書いた + ' 版、いま git は ' + 実 + ' 版です'
+        + ' ── ★★install.mjs が変わったので、置く道が増えているかもしれません。'
+        + '★★★数字だけ直さないこと。**9件の側を測り直して**から書き直してください'
+        + '(git log --format=%H --reverse --follow -- install.mjs で各版を出し、path.join(ROOT, …) の字面を拾う)。'
+        + '【' + 診断.join(' / ') + '】');
     } else {
-      ok.push("「正本で測った」と書いた数は いまも合っている(install.mjs が変わった版 " + 実 + ")");
+      ok.push('「正本で測った」と書いた数は いまも合っている(install.mjs が変わった版 ' + 実 + ')');
     }
   }
 }
+
 
 /* ---------- B20. 塊の半分どうしが【コードとは何か】で食い違っていないか(2026-09-03、会議で @kozo が「測っていない」と挙げた) ----------
  *
