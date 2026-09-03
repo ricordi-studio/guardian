@@ -1818,13 +1818,26 @@ if (process.argv.includes("--why")) {
   if (書いた === null) {
     未測.push('正本で測った数: 外す.mjs に「install.mjs が変わった版 N」が在りません(書き方が変わった?)');
   } else {
-    const g = (...a) => spawnSync('git', ['-C', HERE, ...a],
+    /* ★問い合わせ先と pathspec の【基準を揃える】(24.13、2026-09-03、@codex が B として指した)。
+     *
+     *   ★★直す前: -C HERE で走らせながら、pathspec には ls-files --full-name の値
+     *   (=リポジトリの根からの道)を渡していた。git の pathspec は cwd 基準なので、
+     *   ★★★HERE が根でない現場では【必ず外れる】── 真の履歴3版に対して 0版 を返した(実測)。
+     *
+     *   ★これは A(正本由来の証明)とは別の穴である。A で未測に落として隠さず、B として直す。
+     *   ★★直し: まず根を出し、以後の git は【根を cwd】にして、道も根からの道で渡す。 */
+    const 根探し = spawnSync('git', ['-C', HERE, 'rev-parse', '--show-toplevel'],
       { encoding: 'utf8', windowsHide: true, timeout: 60000 });
-    const gB = (...a) => spawnSync('git', ['-C', HERE, ...a],
+    const 根 = (!根探し.error && 根探し.status === 0)
+      ? String(根探し.stdout || '').trim() : null;
+    const 基 = 根 || HERE;   /* 根が取れないなら HERE のまま(その時は履歴も取れない) */
+    const g = (...a) => spawnSync('git', ['-C', 基, ...a],
+      { encoding: 'utf8', windowsHide: true, timeout: 60000 });
+    const gB = (...a) => spawnSync('git', ['-C', 基, ...a],
       { encoding: 'buffer', windowsHide: true, timeout: 60000 });
-    const top = (() => { const r = g('rev-parse', '--show-toplevel');
-      return (!r.error && r.status === 0) ? String(r.stdout || '').trim() : null; })();
-    const 相対 = (() => { const r = g('ls-files', '--full-name', '--', 'install.mjs');
+    const top = 根;
+    /* ★根を cwd にしたので、install.mjs は そのままでは当たらない ── 根からの道で探す */
+    const 相対 = (() => { const r = g('ls-files', '--full-name', '--', '*install.mjs');
       return (!r.error && r.status === 0) ? String(r.stdout || '').trim().split(String.fromCharCode(10))[0] : ''; })();
     診断.push('根=' + (top || '(git なし)'), '問うた道=' + (相対 || '(追跡されていません)'));
     let 同じバイト = false;
