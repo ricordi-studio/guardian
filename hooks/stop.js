@@ -160,7 +160,27 @@ function main(ev) {
       }
     } catch (_) { /* ★道.cjs が無い古い配布先では、watch だけで見る(前の版と同じ) */ }
   }
-  if (!changed) return pass();
+  /* ★測らずに通すときも【機械には言う】(26.13、2026-09-03、@kozo が実測)。
+   *
+   *   ★★実測(直す前): 印より新しい実装が無いと、この門は
+   *   **出口0・出力0バイト**で返っていた ── ★★★合否を1度も呼んでいない。
+   *   人からも機械からも【通った】に見える。
+   *
+   *   ★これは「不明が緑に見える」より手前である ── **測っていないのに通る**。
+   *   ★★@kozo の再現は touch(clone や archive では時刻が新しくなるので起きない)だが、
+   *   形としては この塊が一番 嫌う「黙って通る」である。
+   *
+   *   ★★★人には黙ったまま(鳴りすぎない、は守る)、**機械にだけ**
+   *   「測っていない」と返す ── 24.3 で決めた「通すなら、通したと言う」の続き。 */
+  if (!changed) {
+    process.stdout.write(JSON.stringify({
+      decision: 'skipped_unchanged',
+      測った: false,
+      理由: '印より新しい実装が見つからないので、合否を回していません',
+      印: last,
+    }));
+    return process.exit(0);
+  }
 
   /* ---- 合否を集める ---- */
   const r = spawnSync(process.execPath, [path.join(__dirname, '..', 'verdict.mjs'), '--fast', '--json'],
