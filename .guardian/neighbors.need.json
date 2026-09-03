@@ -2,172 +2,196 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "docs/CODEMAP.md::案内:clock.js",
-   "記号": "案内:clock.js",
+   "key": "check.mjs::子として回す:selfcheck.mjs",
+   "記号": "子として回す:selfcheck.mjs",
+   "場所": "check.mjs",
+   "環": 1,
+   "根": "proc:selfcheck.mjs",
+   "きっかけ": "selfcheck.mjs から子として回されている"
+  },
+  {
+   "key": "docs/CODEMAP.md::案内:selfcheck.mjs",
+   "記号": "案内:selfcheck.mjs",
    "場所": "docs/CODEMAP.md",
    "環": 1,
-   "根": "proc:hooks/clock.js",
-   "きっかけ": "docs/CODEMAP.md が clock.js を名指ししている(中身が変わったので、案内が古くないか)"
+   "根": "proc:selfcheck.mjs",
+   "きっかけ": "docs/CODEMAP.md が selfcheck.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
-   "key": "docs/CODEMAP.md::案内:codemap.js",
-   "記号": "案内:codemap.js",
+   "key": "docs/CODEMAP.md::案内:外す.mjs",
+   "記号": "案内:外す.mjs",
    "場所": "docs/CODEMAP.md",
    "環": 1,
-   "根": "proc:hooks/codemap.js",
-   "きっかけ": "docs/CODEMAP.md が codemap.js を名指ししている(中身が変わったので、案内が古くないか)"
+   "根": "proc:外す.mjs",
+   "きっかけ": "docs/CODEMAP.md が 外す.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
-   "key": "docs/CODEMAP.md::案内:lib-root.js",
-   "記号": "案内:lib-root.js",
-   "場所": "docs/CODEMAP.md",
-   "環": 1,
-   "根": "proc:hooks/lib-root.js",
-   "きっかけ": "docs/CODEMAP.md が lib-root.js を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "hooks/clock.js::AUDIT_FILE",
-   "記号": "AUDIT_FILE",
-   "場所": "hooks/clock.js",
-   "環": 1,
-   "根": "path",
-   "きっかけ": "「path」を呼んでいる"
-  },
-  {
-   "key": "hooks/clock.js::changed",
-   "記号": "changed",
-   "場所": "hooks/clock.js",
-   "環": 1,
-   "根": "path",
-   "きっかけ": "「path」を呼んでいる"
-  },
-  {
-   "key": "hooks/clock.js::LIMIT_MS",
-   "記号": "LIMIT_MS",
-   "場所": "hooks/clock.js",
-   "環": 1,
-   "根": "CFG",
-   "きっかけ": "「CFG」を呼んでいる"
-  },
-  {
-   "key": "hooks/clock.js::newestMtime",
-   "記号": "newestMtime",
-   "場所": "hooks/clock.js",
-   "環": 1,
-   "根": "path",
-   "きっかけ": "「path」を呼んでいる"
-  },
-  {
-   "key": "hooks/clock.js::touched",
-   "記号": "touched",
-   "場所": "hooks/clock.js",
-   "環": 1,
-   "根": "path",
-   "きっかけ": "「path」を呼んでいる"
-  },
-  {
-   "key": "hooks/clock.js::WATCH",
-   "記号": "WATCH",
-   "場所": "hooks/clock.js",
-   "環": 1,
-   "根": "CFG",
-   "きっかけ": "「CFG」を呼んでいる"
-  },
-  {
-   "key": "hooks/codemap.js::MAP_PATH",
-   "記号": "MAP_PATH",
-   "場所": "hooks/codemap.js",
-   "環": 1,
-   "根": "path",
-   "きっかけ": "「path」を呼んでいる"
-  },
-  {
-   "key": "hooks/codemap.js::WATCH",
-   "記号": "WATCH",
-   "場所": "hooks/codemap.js",
-   "環": 1,
-   "根": "CFG",
-   "きっかけ": "「CFG」を呼んでいる"
-  },
-  {
-   "key": "install.md::案内:clock.js",
-   "記号": "案内:clock.js",
+   "key": "install.md::案内:selfcheck.mjs",
+   "記号": "案内:selfcheck.mjs",
    "場所": "install.md",
    "環": 1,
-   "根": "proc:hooks/clock.js",
-   "きっかけ": "install.md が clock.js を名指ししている(中身が変わったので、案内が古くないか)"
+   "根": "proc:selfcheck.mjs",
+   "きっかけ": "install.md が selfcheck.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
-   "key": "install.md::案内:codemap.js",
-   "記号": "案内:codemap.js",
+   "key": "install.md::案内:外す.mjs",
+   "記号": "案内:外す.mjs",
    "場所": "install.md",
    "環": 1,
-   "根": "proc:hooks/codemap.js",
-   "きっかけ": "install.md が codemap.js を名指ししている(中身が変わったので、案内が古くないか)"
+   "根": "proc:外す.mjs",
+   "きっかけ": "install.md が 外す.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
-   "key": "README.md::案内:clock.js",
-   "記号": "案内:clock.js",
+   "key": "install.mjs::子として回す:selfcheck.mjs",
+   "記号": "子として回す:selfcheck.mjs",
+   "場所": "install.mjs",
+   "環": 1,
+   "根": "proc:selfcheck.mjs",
+   "きっかけ": "selfcheck.mjs を子として回し、その出口を読んでいる"
+  },
+  {
+   "key": "neighbors.mjs::子として回す:selfcheck.mjs",
+   "記号": "子として回す:selfcheck.mjs",
+   "場所": "neighbors.mjs",
+   "環": 1,
+   "根": "proc:selfcheck.mjs",
+   "きっかけ": "selfcheck.mjs から子として回されている"
+  },
+  {
+   "key": "pull.mjs::子として回す:selfcheck.mjs",
+   "記号": "子として回す:selfcheck.mjs",
+   "場所": "pull.mjs",
+   "環": 1,
+   "根": "proc:selfcheck.mjs",
+   "きっかけ": "selfcheck.mjs から子として回されている"
+  },
+  {
+   "key": "README.md::案内:selfcheck.mjs",
+   "記号": "案内:selfcheck.mjs",
    "場所": "README.md",
    "環": 1,
-   "根": "proc:hooks/clock.js",
-   "きっかけ": "README.md が clock.js を名指ししている(中身が変わったので、案内が古くないか)"
+   "根": "proc:selfcheck.mjs",
+   "きっかけ": "README.md が selfcheck.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
-   "key": "README.md::案内:codemap.js",
-   "記号": "案内:codemap.js",
+   "key": "README.md::案内:外す.mjs",
+   "記号": "案内:外す.mjs",
    "場所": "README.md",
    "環": 1,
-   "根": "proc:hooks/codemap.js",
-   "きっかけ": "README.md が codemap.js を名指ししている(中身が変わったので、案内が古くないか)"
+   "根": "proc:外す.mjs",
+   "きっかけ": "README.md が 外す.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
-   "key": "SPEC.md::案内:clock.js",
-   "記号": "案内:clock.js",
+   "key": "SPEC.md::案内:selfcheck.mjs",
+   "記号": "案内:selfcheck.mjs",
    "場所": "SPEC.md",
    "環": 1,
-   "根": "proc:hooks/clock.js",
-   "きっかけ": "SPEC.md が clock.js を名指ししている(中身が変わったので、案内が古くないか)"
+   "根": "proc:selfcheck.mjs",
+   "きっかけ": "SPEC.md が selfcheck.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
-   "key": "SPEC.md::案内:codemap.js",
-   "記号": "案内:codemap.js",
+   "key": "SPEC.md::案内:外す.mjs",
+   "記号": "案内:外す.mjs",
    "場所": "SPEC.md",
    "環": 1,
-   "根": "proc:hooks/codemap.js",
-   "きっかけ": "SPEC.md が codemap.js を名指ししている(中身が変わったので、案内が古くないか)"
+   "根": "proc:外す.mjs",
+   "きっかけ": "SPEC.md が 外す.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
-   "key": "SPEC.md::案内:lib-root.js",
-   "記号": "案内:lib-root.js",
-   "場所": "SPEC.md",
+   "key": "外す.mjs::HERE",
+   "記号": "HERE",
+   "場所": "外す.mjs",
    "環": 1,
-   "根": "proc:hooks/lib-root.js",
-   "きっかけ": "SPEC.md が lib-root.js を名指ししている(中身が変わったので、案内が古くないか)"
+   "根": "判定",
+   "きっかけ": "「判定」を呼んでいる"
   },
   {
-   "key": "hooks/clock.js::last",
-   "記号": "last",
-   "場所": "hooks/clock.js",
-   "環": 2,
-   "根": "path",
-   "きっかけ": "「AUDIT_FILE」を呼んでいる"
+   "key": "外す.mjs::依存の網",
+   "記号": "依存の網",
+   "場所": "外す.mjs",
+   "環": 1,
+   "根": "実行される綴り",
+   "きっかけ": "「実行される綴り」を呼んでいる"
   },
   {
-   "key": "hooks/clock.js::overdue",
-   "記号": "overdue",
-   "場所": "hooks/clock.js",
-   "環": 2,
-   "根": "CFG",
-   "きっかけ": "「LIMIT_MS」を呼んでいる"
+   "key": "外す.mjs::走査",
+   "記号": "走査",
+   "場所": "外す.mjs",
+   "環": 1,
+   "根": "判定",
+   "きっかけ": "「判定」を呼んでいる"
   },
   {
-   "key": "hooks/codemap.js::main",
-   "記号": "main",
-   "場所": "hooks/codemap.js",
+   "key": "外す.mjs::retained",
+   "記号": "retained",
+   "場所": "外す.mjs",
    "環": 2,
-   "根": "path",
-   "きっかけ": "「MAP_PATH」を呼んでいる"
+   "根": "実行される綴り",
+   "きっかけ": "「依存の網」を呼んでいる"
+  },
+  {
+   "key": "外す.mjs::ROOT",
+   "記号": "ROOT",
+   "場所": "外す.mjs",
+   "環": 2,
+   "根": "判定",
+   "きっかけ": "「HERE」を呼んでいる"
+  },
+  {
+   "key": "外す.mjs::口の宣言",
+   "記号": "口の宣言",
+   "場所": "外す.mjs",
+   "環": 2,
+   "根": "判定",
+   "きっかけ": "「走査」を呼んでいる"
+  },
+  {
+   "key": "外す.mjs::畳んだ",
+   "記号": "畳んだ",
+   "場所": "外す.mjs",
+   "環": 2,
+   "根": "判定",
+   "きっかけ": "「走査」を呼んでいる"
+  },
+  {
+   "key": "外す.mjs::昔の名前",
+   "記号": "昔の名前",
+   "場所": "外す.mjs",
+   "環": 2,
+   "根": "判定",
+   "きっかけ": "「HERE」を呼んでいる"
+  },
+  {
+   "key": "外す.mjs::選ばれたmode",
+   "記号": "選ばれたmode",
+   "場所": "外す.mjs",
+   "環": 2,
+   "根": "判定",
+   "きっかけ": "「走査」を呼んでいる"
+  },
+  {
+   "key": "外す.mjs::走査だけ",
+   "記号": "走査だけ",
+   "場所": "外す.mjs",
+   "環": 2,
+   "根": "判定",
+   "きっかけ": "「走査」を呼んでいる"
+  },
+  {
+   "key": "外す.mjs::読む",
+   "記号": "読む",
+   "場所": "外す.mjs",
+   "環": 2,
+   "根": "実行される綴り",
+   "きっかけ": "「依存の網」を呼んでいる"
+  },
+  {
+   "key": "外す.mjs::保持の訴え",
+   "記号": "保持の訴え",
+   "場所": "外す.mjs",
+   "環": 2,
+   "根": "判定",
+   "きっかけ": "「HERE」を呼んでいる"
   }
  ]
 }

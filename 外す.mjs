@@ -386,7 +386,24 @@ if (走査だけ) {
 
   if (JSONで出す) {
     console.log(JSON.stringify({
+      /* ★見分けは【mode】に載せる(24.5、2026-09-03、@codex 06:33 / @kozo 08:10)。
+ *
+       *   ★★直す前、2つの JSON の見分けは `版`/`形` の【文字列】だけだった ──
+       *   ★★★それは人が付ける名前で、人が付ける物は変わる。
+       *   mode は打った口そのものなので、★機械が取り違えない。
+       *   ★★どちらの JSON も同じ鍵(mode / schema)を持つ ── 読む側が1つの手で分岐できる。 */
+      mode: 選ばれたmode, schema: 'guardian-走査 v1',
       版: 'guardian-走査 v1', 根: 走査の根,
+      /* ★【版ごとの道を集める仕掛け】は在りません(24.5、@codex 05:33 の求め)。
+       *   ★★実測: この塊に 版ごと/profile/candidateSHA の類は 0件。
+       *   ★★★何も言わないと、読む側は「候補の一覧が これで全部」と読む ── 
+       *   それは「測っていない所を無いと言わない」の、対象が【機能】の版である。 */
+      profileCoverage: {
+        状態: 'not-collected',
+        注: '★この走査は【版ごとの道】を体系的には集めていません。'
+          + '★★入っているのは install.mjs が覚えている昔の名前だけで、'
+          + '★★★それ以外の版が置いた道は、この一覧に出ません。',
+      },
       台帳: fs.existsSync(path.join(走査の根, 書き手.台帳の相対)),
       /* ★走査は保持一覧を読まない ── ★★下見だけが読む(2026-09-03、@codex の線)。
        *   ★★★片方だけが黙って保持の情報を捨てる形にしないため、ここで明示する。 */
@@ -1139,6 +1156,7 @@ const 判定 = (衝突.length || 依存衝突.length) ? 'CONFLICT'
 if (静かにする) {
   console.log = 本当のlog;
   console.log(JSON.stringify({
+    mode: 選ばれたmode, schema: 'guardian-撤去計画 v1',   /* ★見分けは mode(24.5)── 上の走査と同じ鍵 */
     形: 'guardian-撤去計画 v1',
     根: ROOT,
     版: (() => { try { return fs.readFileSync(path.join(HERE, "KIT_VERSION"), "utf8").trim(); } catch (_) { return null; } })(),

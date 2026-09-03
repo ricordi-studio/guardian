@@ -1664,6 +1664,60 @@ if (process.argv.includes("--why")) {
   }
 }
 
+/* ---------- B18. 通した道は【通したと言う】か(2026-09-03、会議で @kozo が形にした) ----------
+ *
+ * ★@kozo の一言がこの検査を作った:
+ *   ★★「通す」の双子は「通したと言ったか」であって、「通したか」では ありません。
+ *
+ *   ★★★なぜ代償(言う方)だけが落ちるのか、彼の説明:
+ *     許しの理由は【実装する時に要る】(そう書かないと動かない)
+ *     代償は【実装しなくても動く】── 器が「動く」と言った時点で、代償は器の外に居る
+ *
+ * ★実際に2回 落ちた:
+ *   24.2 … 入力が読めない道を fail-open に残したが、診断を1文字も出さなかった(24.3 で直した)
+ *   24.2 … 壊れた設定で合図のフックが既定値に落ちるのに、何も言わなかった(24.4 で直した)
+ *
+ * ★★測り方: にせの現場を作り、【通る形】で叩いて、診断が出るかを見る。
+ *   ★★★出口や stdout では測らない ── どちらも「通った」しか言わない。**stderr を測る。** */
+{
+  const 表 = [
+    { 誰: "hooks/stop.js", 設定: "{\"evidence\":[{\"name\":\"x\",\"run\":\"node -e 0\"}]}", 入力: "これはJSONでない", 何: "入力が読めない(唯一の fail-open)" },
+    { 誰: "hooks/clock.js", 設定: "{\"evidence\":[] \"watch\":[\"packages\"]}", 入力: "{\"tool_input\":{\"file_path\":\"src/a.js\"}}", 何: "壊れた設定で既定値に落ちる" },
+    { 誰: "hooks/codemap.js", 設定: "{\"evidence\":[] \"watch\":[\"packages\"]}", 入力: "{\"tool_input\":{\"file_path\":\"src/a.js\"}}", 何: "壊れた設定で既定値に落ちる" },
+  ];
+  let 仮 = null;
+  try { 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-say-')); } catch (_) {}
+  if (!仮) 未測.push("通した道が【通したと言う】か: 一時の場所が作れません");
+  else {
+    const 外れ = [];
+    try {
+      fs.mkdirSync(path.join(仮, 'guardian', 'hooks'), { recursive: true });
+      for (const f of ['書き手.cjs', '台帳.mjs']) {
+        try { fs.copyFileSync(path.join(HERE, f), path.join(仮, "guardian", f)); } catch (_) {}
+      }
+      for (const f of fs.readdirSync(path.join(HERE, 'hooks')))
+        fs.copyFileSync(path.join(HERE, 'hooks', f), path.join(仮, 'guardian', 'hooks', f));
+      for (const t of 表) {
+        fs.writeFileSync(path.join(仮, 'guardian.config.json'), t.設定);
+        const r = spawnSync(process.execPath, [path.join(仮, "guardian", t.誰)],
+          { cwd: 仮, input: t.入力, encoding: "utf8", windowsHide: true, timeout: 60000 });
+        const 言 = String(r.stderr || "");
+        const 止 = String(r.stdout || "").includes("\"block\"");
+        if (止) continue;                       /* 止めたなら、それは「通した道」ではない */
+        if (!言.trim())
+          外れ.push(t.誰 + "(" + t.何 + ") → 通したのに stderr が空です");
+      }
+      if (外れ.length)
+        ng.push("★通した道が【通したと言っていません】(" + 外れ.length + "件): " + 外れ.join(" / ") + ' ── ★★通ったことがどこにも残らないと、次に同じ形を見つけた人が' + '「そういう道が在る」のか「たまたま黙った」のかを区別できません。' + '★★★通すなら、通したと言うこと。');
+      else ok.push("通した道は【通したと言う】(唯一の fail-open と、既定値に落ちる合図のフック2本)");
+    } catch (e) {
+      未測.push("通した道が【通したと言う】か: 測れませんでした(" + String(e && e.message).slice(0, 60) + ")");
+    } finally {
+      try { fs.rmSync(仮, { recursive: true, force: true }); } catch (_) {}
+    }
+  }
+}
+
 /* ---------- B16. 低い層の module は、読み込んだだけで何も起こさないか(2026-09-03、会議で @codex が出し @kozo が叩いた) ----------
  *
  * ★なぜ要るか: この検査は `書き手.cjs` と `道.cjs` を **import している**。

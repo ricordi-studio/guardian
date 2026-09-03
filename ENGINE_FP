@@ -1,9 +1,9 @@
-24.4
+24.5
 METHOD.md 1kv4bye-22912
 PROTOCOL.json aajo32-354
 README.md cw0tbr-8361
 RULES.md t55p66-12134
-SPEC.md 1qjqfp6-14235
+SPEC.md 1eogspn-14361
 audit.md 78qkl6-2162
 check.mjs 6hht09-59122
 githooks/pre-commit 1y3b1ae-2062
@@ -20,7 +20,7 @@ install.mjs 1oai3jx-32594
 neighbors.mjs 1w3ub5g-53147
 package.json zx7jrx-416
 pull.mjs n4vgvd-31618
-selfcheck.mjs 1t302t1-128979
+selfcheck.mjs pxwsgz-131538
 templates/CLAUDE-snippet.md 1y7ghqv-1478
 templates/CODEMAP.md 1iwybyg-827
 templates/guardian-audit-command.md hyfuh-175
@@ -29,6 +29,6 @@ templates/nightly-check.yml 1ybpxvw-2843
 verdict.mjs 1khv7yf-10356
 保持一覧.json tfn9m3-1146
 台帳.mjs kl8ahu-3737
-外す.mjs 1x53jxt-51996
+外す.mjs 1hotswu-52808
 書き手.cjs 18bc76y-4834
 道.cjs 1mpvcnl-2966
