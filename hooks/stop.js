@@ -211,7 +211,22 @@ function main(ev) {
     const reason = '合否は止めるほどではありませんが、**測れていないもの**があります。'
       + '完了を報告するときは、これを「不明」として正直に書いてください(緑に混ぜない)。\n'
       + [...unknown, ...warn].map(brief).join('\n');
+    /* ★機械にも【不明】と分かる形で返す(26.11、2026-09-03、@codex 14:14)。
+     *
+     *   ★★実測(直す前): 合否が不明のとき、この道は
+     *   { hookSpecificOutput: { additionalContext } } だけを返していた。
+     *   ★★★decision の欄が【無い】ので、機械には【通過と区別できない】。
+     *
+     *   ★additionalContext は人が読む文である。読み飛ばす機械は、
+     *   ★★不明を緑として受け取る ── この塊の一行目(不明は合格ではない)が、
+     *   ★★★停止器の【機械向けの口】でだけ守られていなかった。
+     *
+     *   ★止めないことは変えない(不明では閉じ込めない)。
+     *   ★★変えるのは【何を返すか】── 状態と内訳を機械可読で添える。 */
     process.stdout.write(JSON.stringify({
+      decision: 'continue_with_unknown',
+      不明: unknown.length, 注意: warn.length,
+      内訳: [...unknown, ...warn].map((x) => ({ name: x.name, verdict: x.verdict })),
       hookSpecificOutput: { hookEventName: 'Stop', additionalContext: reason },
     }));
     return process.exit(0);

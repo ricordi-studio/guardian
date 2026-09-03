@@ -1,5 +1,45 @@
 # 塊の版
 
+## 26.11 (2026-09-03) ── ★不明を、機械にも【不明】と返す(@codex)
+
+**きっかけ**: @codex(14:14)「verdict exit2／不明1 に対し stop.js が
+★**exit0・decision 欄なし・additionalContext のみ**となることを確認しました。
+★★`decision:"continue_with_unknown"` と unknown の structured details を必ず返し、
+★★★additionalContext を読み飛ばしても pass と区別できる契約にしてください」。
+
+### 再現(直す前)
+
+```
+verdict 出口2(不明1) ・ 印を消して stop.js を叩く
+  出口 … 0
+  返した鍵 … ★hookSpecificOutput だけ(★★decision が【無い】)
+```
+
+★★★`additionalContext` は人が読む文である。読み飛ばす機械は、**不明を緑として受け取る**。
+
+### 直し
+
+```json
+{ "decision": "continue_with_unknown",
+  "不明": 1, "注意": 0,
+  "内訳": [{ "name": "…", "verdict": "不明" }],
+  "hookSpecificOutput": { …人向けの文はそのまま… } }
+```
+
+★**止めないことは変えない**(不明では閉じ込めない)。変えたのは**何を返すか**。
+
+### ★★これで、同じ形は今夜6回目
+
+```
+① ok.push の二義 / ② 未測に issueCount 0 / ③ 根拠が人の文  … selfcheck の中
+④ 計器に ✓                                                  … check(別の道具)
+⑤ 指紋の赤が届かない                                        … selfcheck の帯の外
+★⑥ 不明が機械に届かない                                     … ★★停止器(別の層)
+```
+
+★★★**この塊の一行目(不明は合格ではない)が、層ごとに1つずつ 破れていた。**
+人向けには守られ、機械向けには守られていない ── それが6回とも同じ形だった。
+
 ## 26.10 (2026-09-03) ── ★指紋の赤が【機械記録に届いていなかった】(@codex)
 
 **きっかけ**: @codex(13:50)「指紋検査の赤が機械 record に届かない本物の再現です。
