@@ -352,7 +352,7 @@ const 終 = '<!-- guardian:end -->';
 const 既定の見出し = '# CLAUDE.md — 開発規範';
 const 人が書いた開発規範 = (() => {
   let t = '';
-  try { t = fs.readFileSync(path.join(ROOT, 'CLAUDE.md'), 'utf8'); } catch (_) { return false; }
+  try { t = fs.readFileSync(path.join(ROOT, 'CLAUDE.md'), 'utf8'); } catch (_) { return false; }   // guardian:read
   const i = t.indexOf(始), j = t.indexOf(終);
   const 外 = (i >= 0 && j > i ? t.slice(0, i) + t.slice(j + 終.length) : t)
     .split(既定の見出し).join('')
@@ -362,7 +362,7 @@ const 人が書いた開発規範 = (() => {
 const CC = process.argv.includes('--hooks') ? true
   : process.argv.includes('--no-hooks') ? false
   : KIT === '.' ? true
-  : (fs.existsSync(path.join(ROOT, '.claude')) || 人が書いた開発規範);
+  : (fs.existsSync(path.join(ROOT, '.claude')) || 人が書いた開発規範);   // guardian:read
 
 /* ---------- 3. フックの登録(既存を壊さない) ---------- */
 if (CC) {
@@ -688,7 +688,7 @@ if (!DRY) {
     todo.push('★古い名前が残っています: ' + x.p + '(' + x.say + ')。**中身を新しい方へ移してから消してください** ── 残したままだと、そちらは誰にも読まれません');
   /* フックの二重登録 */
   try {
-    const s = JSON.parse(fs.readFileSync(path.join(ROOT, '.claude', 'settings.json'), 'utf8'));
+    const s = JSON.parse(fs.readFileSync(path.join(ROOT, '.claude', 'settings.json'), 'utf8'));   // guardian:read
     let 古いフック = 0;
     for (const 種 of Object.keys(s.hooks || {}))
       for (const g of s.hooks[種])

@@ -1664,6 +1664,67 @@ if (process.argv.includes("--why")) {
   }
 }
 
+/* ---------- B22. install が置く道を、外す側の 既知の道 が覆っているか(2026-09-03、会議で @kozo が語彙を見つけた) ----------
+ *
+ * ★@kozo が見つけた: `guardian:read` は【向きの宣言】で、B7 が既に読んでいる。
+ *   ★★だから「install が置く道」は 字面 − guardian:read で機械が集められる。
+ *
+ * ★★★実測(2026-09-03): B7 の網は1引数の join しか見ないので 5件(粗い)。
+ *   引数を継ぐ形まで見ると 6件になり、★既知の道(6件)のうち **5件が一致**する。
+ *
+ * ★★届かない物も、はっきり言う ── `.github/workflows/guardian-nightly.yml` は
+ *   `path.join(dir, …)` と**変数で組む**ので、字面の網には映らない。
+ *   ★★★だからこの検査は【完全ではない】。それでも入れるのは、
+ *   install が新しい道を字面で足したときに、外す側が黙って取り残されるのを止めるため。
+ *   (@kozo が測った歴史: 23版で置く道は 9件。取りこぼしは 0件だった) */
+{
+  try {
+    const NL1 = String.fromCharCode(10);
+    const 置く = new Set();
+    /* ★正規表現は【毎回 作る】(2026-09-03、双子が 0件 を緑で返して気づいた)。
+     *   ★★matchAll は lastIndex を引き継ぐので、使い回すと2行目以降が飛ぶ。
+     *   ★★★網が空振りしたのに緑が出る ── この塊が一番 嫌う形だった。 */
+    /* ★正規表現は【文字コードから組む】(2026-09-03)── 逆斜線は殻にもヒアドキュメントにも食われ、この直しだけで3回 落ちた。★★食われた形 /path.join(ROOT,((?:s*…/ は【当たらないのに構文は通る】。 */
+    const 継ぐ = () => new RegExp("path\\.join\\(ROOT,((?:\\s*'[^']+',?)+)\\s*\\)", "g");
+    const 片取り = () => /'([^']+)'/g;
+    for (const 行 of kit('install.mjs').split(NL1)) {
+      if (/guardian:read/.test(行)) continue;
+      for (const m of 行.matchAll(継ぐ())) {
+        const 片 = [...m[1].matchAll(片取り())].map((x) => x[1]);
+        if (片.length) 置く.add(片.join('/'));
+      }
+    }
+    const 外 = kit('外す.mjs');
+    const 既知 = new Set();
+    const h = 外.indexOf('const 既知の道 = new Set([');
+    if (h >= 0) {
+      const 尾 = 外.indexOf(']);', h);
+      for (const m of 外.slice(h, 尾).matchAll(片取り())) 既知.add(m[1]);
+    }
+    const 入れ物 = new Set(['docs', '.claude', '.github', '.github/workflows', '.claude/commands']);
+    /* ★網が空振りしたら【緑にしない】── 0件は「漏れが無い」ではなく「見えていない」 */
+    if (!置く.size) {
+      未測.push("install が置く道の覆い: 網が1件も拾えませんでした(install.mjs の書き方が変わった可能性 ── 直すこと)");
+    } else if (!既知.size) {
+      未測.push('install が置く道の覆い: 外す.mjs から 既知の道 を取り出せません(書き方が変わった?)');
+    } else {
+      const 漏れ = [...置く].filter((p) => !既知.has(p) && !入れ物.has(p));
+      if (漏れ.length) {
+        ng.push('★install が置く道を、外す側の 既知の道 が覆っていません(' + 漏れ.length + '件): '
+          + 漏れ.join(' / ')
+          + ' ── ★★置いた物が、外すとき【誰の物か分からない】に落ちます。'
+          + '★★★外す.mjs の 既知の道 に足してください'
+          + '(読むだけの行なら install 側に guardian:read を付ける)。');
+      } else {
+        ok.push('install が字面で置く道は 外す側の 既知の道 が覆っている(' + 置く.size
+          + '件を見た。★変数で組む道は見えていない ── .github/workflows/guardian-nightly.yml など)');
+      }
+    }
+  } catch (e) {
+    未測.push('install が置く道の覆い: 測れませんでした(' + String(e && e.message).slice(0, 80) + ')');
+  }
+}
+
 /* ---------- B21. 「正本で測った」と書いた数が、古くなっていないか(2026-09-03、会議で @kozo が求めた) ----------
  *
  * ★外す.mjs の profileCoverage は「install.mjs が変わった版 23」と書いている。
