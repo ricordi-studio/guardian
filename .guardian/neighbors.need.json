@@ -2,60 +2,44 @@
  "range": "HEAD",
  "need": [
   {
-   "key": "docs/CODEMAP.md::案内:verdict.mjs",
-   "記号": "案内:verdict.mjs",
+   "key": "docs/CODEMAP.md::案内:pull.mjs",
+   "記号": "案内:pull.mjs",
    "場所": "docs/CODEMAP.md",
    "環": 1,
-   "根": "proc:verdict.mjs",
-   "きっかけ": "docs/CODEMAP.md が verdict.mjs を名指ししている(中身が変わったので、案内が古くないか)"
+   "根": "proc:pull.mjs",
+   "きっかけ": "docs/CODEMAP.md が pull.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
-   "key": "hooks/stop.js::子として回す:verdict.mjs",
-   "記号": "子として回す:verdict.mjs",
-   "場所": "hooks/stop.js",
-   "環": 1,
-   "根": "proc:verdict.mjs",
-   "きっかけ": "verdict.mjs を子として回し、その出口を読んでいる"
-  },
-  {
-   "key": "install.md::案内:verdict.mjs",
-   "記号": "案内:verdict.mjs",
+   "key": "install.md::案内:pull.mjs",
+   "記号": "案内:pull.mjs",
    "場所": "install.md",
    "環": 1,
-   "根": "proc:verdict.mjs",
-   "きっかけ": "install.md が verdict.mjs を名指ししている(中身が変わったので、案内が古くないか)"
+   "根": "proc:pull.mjs",
+   "きっかけ": "install.md が pull.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
-   "key": "README.md::案内:verdict.mjs",
-   "記号": "案内:verdict.mjs",
+   "key": "README.md::案内:pull.mjs",
+   "記号": "案内:pull.mjs",
    "場所": "README.md",
    "環": 1,
-   "根": "proc:verdict.mjs",
-   "きっかけ": "README.md が verdict.mjs を名指ししている(中身が変わったので、案内が古くないか)"
+   "根": "proc:pull.mjs",
+   "きっかけ": "README.md が pull.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   },
   {
-   "key": "SPEC.md::案内:verdict.mjs",
-   "記号": "案内:verdict.mjs",
+   "key": "selfcheck.mjs::子として回す:pull.mjs",
+   "記号": "子として回す:pull.mjs",
+   "場所": "selfcheck.mjs",
+   "環": 1,
+   "根": "proc:pull.mjs",
+   "きっかけ": "pull.mjs を子として回し、その出口を読んでいる"
+  },
+  {
+   "key": "SPEC.md::案内:pull.mjs",
+   "記号": "案内:pull.mjs",
    "場所": "SPEC.md",
    "環": 1,
-   "根": "proc:verdict.mjs",
-   "きっかけ": "SPEC.md が verdict.mjs を名指ししている(中身が変わったので、案内が古くないか)"
-  },
-  {
-   "key": "verdict.mjs::push",
-   "記号": "push",
-   "場所": "verdict.mjs",
-   "環": 1,
-   "根": "code",
-   "きっかけ": "「code」を呼んでいる"
-  },
-  {
-   "key": "verdict.mjs::残りを全部取る口",
-   "記号": "残りを全部取る口",
-   "場所": "verdict.mjs",
-   "環": 2,
-   "根": "code",
-   "きっかけ": "「push」を呼んでいる"
+   "根": "proc:pull.mjs",
+   "きっかけ": "SPEC.md が pull.mjs を名指ししている(中身が変わったので、案内が古くないか)"
   }
  ]
 }
