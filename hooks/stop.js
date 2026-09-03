@@ -222,9 +222,6 @@ function main(ev) {
   if (!v || !Array.isArray(v.results))
     return 測れなかった('合否の出力に results が在りません(出口 ' + r.status + ')', JSON.stringify(v).slice(0, 300));
 
-  /* ★共通の書き手を通す(2026-09-03) ── ここは【現場の .claude/ に塊が書く】唯一の場所。
-   *   ★★台帳に載せないと、外すとき「誰の物か決まっていない」に落ちる。 */
-  try { require('../書き手.cjs').書く(ROOT, '.claude/verdict_at', String(Date.now()), 'hooks/stop.js'); } catch (_) {}
 
   const of = (k) => v.results.filter((x) => x.verdict === k);
   const brief = (x) => {
@@ -250,6 +247,20 @@ function main(ev) {
     return process.exit(0);
   }
 
+  /* ★印は【止めなかった時だけ】押す(27.28、2026-09-04、外の監査役の指摘4)。
+ *
+ *   ★★事故: 直す前は 印を :227 で押し、止める判断は :241 だった ──
+ *   ★★★止めた回も 印が押され、次の走行は「印より新しい実装が無い」と読んで
+ *   **skipped_unchanged** を返した(★測り直さない)。
+ *
+ *   ★実測(見本の現場): 1回目 block → ★★2回目・3回目 skipped_unchanged。
+ *   ★★★誰も直していないのに、2回「完了」と言えば 抜けられる。
+ *
+ *   ★印の意味は「ここまで測った」── ★★止めた回は【まだ直っていない】ので、
+ *   ★★★測った事にしてはいけない。だから 止める枝より 後ろに置く。 */
+  /* ★共通の書き手を通す(2026-09-03) ── ここは【現場の .claude/ に塊が書く】唯一の場所。
+   *   ★★台帳に載せないと、外すとき「誰の物か決まっていない」に落ちる。 */
+  try { require('../書き手.cjs').書く(ROOT, '.claude/verdict_at', String(Date.now()), 'hooks/stop.js'); } catch (_) {}
   const unknown = of('不明');
   const warn = of('注意');
   if (unknown.length || warn.length) {
