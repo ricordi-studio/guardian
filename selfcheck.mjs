@@ -948,8 +948,18 @@ const kit = (p) => { try { return fs.readFileSync(path.join(HERE, p), 'utf8'); }
     } catch (_) { return []; }
   })();
   if (!語.length) {
-    未測.push("個人情報の見張りは**していません**(guardian.config.json の private が空)"
-      + " ── 配るなら、伏せたい語をそこに並べてください");
+    /* ★判定の入口を通す(27.14、2026-09-03、@codex が verdict/stop を通せと言って見つかった)。
+     *   ★★この押しは【現場でだけ 鳴る】── 塊のリポジトリでは private が宣言されているので出ない。
+     *   ★★★だから 27.8 の保存則を入れた後、**新しく導入した現場が赤になっていた**。 */
+    判定({
+      対象: '個人情報の見張り(伏せたい語)',
+      状態: '未測',
+      根拠: 'guardian.config.json の private が空 ── 見張る語をこの現場が宣言していない',
+      走査集合: 'guardian.config.json の private(宣言が空なので、走査した集合が存在しない)',
+      件数: null, issueCount: null, 正本由来: null,
+      文: "個人情報の見張りは**していません**(guardian.config.json の private が空)"
+        + " ── 配るなら、伏せたい語をそこに並べてください",
+    });
   } else {
     個人情報の見張り.状態 = "見張った";
     個人情報の見張り.語数 = 語.length;
@@ -3282,8 +3292,17 @@ if (process.argv.includes("--why")) {
   if (文脈 === null) {
     未測.push('運用の文脈: 宣言が読めないので見ていません');
   } else if (!文脈.length) {
-    未測.push('運用の文脈が宣言されていないので、**運用の欠落(上限・錠・記録・退避)は見ていません**'
-      + ' ── guardian.config.json の context に書くまで、どんな問い方をしても出ません(guardian/hunch.md)');
+    /* ★判定の入口を通す(27.14、2026-09-03)── ★★これも【現場でだけ 鳴る】押しだった。 */
+    判定({
+      対象: '運用の欠落(上限・錠・記録・退避)',
+      状態: '未測',
+      根拠: 'guardian.config.json の context が空 ── 運用の文脈が宣言されていない'
+        + '(実測: 文脈を足した1回だけ 3/6 → 5〜6/6 に動いた)',
+      走査集合: 'guardian.config.json の context(宣言が空なので、走査した集合が存在しない)',
+      件数: null, issueCount: null, 正本由来: null,
+      文: '運用の文脈が宣言されていないので、**運用の欠落(上限・錠・記録・退避)は見ていません**'
+        + ' ── guardian.config.json の context に書くまで、どんな問い方をしても出ません(guardian/hunch.md)',
+    });
   } else {
     ok.push('運用の文脈を ' + 文脈.length + ' 行 宣言している(違和感が届く広さは、ここで決まる)');
   }
