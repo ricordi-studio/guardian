@@ -305,9 +305,10 @@ if (!fs.existsSync(cfgPath)) {
       for (const m of fs.readFileSync(path.join(ROOT, 'Makefile'), 'utf8').matchAll(/^([a-zA-Z0-9_-]+):/gm)) 候補.push('make ' + m[1]);   // guardian:read
     } catch (_) {}
     try {
-      const dir = path.join(ROOT, '.github', 'workflows');
-      for (const f of fs.readdirSync(dir))
-        for (const m of fs.readFileSync(path.join(dir, f), 'utf8').matchAll(/^s*-s*run:s*(.+)$/gm)) 候補.push(m[1].trim());
+      /* ★名前を分ける(24.12)── この塊には walk(dir, depth) の引数も在り、同じ綴りで別物だった。★★機械が束ね元を追えるように一意にする(@codex「網の一致数から同一性を推論しない」)。 */
+      const ワークフローの置き場 = path.join(ROOT, '.github', 'workflows');
+      for (const f of fs.readdirSync(ワークフローの置き場))
+        for (const m of fs.readFileSync(path.join(ワークフローの置き場, f), 'utf8').matchAll(/^s*-s*run:s*(.+)$/gm)) 候補.push(m[1].trim());
     } catch (_) {}
     const 一意 = [...new Set(候補)].slice(0, 12);
     todo.push('guardian.config.json の evidence には【塊の4件】だけが入っています。'
@@ -439,13 +440,14 @@ if (added) {
    *     手直しされた版・くるんだ版には届かない。**中身の軸を広げる**ほうが当たる。
    * ★それでも当たらない形(npm script)は残る ── そこは**黙らずに言う**。
    *   置いたうえで「既に N本ある」と名指しし、二重に走っていないか人に確かめてもらう。 */
-  const dir = path.join(ROOT, '.github', 'workflows');
+  /* ★名前を分ける(24.12)── この塊には walk(dir, depth) の引数も在り、同じ綴りで別物だった。★★機械が束ね元を追えるように一意にする(@codex「網の一致数から同一性を推論しない」)。 */
+  const ワークフローの置き場 = path.join(ROOT, '.github', 'workflows');
   const 塊の道具 = /(check|verdict|selfcheck|neighbors|index)\.mjs/;
   let already = '';
   const ほかの仕掛け = [];
   try {
-    for (const f of fs.readdirSync(dir)) {
-      const t = fs.readFileSync(path.join(dir, f), 'utf8');
+    for (const f of fs.readdirSync(ワークフローの置き場)) {
+      const t = fs.readFileSync(path.join(ワークフローの置き場, f), 'utf8');
       if (塊の道具.test(t) || t.includes(KIT + '/')) { if (!already) already = f; continue; }
       ほかの仕掛け.push(f);
     }
@@ -456,7 +458,7 @@ if (added) {
       + ほかの仕掛け.join(', ') + ')。塊の道具を名指ししていないので**別物と見なして置きました**が、'
       + '**夜間の検査が二重に走らないか確かめてください**(npm script などでくるんでいると、こちらからは見えません)');
   }
-  if (!already) write(path.join(dir, 'guardian-nightly.yml'),
+  if (!already) write(path.join(ワークフローの置き場, 'guardian-nightly.yml'),
     fs.readFileSync(path.join(HERE, 'templates', 'nightly-check.yml'), 'utf8').replace(/tools\/guardian/g, KIT),
     '毎晩01:00に検査し、赤ければIssueを立てる。緑に戻れば閉じる');
 }

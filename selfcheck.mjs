@@ -1664,36 +1664,85 @@ if (process.argv.includes("--why")) {
   }
 }
 
-/* ---------- B22. install が置く道を、外す側の 既知の道 が覆っているか(2026-09-03、会議で @kozo が語彙を見つけた) ----------
+/* ---------- B22. install が置く道を、外す側の 既知の道 が覆っているか(2026-09-03、@kozo が語彙を見つけ、@codex が名乗りを直させた) ----------
  *
  * ★@kozo が見つけた: `guardian:read` は【向きの宣言】で、B7 が既に読んでいる。
- *   ★★だから「install が置く道」は 字面 − guardian:read で機械が集められる。
+ *   だから「install が置く道」は 字面 − guardian:read で機械が集められる。
  *
- * ★★★実測(2026-09-03): B7 の網は1引数の join しか見ないので 5件(粗い)。
- *   引数を継ぐ形まで見ると 6件になり、★既知の道(6件)のうち **5件が一致**する。
+ * ★★@codex の指摘(10:29 / 10:32): 最初の実装は「6件を見た」と名乗ったが、
+ *   その6件には【親フォルダ】が混ざっていて、★★★親の下に子を1本 足しても緑のままだった。
+ *   「列挙できた字面の範囲だけ照合済み」としか名乗ってはいけない。
  *
- * ★★届かない物も、はっきり言う ── `.github/workflows/guardian-nightly.yml` は
- *   `path.join(dir, …)` と**変数で組む**ので、字面の網には映らない。
- *   ★★★だからこの検査は【完全ではない】。それでも入れるのは、
- *   install が新しい道を字面で足したときに、外す側が黙って取り残されるのを止めるため。
- *   (@kozo が測った歴史: 23版で置く道は 9件。取りこぼしは 0件だった) */
+ * ★動的な子(path.join(dir, '…'))を1段 追う条件も、@codex が条文にした:
+ *   ・束ね元が許された path.join の字面である
+ *   ・再代入・別スコープ・条件依存・未解決の関数呼出しが無い
+ *   ・子の書込み先と束ね元の基底が一致する
+ *
+ * ★★実測(2026-09-03、直接 確かめた ── 網の一致数から同一性を推論しない):
+ *   install.mjs の `dir` は :308 と :442 の const 2本(どちらも同じ字面)に加え、
+ *   ★★★:225 に `walk = (dir, depth) =>` の【引数】が在る。名前が同じでも別物である。
+ *   → だから この塊では `dir` は【解決できない】。未解決として出す。
+ *
+ * ★出口は2つに分ける(@codex:「別検査の赤を B22 の合格根拠にしない」):
+ *   ① 字面で拾えた【置く道】が 既知の道 に無い → ★赤(ラチェットはここ)
+ *   ② 未解決の動的な子が在る → ★★未測(緑にしない)
+ *   ③ 両方 無い → ★★★緑 */
 {
   try {
     const NL1 = String.fromCharCode(10);
-    const 置く = new Set();
-    /* ★正規表現は【毎回 作る】(2026-09-03、双子が 0件 を緑で返して気づいた)。
-     *   ★★matchAll は lastIndex を引き継ぐので、使い回すと2行目以降が飛ぶ。
-     *   ★★★網が空振りしたのに緑が出る ── この塊が一番 嫌う形だった。 */
-    /* ★正規表現は【文字コードから組む】(2026-09-03)── 逆斜線は殻にもヒアドキュメントにも食われ、この直しだけで3回 落ちた。★★食われた形 /path.join(ROOT,((?:s*…/ は【当たらないのに構文は通る】。 */
-    const 継ぐ = () => new RegExp("path\\.join\\(ROOT,((?:\\s*'[^']+',?)+)\\s*\\)", "g");
-    const 片取り = () => /'([^']+)'/g;
-    for (const 行 of kit('install.mjs').split(NL1)) {
+    const 行々 = kit('install.mjs').split(NL1);
+    const 生 = (p) => new RegExp(p, 'g');
+    const B = String.fromCharCode(92);
+    const 継ぐ = () => new RegExp('path' + B + '.join' + B + '(ROOT,((?:' + B + "s*'[^']+',?)+)" + B + 's*' + B + ')', 'g');
+    const 片取り = () => new RegExp("'([^']+)'", 'g');
+    /* ★識別子は ASCII だけではない(24.12)── この塊の変数名は日本語である。
+     *   ★★実測: 置き場を「ワークフローの置き場」に替えた途端、動的な子が【網から消え】、
+     *   ★★★未解決 0件 = 嘘の緑になった。ASCII だけの網は、この塊では必ず嘘をつく。 */
+    const 字 = '[' + B + 'p{L}' + B + 'p{N}_$]+';   /* ★逆斜線は書かない ── 文字列に直に書くと JS が食う(今夜7度目) */
+    const 動的 = () => new RegExp('path' + B + '.join' + B + '((' + 字 + '),' + B + "s*'([^']+)'", 'gu');
+
+    const 字面 = new Set();
+    const 動く = [];   /* {変数, 子} */
+    for (const 行 of 行々) {
       if (/guardian:read/.test(行)) continue;
       for (const m of 行.matchAll(継ぐ())) {
         const 片 = [...m[1].matchAll(片取り())].map((x) => x[1]);
-        if (片.length) 置く.add(片.join('/'));
+        if (片.length) 字面.add(片.join('/'));
+      }
+      for (const m of 行.matchAll(動的())) {
+        if (m[1] === 'ROOT' || m[1] === 'HERE') continue;   /* ROOT は上で拾っている */
+        動く.push({ 変数: m[1], 子: m[2] });
       }
     }
+
+    /* ★束ね元を1段だけ追う ── 追えない形は【追えない】と言う(推論しない) */
+    const 解けた = new Set(), 未解決 = [];
+    const 見た変数 = new Set();
+    for (const d of 動く) {
+      if (見た変数.has(d.変数 + '/' + d.子)) continue;
+      見た変数.add(d.変数 + '/' + d.子);
+      const 束 = [];
+      let 引数か = false;
+      for (const 行 of 行々) {
+        if (new RegExp('(const|let|var)' + B + 's+' + d.変数 + B + 's*=').test(行)) 束.push(行);
+        if (new RegExp('=' + B + 's*' + B + '(?[^)]*' + B + 'b' + d.変数 + B + 'b[^)]*' + B + ')?' + B + 's*=>').test(行)) 引数か = true;
+        if (new RegExp('function' + B + 's+[A-Za-z0-9_$]*' + B + 's*' + B + '([^)]*' + B + 'b' + d.変数 + B + 'b').test(行)) 引数か = true;
+      }
+      const 字面の束 = 束.map((行) => {
+        const m = [...行.matchAll(継ぐ())][0];
+        if (!m) return null;
+        return [...m[1].matchAll(片取り())].map((x) => x[1]).join('/');
+      });
+      const 揃った = 字面の束.length > 0 && 字面の束.every((x) => x !== null && x === 字面の束[0]);
+      if (引数か) {
+        未解決.push(d.変数 + '/' + d.子 + '(★' + d.変数 + ' は関数の引数でもあります ── 名前が同じでも別物)');
+      } else if (!揃った) {
+        未解決.push(d.変数 + '/' + d.子 + '(束ね元が ' + 束.length + ' 本で、字面が揃いません)');
+      } else {
+        解けた.add(字面の束[0] + '/' + d.子);
+      }
+    }
+
     const 外 = kit('外す.mjs');
     const 既知 = new Set();
     const h = 外.indexOf('const 既知の道 = new Set([');
@@ -1702,28 +1751,40 @@ if (process.argv.includes("--why")) {
       for (const m of 外.slice(h, 尾).matchAll(片取り())) 既知.add(m[1]);
     }
     const 入れ物 = new Set(['docs', '.claude', '.github', '.github/workflows', '.claude/commands']);
-    /* ★網が空振りしたら【緑にしない】── 0件は「漏れが無い」ではなく「見えていない」 */
-    if (!置く.size) {
-      未測.push("install が置く道の覆い: 網が1件も拾えませんでした(install.mjs の書き方が変わった可能性 ── 直すこと)");
+    const 子付き = new Set([...字面, ...解けた].filter((p) => !入れ物.has(p)));
+
+    if (!字面.size) {
+      未測.push('install が置く道の覆い: 網が1件も拾えませんでした(install.mjs の書き方が変わった可能性 ── 直すこと)');
     } else if (!既知.size) {
       未測.push('install が置く道の覆い: 外す.mjs から 既知の道 を取り出せません(書き方が変わった?)');
     } else {
-      const 漏れ = [...置く].filter((p) => !既知.has(p) && !入れ物.has(p));
+      const 漏れ = [...子付き].filter((p) => !既知.has(p));
+      const 名乗り = '親フォルダ ' + [...字面].filter((p) => 入れ物.has(p)).length + '件'
+        + ' / 字面の子 ' + [...字面].filter((p) => !入れ物.has(p)).length + '件'
+        + ' / 解決した子 ' + 解けた.size + '件'
+        + ' / ★未解決の動的な子 ' + 未解決.length + '件';
+      /* ① ラチェット(字面で見えた分の照合)── ここは常に効く */
       if (漏れ.length) {
         ng.push('★install が置く道を、外す側の 既知の道 が覆っていません(' + 漏れ.length + '件): '
           + 漏れ.join(' / ')
           + ' ── ★★置いた物が、外すとき【誰の物か分からない】に落ちます。'
           + '★★★外す.mjs の 既知の道 に足してください'
-          + '(読むだけの行なら install 側に guardian:read を付ける)。');
+          + '(読むだけの行なら install 側に guardian:read を付ける)。【' + 名乗り + '】');
+      } else if (未解決.length) {
+        /* ② 未解決が在るなら【覆っている】とは名乗らない(@codex 10:29) */
+        未測.push('install が置く道の覆い: 字面で拾えた分は 既知の道 が覆っていますが、'
+          + '★動的に組む子が ' + 未解決.length + '件 解決できません ── ' + 未解決.join(' / ')
+          + ' ── ★★親フォルダで数えているので、その下に子を1本 足しても この検査は気づきません。'
+          + '【' + 名乗り + '】');
       } else {
-        ok.push('install が字面で置く道は 外す側の 既知の道 が覆っている(' + 置く.size
-          + '件を見た。★変数で組む道は見えていない ── .github/workflows/guardian-nightly.yml など)');
+        ok.push('install が置く道は 外す側の 既知の道 が覆っている【' + 名乗り + '】');
       }
     }
   } catch (e) {
     未測.push('install が置く道の覆い: 測れませんでした(' + String(e && e.message).slice(0, 80) + ')');
   }
 }
+
 
 /* ---------- B21. 「正本で測った」と書いた数が、古くなっていないか(2026-09-03、会議で @kozo が求め、@codex が P0 を出した) ----------
  *
