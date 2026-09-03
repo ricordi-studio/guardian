@@ -63,6 +63,9 @@ const 口の宣言 = {
   '--走査':  { 個数: 0, mode: '走査' },
   '--root':  { 個数: 1, mode: null, 使えるmode: ['走査'] },
   '--json':  { 個数: 0, mode: null, 使えるmode: ['下見', '走査'] },
+  /* ★撤去側(27.0)── 台帳が無い現場で、人が名指しした物だけを消す。
+   *   ★★走査の中でしか使えない ── 走査が見た集合の外は消さないため。 */
+  '--名指しで消す': { 個数: 1, mode: null, 使えるmode: ['走査'] },
 };
 const 知っている口 = Object.keys(口の宣言);
 const 値を取る口 = Object.fromEntries(Object.entries(口の宣言).map(([k, v]) => [k, v.個数]));
@@ -519,6 +522,91 @@ if (走査だけ) {
   console.log('  ・証拠なし … この網では付かなかった、という観測にすぎません');
   console.log(String.fromCharCode(10) + '★次の一手は【人が決めること】です ── この一覧を見て、外す物を選んでください。');
   console.log('★★`--json` で機械が読む形、`--root <道>` で外の現場も走査できます(どちらも消しません)。');
+
+  /* ---------- ★撤去側 ── 人が名指しした物だけを消す(27.0、2026-09-03、依頼主の依頼) ----------
+   *
+   * ★台帳が無い現場では、**機械は所有を決められない**。
+   *   走査は そのことを言うために在り、★★消す物を決めない。
+   *
+   * ★★★だから撤去側は【人が名指しした物だけ】を消す:
+   *   ① 人が一覧を書く(1行に1つ、走査が出した道をそのまま)
+   *   ② この口は、その一覧を **走査が見た集合の中にしか許さない**
+   *      → 走査の外を書いても消さない(打ち間違いで別の物を消させない)
+   *   ③ 消す前に【何を・どの証拠で】消すかを出す
+   *   ④ 消した物を受け取りに書く(★黙って消さない)
+   *
+   * ★出口: 0=名指し全部 消した / 1=断った物が在る / 2=一覧が読めない
+   */
+  const 名指し引数 = process.argv.indexOf('--名指しで消す');
+  if (名指し引数 >= 0) {
+    const 一覧の道 = process.argv[名指し引数 + 1];
+    let 名 = null;
+    try {
+      名 = fs.readFileSync(path.resolve(一覧の道), 'utf8')
+        .split(String.fromCharCode(10))
+        .map((l) => l.replace(String.fromCharCode(13), '').trim())
+        .filter((l) => l && !l.startsWith('#'));
+    } catch (e) {
+      console.error('✗ 一覧が読めません: ' + 一覧の道 + ' ── ' + String(e && e.message).slice(0, 80));
+      console.error('  ★1行に1つ、走査が出した道をそのまま書いてください(# で始まる行は覚え書きとして飛ばします)');
+      process.exit(2);
+    }
+    if (!名.length) {
+      console.error('✗ 一覧に道が1つも書かれていません: ' + 一覧の道);
+      console.error('  ★空の一覧で「消した」と言わないために、ここで止めます');
+      process.exit(2);
+    }
+    /* ★走査が見た集合の中にしか許さない */
+    const 見た = new Map();
+    for (const c of 候補) 見た.set(c.rel, c.証拠);
+    for (const r of 証拠なし) if (!見た.has(r)) 見た.set(r, [{ 型: '証拠なし', 詳細: 'この網では証拠が付きませんでした' }]);
+    const 消す名 = [], 断った = [];
+    for (const r of 名) {
+      if (!見た.has(r)) { 断った.push(r + '(★走査が見た集合に在りません ── 打ち間違いか、走査の外)'); continue; }
+      if (!fs.existsSync(path.join(走査の根, r))) { 断った.push(r + '(もう在りません)'); continue; }
+      消す名.push(r);
+    }
+    console.log(String.fromCharCode(10) + '★★これから消す物 ' + 消す名.length + '件(★人が名指しした分だけ):');
+    for (const r of 消す名) {
+      const 証 = (見た.get(r) || []).map((e) => '[' + e.型 + ']').join(' ');
+      console.log('  ・' + r + '  ' + 証);
+    }
+    if (断った.length) {
+      console.log(String.fromCharCode(10) + '★★★消さなかった物 ' + 断った.length + '件:');
+      for (const x of 断った) console.log('  ・' + x);
+    }
+    const 消せた = [], 消せない = [];
+    for (const r of 消す名) {
+      try { fs.rmSync(path.join(走査の根, r), { recursive: true, force: true }); 消せた.push(r); }
+      catch (e) { 消せない.push(r + '(' + String(e && e.message).slice(0, 60) + ')'); }
+    }
+    /* ★消した物を受け取りに書く ── 黙って消さない */
+    const 受け取り = path.join(走査の根, '.guardian', '名指しで消した.json');
+    try {
+      書き手.親を作る(走査の根, 受け取り);
+      fs.writeFileSync(受け取り, JSON.stringify({
+        形: 'guardian-名指しで消した v1',
+        時刻: new Date().toISOString(),
+        根: 走査の根,
+        一覧: 一覧の道,
+        消せた, 消せない, 断った,
+        注: '★台帳が無い現場なので、機械は所有を決めていません。'
+          + '★★ここに在るのは【人が名指しし、走査が見た集合に在り、実際に消せた物】です。'
+          + '★★★消し漏れが無いことは、この記録では言えません(走査の外は見ていません)。',
+      }, null, 1));
+      /* ★道は【走査の根から】出す ── rel() は塊の根からなので、外の現場では読めない道になる */
+      console.log(String.fromCharCode(10) + '★受け取りを書きました: ' + path.relative(走査の根, 受け取り).split(path.sep).join('/'));
+    } catch (e) {
+      console.log(String.fromCharCode(10) + '★受け取りが書けませんでした(' + String(e && e.message).slice(0, 60) + ')'
+        + ' ── ★★消した事実は残りません。消した物は上の一覧です。');
+    }
+    console.log('★★消せた ' + 消せた.length + '件 / 消せなかった ' + 消せない.length + '件 / 断った ' + 断った.length + '件');
+    for (const x of 消せない) console.log('  ✗ ' + x);
+    console.log('★★★この口は【名指しした物】しか消しません ── 現場に何も残っていない、とは言いません。');
+    process.exit((消せない.length || 断った.length) ? 1 : 0);
+  }
+
+
   process.exit(0);
 }
 
