@@ -763,7 +763,19 @@ for (const [f, lines] of changed) {
  * ★指紋の作り方は selfcheck.mjs の 指紋() と同じ FNV-1a だが、**測る対象が違う**
  *   (あちら=配られた塊のファイル全体 / こちら=いま直した記号の本体)。
  *   findRoot → findInstallRoot と同じ理由で、ひとつにせず名前を分けてある。 */
-const 印を取る = (s) => {
+/* ★印は【改行を揃えてから】取る(27.19、2026-09-03、@kozo が clone して実測)。
+ *
+ *   ★★事故: 私の作業木は CRLF、git が commit で LF に直す(.gitattributes)。
+ *   ★★★同じコミットなのに ── 私の門は 出口0、clone した門は 出口1 だった。
+ *     実測: hooks/stop.js … 作業木 18651バイト(CR 181個)/ clone 18470バイト(CR 0個)
+ *           改行を揃えると 同じ。
+ *
+ *   ★これは【私の側が 偽の緑】である ── 答えた印が、押した後の中身と合わない。
+ *   ★★配布先や 他の席が clone して叩くと、答えたはずの物が「別の変更に対する回答です」になる。
+ *   ★★★selfcheck の指紋は もう改行を正規化している(その理由と同じ)── 門だけ 揃っていなかった。 */
+const 印を取る = (s0) => {
+  const s = String(s0).split(String.fromCharCode(13) + String.fromCharCode(10))
+    .join(String.fromCharCode(10));
   let h = 2166136261;
   for (let k = 0; k < s.length; k++) { h ^= s.charCodeAt(k); h = Math.imul(h, 16777619); }
   return (h >>> 0).toString(36) + '-' + s.length;
