@@ -183,8 +183,29 @@ if (!cfg) {
         { encoding: "utf8", shell: !窓, windowsHide: true, timeout: 15000 });
       return !(!w.error && w.status === 0);
     })() : false;
+    /* ★依存の欠落は【2つの綴り】で出る(27.27、2026-09-04、外の監査役が指摘5で実測)。
+ *
+ *   ★★直す前は ERR_MODULE_NOT_FOUND だけを 探していた。
+ *   ★★★だが この塊は createRequire で CJS を読む(.guardian/輪.mjs / 鼓動.mjs / hooks)──
+ *   Node は そのとき **MODULE_NOT_FOUND**(接頭辞 ERR_ が 無い)を 出す。
+ *
+ *   ★叩いて確かめた:
+ *     import 無い物.mjs        … ERR_MODULE_NOT_FOUND
+ *     ★★createRequire(無い物.cjs) … ★★★MODULE_NOT_FOUND
+ *
+ *   ★監査役の実測: 依存欠落4件が【全部 差戻】になり、★★測れた割合は 100% と書かれた。
+ *   ★★★= 「測れなかった」が「違反」に化け、★coverage 自身が 嘘をつく。
+ *   この塊の一行目(不明は合格ではない)の、★★裏側の破れ方である。
+ *
+ *   ★★★網は【綴りの端を留めない】── ERR_ が付く形も 付かない形も 拾う。 */
     const cantRun = (r.error && r.error.code === 'ENOENT') || r.status === 127
-      || /ERR_MODULE_NOT_FOUND/.test(out) || 命令が無い;
+      /* ★網は【符号の形】で当てる(27.27b、2026-09-04、押す前に叩いて見つけた)。
+       *   ★★事故: /MODULE_NOT_FOUND/ にしたら、**この塊の地図と注釈に書いた その語**が
+       *   check.mjs の出力に乗り、★★★check が【不明】に化けた(不明 1 → 2)。
+       *   ★測っていた物が、測る道具の説明文に 反応した。
+       *   ★★だから「code: の後ろに在る」形だけを 拾う ── 説明文では そう書かない。 */
+      || new RegExp('code:?' + String.fromCharCode(92) + 's*.?(ERR_)?MODULE_NOT_FOUND').test(out)
+      || 命令が無い;
     const timedOut = r.error && /ETIMEDOUT|timed out/i.test(String(r.error.code || r.error.message));
     const unknownRe = e.unknownIf ? new RegExp(e.unknownIf, 'i') : null;
 
