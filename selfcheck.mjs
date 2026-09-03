@@ -1714,54 +1714,78 @@ if (process.argv.includes("--why")) {
   }
 }
 
-/* ---------- B18. 通した道は【通したと言う】か(2026-09-03、会議で @kozo が形にした) ----------
+/* ---------- B18. 黙って通る道は【このファイルが宣言しているか】(2026-09-03、会議で @kozo が2度 直させた) ----------
  *
- * ★@kozo の一言がこの検査を作った:
- *   ★★「通す」の双子は「通したと言ったか」であって、「通したか」では ありません。
+ * ★最初の形は【手で並べた3行の表】だった。@kozo が読んで指した:
+ *   ★★「あなたが 23.x で 外す.mjs から消した形が、24.5 で検査の側に戻っています」
+ *   ★★★「B18 は、この表に無い通す道を【見つけられません】」
  *
- *   ★★★なぜ代償(言う方)だけが落ちるのか、彼の説明:
- *     許しの理由は【実装する時に要る】(そう書かないと動かない)
- *     代償は【実装しなくても動く】── 器が「動く」と言った時点で、代償は器の外に居る
+ *   叩いたら、その通りだった ── ★hooks を全部 × 3条件 = 21マス のうち
+ *   ★★【12マスが黙って通っていた】(4ファイル)。手書きの表は1つも見ていなかった。
  *
- * ★実際に2回 落ちた:
- *   24.2 … 入力が読めない道を fail-open に残したが、診断を1文字も出さなかった(24.3 で直した)
- *   24.2 … 壊れた設定で合図のフックが既定値に落ちるのに、何も言わなかった(24.4 で直した)
+ * ★★★直した形: 母集団を【hooks/ の全部 × 条件】にする(数えるので、思い出さなくてよい)。
+ *   黙ってよい理由は【そのファイル自身】が宣言する ── 
+ *   ★離れた表に書くと、道を足す人と表を直す人が別の場所に居ることになる。
+ *   これは 書き手 でやった形と同じ:★★「書いた者が台帳に載せる」。通す者が載せる。
  *
- * ★★測り方: にせの現場を作り、【通る形】で叩いて、診断が出るかを見る。
- *   ★★★出口や stdout では測らない ── どちらも「通った」しか言わない。**stderr を測る。** */
+ * ★宣言の綴り(ファイルの頭のコメント):
+ *   @通す道: <条件> ── 通すが、必ず言う
+ *   @黙る道: <条件 または 全部> ── 黙ってよい理由
+ *
+ * ★★測るのは stderr と stdout の【両方】── どちらも空で、止めてもいなければ「黙って通った」。
+ *   出口では測らない(フックは decision で言うので、出口は常に0)。 */
 {
-  const 表 = [
-    { 誰: "hooks/stop.js", 設定: "{\"evidence\":[{\"name\":\"x\",\"run\":\"node -e 0\"}]}", 入力: "これはJSONでない", 何: "入力が読めない(唯一の fail-open)" },
-    { 誰: "hooks/clock.js", 設定: "{\"evidence\":[] \"watch\":[\"packages\"]}", 入力: "{\"tool_input\":{\"file_path\":\"src/a.js\"}}", 何: "壊れた設定で既定値に落ちる" },
-    { 誰: "hooks/codemap.js", 設定: "{\"evidence\":[] \"watch\":[\"packages\"]}", 入力: "{\"tool_input\":{\"file_path\":\"src/a.js\"}}", 何: "壊れた設定で既定値に落ちる" },
+  const 条件 = [
+    { 名: "正しい設定", 設定: "{\"evidence\":[{\"name\":\"x\",\"run\":\"node -e 0\"}],\"watch\":[\"src\"]}", 入力: "{\"tool_input\":{\"file_path\":\"src/a.js\",\"content\":\"x\"}}" },
+    /* ★★カンマの欠けは【わざと】である(2026-09-03、@kozo が「次の人が直す」と指した)。
+     *   ★★★ここを直すと、この作り物は別の道(evidence が空)を測ることになる。 */
+    { 名: "設定が壊れている", 設定: "{\"evidence\":[{\"name\":\"x\"} \"watch\":[\"src\"]}", 入力: "{\"tool_input\":{\"file_path\":\"src/a.js\",\"content\":\"x\"}}" },
+    { 名: "入力が読めない", 設定: "{\"evidence\":[{\"name\":\"x\",\"run\":\"node -e 0\"}],\"watch\":[\"src\"]}", 入力: "これはJSONでない" },
   ];
   let 仮 = null;
   try { 仮 = fs.mkdtempSync(path.join(os.tmpdir(), 'guardian-say-')); } catch (_) {}
-  if (!仮) 未測.push("通した道が【通したと言う】か: 一時の場所が作れません");
+  if (!仮) 未測.push("黙って通る道の宣言: 一時の場所が作れません");
   else {
-    const 外れ = [];
     try {
       fs.mkdirSync(path.join(仮, 'guardian', 'hooks'), { recursive: true });
-      for (const f of ['書き手.cjs', '台帳.mjs']) {
-        try { fs.copyFileSync(path.join(HERE, f), path.join(仮, "guardian", f)); } catch (_) {}
-      }
-      for (const f of fs.readdirSync(path.join(HERE, 'hooks')))
+      fs.mkdirSync(path.join(仮, 'src'), { recursive: true });
+      fs.mkdirSync(path.join(仮, 'docs'), { recursive: true });
+      fs.writeFileSync(path.join(仮, 'src', 'a.js'), 'x');
+      fs.writeFileSync(path.join(仮, 'docs', 'CODEMAP.md'),
+        '# 地図' + String.fromCharCode(10,10) + '## 何か' + String.fromCharCode(10,10) + '接点: `src/b.js`');
+      const 皆 = fs.readdirSync(path.join(HERE, 'hooks')).filter((f) => f.endsWith('.js'));
+      for (const f of 皆)
         fs.copyFileSync(path.join(HERE, 'hooks', f), path.join(仮, 'guardian', 'hooks', f));
-      for (const t of 表) {
-        fs.writeFileSync(path.join(仮, 'guardian.config.json'), t.設定);
-        const r = spawnSync(process.execPath, [path.join(仮, "guardian", t.誰)],
-          { cwd: 仮, input: t.入力, encoding: "utf8", windowsHide: true, timeout: 60000 });
-        const 言 = String(r.stderr || "");
-        const 止 = String(r.stdout || "").includes("\"block\"");
-        if (止) continue;                       /* 止めたなら、それは「通した道」ではない */
-        if (!言.trim())
-          外れ.push(t.誰 + "(" + t.何 + ") → 通したのに stderr が空です");
+      const 黙 = [], 宣言なし = [];
+      for (const f of 皆) {
+        const src = fs.readFileSync(path.join(HERE, 'hooks', f), 'utf8');
+        const 黙る道 = [...src.matchAll(new RegExp("@黙る道:\\s*([^\\s─]+)", "g"))].map((m) => m[1]);
+        const 通す道 = [...src.matchAll(new RegExp("@通す道:\\s*([^\\s─]+)", "g"))].map((m) => m[1]);
+        const 宣言0 = (!黙る道.length && !通す道.length);
+        for (const c of 条件) {
+          fs.writeFileSync(path.join(仮, 'guardian.config.json'), c.設定);
+          const r = spawnSync(process.execPath, [path.join(仮, "guardian", "hooks", f)],
+            { cwd: 仮, input: c.入力, encoding: "utf8", windowsHide: true, timeout: 60000 });
+          const 出 = String(r.stdout || "");
+          const 言 = String(r.stderr || "");
+          if (出.includes("\"block\"") || 出.includes("\"deny\"")) continue;   /* 止めた道は「通した道」ではない */
+          if (出.trim() || 言.trim()) continue;                                 /* 何か言っている */
+          const 許 = 黙る道.includes(c.名) || 黙る道.includes("全部");
+          if (!許) 黙.push(f + "(" + c.名 + ")");
+        }
+        /* ★赤になった物は ここで数えない ── 赤と未測を同じ物に付けると【文が嘘になる】
+         *   (2026-09-03、双子を回して自分で見つけた: 赤なのに「赤にはしていません」と出た) */
+        if (宣言0 && !黙.some((x) => x.indexOf(f + "(") === 0)) 宣言なし.push(f);
       }
-      if (外れ.length)
-        ng.push("★通した道が【通したと言っていません】(" + 外れ.length + "件): " + 外れ.join(" / ") + ' ── ★★通ったことがどこにも残らないと、次に同じ形を見つけた人が' + '「そういう道が在る」のか「たまたま黙った」のかを区別できません。' + '★★★通すなら、通したと言うこと。');
-      else ok.push("通した道は【通したと言う】(唯一の fail-open と、既定値に落ちる合図のフック2本)");
+      if (黙.length) {
+        ng.push("★宣言に無い【黙って通る道】が在ります(" + 黙.length + "件): " + 黙.join(" / ") + ' ── ★★そのファイルの頭に @黙る道: <条件> ── <黙ってよい理由> を書くか、' + '言うようにしてください。★★★通ったことがどこにも残らないと、次に同じ形を見つけた人が' + '「そういう道が在る」のか「たまたま黙った」のかを区別できません。');
+      } else {
+        ok.push("黙って通る道は すべて そのファイル自身が宣言している(hooks " + 皆.length + "本 × 条件 " + 条件.length + "通り)");
+      }
+      if (宣言なし.length)
+        未測.push("黙って通る道の宣言: 宣言が1本も無いフックが在ります(" + 宣言なし.join(", ") + ")── この作り物では黙らなかったので赤にはしていません");
     } catch (e) {
-      未測.push("通した道が【通したと言う】か: 測れませんでした(" + String(e && e.message).slice(0, 60) + ")");
+      未測.push("黙って通る道の宣言: 測れませんでした(" + String(e && e.message).slice(0, 80) + ")");
     } finally {
       try { fs.rmSync(仮, { recursive: true, force: true }); } catch (_) {}
     }

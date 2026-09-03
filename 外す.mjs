@@ -172,6 +172,13 @@ const ROOT = (() => {
 
 /* ★mode から取る(2026-09-03)── ★★includes を各所で見ると、mode の判断と食い違う */
 const 実行 = (選ばれたmode === '外す');
+
+/* ★schema の綴りは【1箇所】(24.7、2026-09-03、会議で @kozo が見つけた)。
+ *   ★★直す前は 同じ文字列が【隣の行】に2つ在った(schema と 版/形)。
+ *   ★★★隣に在るから安全ではない ── 片方だけ直すのは、隣り合っている時がいちばん起きる
+ *   (目が「もう直した」と言うので)。@kozo が 06:03 に出した『場所の一覧が2つ』と同じ形。 */
+const SCHEMA走査 = 'guardian-走査 v1';
+const SCHEMA下見 = 'guardian-撤去計画 v1';
 const 走査だけ = (選ばれたmode === '走査');
 /* ★--json は【下見】と【走査】の両方で使える(2026-09-03、@codex が mode 表を訂正した) */
 const JSONで出す = process.argv.includes('--json');
@@ -392,8 +399,8 @@ if (走査だけ) {
        *   ★★★それは人が付ける名前で、人が付ける物は変わる。
        *   mode は打った口そのものなので、★機械が取り違えない。
        *   ★★どちらの JSON も同じ鍵(mode / schema)を持つ ── 読む側が1つの手で分岐できる。 */
-      mode: 選ばれたmode, schema: 'guardian-走査 v1',
-      版: 'guardian-走査 v1', 根: 走査の根,
+      mode: 選ばれたmode, schema: SCHEMA走査,
+      版: SCHEMA走査, 根: 走査の根,   /* ★版 は読み手向けの互換。★★正は SCHEMA走査 の1つ */
       /* ★【版ごとの道を集める仕掛け】は在りません(24.5、@codex 05:33 の求め)。
        *   ★★実測: この塊に 版ごと/profile/candidateSHA の類は 0件。
        *   ★★★何も言わないと、読む側は「候補の一覧が これで全部」と読む ── 
@@ -503,6 +510,22 @@ if (走査だけ) {
 let 台帳 = null;
 try { 台帳 = JSON.parse(fs.readFileSync(台帳の道, 'utf8')); } catch (_) {}
 if (!台帳 || !Array.isArray(台帳.走行)) {
+  /* ★機械で読む人にも同じ理由を渡す(24.7、2026-09-03、自分の双子で見つけた)。
+ *
+   *   ★★直す前: 人向けの道は 288バイトで理由を言うのに、--json は【0バイト・出口2】だった。
+   *   console.log はこの時点で静かにされているので、3行とも捨てられていた。
+   *   ★★★「見えない失敗を作らない」を掟にしている塊が、機械向けの口でだけ黙っていた。 */
+  if (JSONで出す) {
+    本当のlog(JSON.stringify({
+      mode: 選ばれたmode, schema: SCHEMA下見,
+      判定: 'UNKNOWN',
+      理由: '所有台帳が読めません: ' + rel(台帳の道),
+      消した物: [], 詳しく: '★何を消してよいかの材料が在りません。何も消していません。'
+        + '★★入れた版が古い(台帳を作らない版)か、台帳が消されたかのどちらかです。'
+        + '★★★台帳が無い現場に当てる口が別に在ります: --走査',
+    }, null, 1));
+    process.exit(2);
+  }
   console.log('★UNKNOWN ── 所有台帳が読めません: ' + rel(台帳の道));
   console.log('  ★★何を消してよいかの材料が在りません。**何も消していません。**');
   console.log('  ★★★入れた版が古い(台帳を作らない版)か、台帳が消されたかのどちらかです。');
@@ -1156,8 +1179,8 @@ const 判定 = (衝突.length || 依存衝突.length) ? 'CONFLICT'
 if (静かにする) {
   console.log = 本当のlog;
   console.log(JSON.stringify({
-    mode: 選ばれたmode, schema: 'guardian-撤去計画 v1',   /* ★見分けは mode(24.5)── 上の走査と同じ鍵 */
-    形: 'guardian-撤去計画 v1',
+    mode: 選ばれたmode, schema: SCHEMA下見,   /* ★見分けは mode(24.5)── 上の走査と同じ鍵 */
+    形: SCHEMA下見,   /* ★形 は読み手向けの互換。★★正は SCHEMA下見 の1つ */
     根: ROOT,
     版: (() => { try { return fs.readFileSync(path.join(HERE, "KIT_VERSION"), "utf8").trim(); } catch (_) { return null; } })(),
     台帳: { 在る: true, 走行: 台帳.走行.length, 合併した項: 項.length },
