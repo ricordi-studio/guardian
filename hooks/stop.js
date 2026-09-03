@@ -32,7 +32,28 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { findRoot, loadConfig, 既定の見る所 } = require('./lib-root');
 
-const pass = () => process.exit(0);
+/* ★この停止器が【見ていない所】を、どの枝でも同じ文で言う(27.17、2026-09-03、@kozo が実測)。
+ *
+ *   ★★27.15 で verdict の人向け出力に但し書きを入れたが、@kozo が叩いたら
+ *   ★★★**3つの口のうち1つにしか無かった**(verdict --json と stop には 0件)。
+ *   「どの合否の口にも出ません」と書いた文が、口を1つしか通っていなかった。
+ *
+ *   ★いちばん読み違えられるのは【完了を名乗る その瞬間】── つまり ここ。
+ *   ★★だから 止める枝・不明の枝・通す枝の【3つとも】に同じ文を置く。
+ *   ★★★条件を付けない ── 条件を付けると、また枝に落ちる(27.13 で踏んだ形)。 */
+const 見ていない所 = '★この合否は【入れた後の現場】を見ます ── '
+  + '撤去(外す.mjs)の結果は、いま どの合否の口にも 出ません。'
+  + '★★撤去側には合否の口が1つも在りません ── '
+  + '「不明が無い」は「撤去が安全」という意味では ありません。';
+
+/* ★通す枝も、この1文だけは言う(27.17)── ★★緑こそ「残滓ゼロ」と読まれる所なので。
+ *   ★★★止めない・decision も足さない(通す動きは変えていない)。文を1つ添えるだけ。 */
+const pass = () => {
+  process.stdout.write(JSON.stringify({
+    hookSpecificOutput: { hookEventName: 'Stop', additionalContext: 見ていない所 },
+  }));
+  return process.exit(0);
+};
 
 /* ★【測れなかった】を、合格と同じ動きにしない(2026-09-03、会議で @codex が指摘)。
  *
@@ -51,7 +72,8 @@ const 測れなかった = (何, 詳しく) => {
     + '★★測れないことを【通した】ことにはしません(不明は合格ではありません)。' + String.fromCharCode(10)
     + '手元で見るには: node guardian/verdict.mjs --fast --json' + String.fromCharCode(10)
     + '★★★この門を一度 止めたあとは通ります ── 直す間に閉じ込められることはありません。';
-  process.stdout.write(JSON.stringify({ decision: 'block', reason }));
+  process.stdout.write(JSON.stringify({ decision: 'block',
+      reason: reason + String.fromCharCode(10) + 見ていない所 }));
   return process.exit(0);
 };
 
@@ -177,6 +199,9 @@ function main(ev) {
       decision: 'skipped_unchanged',
       測った: false,
       理由: '印より新しい実装が見つからないので、合否を回していません',
+      /* ★測っていない枝にも 同じ文を置く(27.17)── ★★ここは【何も測っていない】ので、
+       *   ★★★いちばん「緑だ」と読まれてはいけない所。 */
+      見ていない所,
       印: last,
     }));
     return process.exit(0);
@@ -220,7 +245,8 @@ function main(ev) {
       + blocked.map(brief).join('\n')
       + (of('不明').length ? '\n  ※あわせて【不明】が ' + of('不明').length + ' 件あります(測れていない=通っていない)。' : '')
       + '\n手元で見るには: node guardian/verdict.mjs';
-    process.stdout.write(JSON.stringify({ decision: 'block', reason }));
+    process.stdout.write(JSON.stringify({ decision: 'block',
+      reason: reason + String.fromCharCode(10) + 見ていない所 }));
     return process.exit(0);
   }
 
@@ -247,7 +273,8 @@ function main(ev) {
       decision: 'continue_with_unknown',
       不明: unknown.length, 注意: warn.length,
       内訳: [...unknown, ...warn].map((x) => ({ name: x.name, verdict: x.verdict })),
-      hookSpecificOutput: { hookEventName: 'Stop', additionalContext: reason },
+      hookSpecificOutput: { hookEventName: 'Stop',
+        additionalContext: reason + String.fromCharCode(10) + 見ていない所 },
     }));
     return process.exit(0);
   }

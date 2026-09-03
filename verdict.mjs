@@ -222,6 +222,11 @@ if (JSON_OUT) {
   console.log(JSON.stringify({
     overall, code, fast: FAST,
     counts: { 通過: n('通過'), 注意: n('注意'), 不明: n('不明'), 差戻: n('差戻') }, skipped,
+    /* ★機械にも【見ていない所】を欄で言う(27.17、@codex 18:38)。
+     *   ★★自然文を混ぜる必要はない ── ★★★責務の範囲を、欄として持つ。
+     *   `撤去: 0件` は「撤去を安全に確かめた」ではなく【走らせていない】である。 */
+    見ていない所: { 撤去: '走らせていない(この合否は 外す.mjs を1度も呼びません)',
+      意味: '「不明が無い」は「撤去が安全」という意味では ありません' },
     results: results.map((r) => ({ ...r, out: r.out.split('\n').slice(-20).join('\n') })),
   }, null, 2));
   process.exit(code);
