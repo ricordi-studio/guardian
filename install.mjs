@@ -870,38 +870,67 @@ if (!DRY && 台帳が在る) {
   todo.push('★所有台帳を残していません(' + KIT + '/台帳.mjs が読めませんでした)。★★外すときに【何を消してよいか】の材料が在りません ── 外す側は UNKNOWN になります');
 }
 
-/* ★★★【束の控え】(27.54、2026-09-05、@codex 03:22 / @guardian の実測)。
+/* ★★★【束の控え】── ★配る側の 目録と 照らしてから 書く(27.59、依頼主「完成させて」)。
  *
- *   ★27.50〜53 の --束も は【束の 直下の 名前】しか 見ていなかった ──
- *   ★★許した名前の【中】(例 docs/ の 下)に 現場が 置いた物は、★★★束ごと 消えた。
- *   ★塊の宣言は【直下の 名前】しか 持たないので、名前では 照らせない。
+ *   ★27.54 の 控えは【install した時の 姿】だった ── ★★install の【前】から
+ *   束の中に 在った 現場の物は、★★★塊の物として 取り込まれ、--束も で 一緒に 消えた。
+ *   ★= 「入れた時から 変わっていない」は 証明できたが、★★「塊の物である」は 出来ていなかった。
  *
- *   ★★だから【入れた時の 姿】を ここで 控える ── 相対の道と 指紋。
- *   ★★★外す側は これと 突き合わせ、足された物・変えられた物が 1つでも 在れば 束を 消さない。
- *   ★= 所有を【証明できる】形にする(★★この道具の 太い線)。
+ *   ★★★だから【配る側の 目録】(<束>/目録.json)と 照らす:
+ *     ・束の中の 全ファイルが 目録に 在り、指紋も 合う → ★証明済み
+ *     ・1つでも 目録に 無い / 指紋が 違う / 近道 → ★★証明できない
+ *   ★証明できない時も 控えは 書く ── ★★但し 証明: null。★★★外す側が それを 見て 断る。
  *
- *   ★★控え自身は 台帳に 載る(書き手を 通す)ので、--外す で 一緒に 消える。 */
+ *   ★改行: 目録は CR を 落として 数えている ── ★★ここも 同じに する。 */
 if (!DRY) {
   try {
     const 束の根 = path.join(ROOT, KIT);
+    const 目録 = (() => {
+      try {
+        const j = JSON.parse(fs.readFileSync(path.join(束の根, '目録.json'), 'utf8'));
+        if (!j || !Array.isArray(j.項)) return null;
+        const m = new Map();
+        for (const x of j.項) if (x && x.rel) m.set(String(x.rel), String(x.印));
+        return { 版: j.版, 印: m };
+      } catch (_) { return null; }
+    })();
     const 項 = [];
+    const 外れ = [];
     const 歩く = (d, 親) => {
       let es = []; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch (_) { return; }
       for (const x of es) {
         if (x.name === '.git' || x.name === 'node_modules') continue;
         const 名 = 親 ? 親 + '/' + x.name : x.name;
-        if (x.isSymbolicLink()) { 項.push({ rel: 名, 印: '近道' }); continue; }
+        if (x.isSymbolicLink()) { 項.push({ rel: 名, 印: '近道' }); 外れ.push(名 + '(近道)'); continue; }
         if (x.isDirectory()) { 歩く(path.join(d, x.name), 名); continue; }
-        let 中 = null; try { 中 = fs.readFileSync(path.join(d, x.name)); } catch (_) {}
-        項.push({ rel: 名, 印: 中 == null ? '読めない' : 書き手.指紋(中) });
+        let 中 = null; try { 中 = fs.readFileSync(path.join(d, x.name), 'utf8'); } catch (_) {}
+        const 印 = 中 == null ? '読めない' : 書き手.均した指紋(中);   /* ★正本は 書き手.cjs に 1本 */
+        項.push({ rel: 名, 印 });
+        if (名 === '目録.json') continue;   /* ★目録は 自分を 数えない */
+        if (!目録) return;
+        if (!目録.印.has(名)) { 外れ.push(名 + '(目録に 無い)'); continue; }
+        if (目録.印.get(名) !== 印) 外れ.push(名 + '(目録と 指紋が 違う)');
       }
     };
     歩く(束の根, '');
+    const 証明 = (目録 && 外れ.length === 0) ? '目録' : null;
     書き手.書く(ROOT, '.guardian/束の控え.json',
-      JSON.stringify({ 束: KIT, 時刻: new Date().toISOString(), 項 }, null, 1) + String.fromCharCode(10),
+      JSON.stringify({ 束: KIT, 時刻: new Date().toISOString(), 証明,
+        目録の版: 目録 ? 目録.版 : null, 外れ: 外れ.slice(0, 20), 項 }, null, 1) + String.fromCharCode(10),
       'install.mjs');
-    did.push('束の控えを置きました(.guardian/束の控え.json ── ★' + 項.length
-      + '点。★★--外す --束も が【入れた時から 変わっていないか】を これで 見ます)');
+    if (証明 === '目録') {
+      did.push('束の控えを置きました(.guardian/束の控え.json ── ★' + 項.length
+        + '点。★★配る側の 目録と 1点も 違いません ── ★★★--外す --束も が 使えます)');
+    } else if (!目録) {
+      todo.push('★束に【目録.json】が 在りません ── ★★配る側の 証拠が 無いので、'
+        + '★★★所有を 証明できません。--外す --束も は 束を 消しません'
+        + '(★正本から 取り直すと 付いてきます)');
+    } else {
+      todo.push('★束が 配る側の 目録と ' + 外れ.length + '件 違います: ' + 外れ.slice(0, 5).join(' / ')
+        + (外れ.length > 5 ? ' ほか' + (外れ.length - 5) + '件' : '')
+        + ' ── ★★あなたの物が 混ざっているかもしれません。'
+        + '★★★所有を 証明できないので、--外す --束も は 束を 消しません');
+    }
   } catch (e) {
     todo.push('★束の控えを 置けませんでした: ' + String(e && e.message).slice(0, 80)
       + ' ── ★★--外す --束も は【所有を 証明できない】ので 束を 消しません');

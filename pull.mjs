@@ -42,7 +42,7 @@ const 正本 = 'https://github.com/ricordi-studio/guardian.git';
  * ★この直し自体は、古い版には届かない ── 9.42 以前を取ってから戻る経路は依然として黙る。
  *   届くのは『ここから先』だけである。それでも入れる理由は、口はこれからも増えるからである。 */
 {
-  const 知っている口 = ['--口一覧', '--check', '--force', '--降格を承知', '--distributed', '--at', '--由来'];
+  const 知っている口 = ['--口一覧', '--check', '--force', '--降格を承知', '--distributed', '--at', '--由来', '--目録を作る'];
   const 値を取る口 = { '--at': 1 };
   const 残りを全部取る口 = [];
   const 渡されたもの = process.argv.slice(2);
@@ -155,6 +155,9 @@ const 配るもの = new Set([
    *   ★★AGPL は【許諾の写しを 一緒に 渡す事】を 求める ── 塊だけ配ると 義務違反になる。
    *   ★★★NOTICE と AUTHORS が 落ちると【誰が 始めたか】が 配布先で 消える。 */
   'LICENSE', 'NOTICE', 'AUTHORS', 'CONTRIBUTING.md',
+  /* ★配る側の 証拠(27.59)── ★★これが 無いと install は 所有を 証明できず、
+   *   ★★★--束も が 使えない。 */
+  '目録.json',
 ]);
 const 現場のもの = new Set([
   '.github',                 // ★この repo の issue の型。★★塊の持ち物では ない(27.46)
@@ -172,6 +175,48 @@ const 現場のもの = new Set([
   'talk', '.gitignore',
   '.git', '.github', 'node_modules',
 ]);
+
+/* ★ESM から CJS を 取る口(★★道.cjs / 書き手.cjs は CJS) */
+const __cr2 = (await import('node:module')).createRequire(import.meta.url);
+/* ★★★【目録】── 配る側が 作る 所有の 証拠(27.59、2026-09-05、依頼主「完成させて」)。
+ *
+ *   ★これまでの 控えは【install した時の 姿】だった ── ★★install の【前】から
+ *   束の中に 在った 現場の物は、★★★塊の物として 取り込まれ、--束も で 一緒に 消えた。
+ *   ★= 控えが 証明できるのは「入れた時から 変わっていない」だけで、
+ *     ★★「塊の物である」は 証明できていなかった。
+ *
+ *   ★★★だから【配る側】が 作る。★正本が 目録を 書き、塊と 一緒に 配る。
+ *   install は 束を 目録と 照合し、★★一致した時だけ【証明済み】の 控えを 持つ。
+ *
+ *   ★改行の 事(27.47 で 踏んだ):★★Windows の clone は CRLF に なる ──
+ *   ★★★だから 指紋を 取る前に CR を 落とす。★でないと 同じ中身が 別の指紋に なる。
+ *
+ *   ★★目録は【追跡している 全ファイル】を 載せる ── clone も pull も 同じ物で 照らせる。
+ *   ★配る物か どうかも 印を 付ける(★★pull は その部分集合を 運ぶため)。 */
+if (process.argv.includes('--目録を作る')) {
+  const 道の口 = __cr2('./道.cjs');
+  const 均した指紋 = __cr2('./書き手.cjs').均した指紋;
+  const 配るものか = (rel) => 配るもの.has(String(rel).split('/')[0]);
+  const 取れた = 道の口.道を取る(HERE, 'ls-files');
+  if (取れた.落ちた) { console.error('✗ 道の一覧が 取れません: ' + 取れた.落ちた); process.exit(2); }
+  const 項 = [];
+  const 読めない = [];
+  for (const rel of 取れた.道) {
+    if (rel === '目録.json') continue;   /* ★自分は 自分を 数えない */
+    let 中 = null;
+    try { 中 = fs.readFileSync(path.join(HERE, rel), 'utf8'); } catch (_) { 読めない.push(rel); continue; }
+    項.push({ rel, 印: 均した指紋(中), 配る: 配るものか(rel) });   /* ★正本は 書き手.cjs に 1本(27.59) */
+  }
+  項.sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
+  const 版 = (() => { try { return fs.readFileSync(path.join(HERE, 'KIT_VERSION'), 'utf8').trim(); } catch (_) { return null; } })();
+  fs.writeFileSync(path.join(HERE, '目録.json'),
+    JSON.stringify({ 版, 作った: new Date().toISOString(), 数え方: 'CR を 落としてから 指紋', 項 }, null, 1)
+    + String.fromCharCode(10));
+  console.log('★目録を 書きました: 目録.json(' + 項.length + '項 / 版 ' + 版 + ')');
+  if (読めない.length) console.log('★★読めなかった道 ' + 読めない.length + '件は 載せていません: ' + 読めない.slice(0, 5).join(', '));
+  console.log('★★★これは【配る側の 証拠】です ── install が 束を これと 照らします');
+  process.exit(0);
+}
 
 /* ★弾くのは【名前】ではなく【場所】である(2026-08-30、配布先を 9.13 → 9.22 に上げて見つけた)。
  *

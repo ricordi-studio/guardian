@@ -1,0 +1,807 @@
+{
+ "版": "27.58",
+ "作った": "2026-09-04T20:03:30.575Z",
+ "数え方": "CR を 落としてから 指紋",
+ "項": [
+  {
+   "rel": ".claude/commands/guardian-audit.md",
+   "印": "hyfuh-175",
+   "配る": false
+  },
+  {
+   "rel": ".claude/settings.json",
+   "印": "1q5q80a-929",
+   "配る": false
+  },
+  {
+   "rel": ".gitattributes",
+   "印": "10jk92m-485",
+   "配る": false
+  },
+  {
+   "rel": ".github/ISSUE_TEMPLATE/accident-report.yml",
+   "印": "i5nlhj-1050",
+   "配る": false
+  },
+  {
+   "rel": ".github/workflows/guardian-nightly.yml",
+   "印": "1ybpxvw-2843",
+   "配る": false
+  },
+  {
+   "rel": ".gitignore",
+   "印": "1p7yigb-561",
+   "配る": false
+  },
+  {
+   "rel": ".guardian/guardian-report.md",
+   "印": "1qfmkui-181759",
+   "配る": false
+  },
+  {
+   "rel": ".guardian/印の場所.cjs",
+   "印": "xx6o4f-953",
+   "配る": false
+  },
+  {
+   "rel": ".guardian/発言ヘッダー.mjs",
+   "印": "1qxnxqz-2493",
+   "配る": false
+  },
+  {
+   "rel": ".guardian/踏んだこと",
+   "印": "1o1u9rl-513",
+   "配る": false
+  },
+  {
+   "rel": ".guardian/輪.mjs",
+   "印": "12v2fbn-3018",
+   "配る": false
+  },
+  {
+   "rel": ".guardian/鼓動.mjs",
+   "印": "1eke1w2-1926",
+   "配る": false
+  },
+  {
+   "rel": "AUTHORS",
+   "印": "ayh30t-294",
+   "配る": true
+  },
+  {
+   "rel": "CHANGELOG.md",
+   "印": "mv4e6u-215358",
+   "配る": true
+  },
+  {
+   "rel": "CLAUDE.md",
+   "印": "a3g7g1-1147",
+   "配る": false
+  },
+  {
+   "rel": "CONTRIBUTING.md",
+   "印": "h64xvo-1202",
+   "配る": true
+  },
+  {
+   "rel": "ENGINE_FP",
+   "印": "1jp0lsb-1001",
+   "配る": true
+  },
+  {
+   "rel": "KIT_VERSION",
+   "印": "ythtdh-6",
+   "配る": true
+  },
+  {
+   "rel": "LICENSE",
+   "印": "hd5n6m-34523",
+   "配る": true
+  },
+  {
+   "rel": "METHOD.md",
+   "印": "1kv4bye-22912",
+   "配る": true
+  },
+  {
+   "rel": "NOTICE",
+   "印": "1ciw0fb-702",
+   "配る": true
+  },
+  {
+   "rel": "PROTOCOL.json",
+   "印": "1tyeirq-344",
+   "配る": true
+  },
+  {
+   "rel": "README.md",
+   "印": "19j6uks-10494",
+   "配る": true
+  },
+  {
+   "rel": "RULES.md",
+   "印": "t55p66-12134",
+   "配る": true
+  },
+  {
+   "rel": "SPEC.md",
+   "印": "1oso604-20714",
+   "配る": true
+  },
+  {
+   "rel": "WHY.md",
+   "印": "vr0kgt-342151",
+   "配る": true
+  },
+  {
+   "rel": "WHY_INDEX.md",
+   "印": "1b4656m-53057",
+   "配る": true
+  },
+  {
+   "rel": "WHY_SEEN",
+   "印": "13vh0ve-29187",
+   "配る": true
+  },
+  {
+   "rel": "audit.md",
+   "印": "s1728l-2740",
+   "配る": true
+  },
+  {
+   "rel": "check.mjs",
+   "印": "s7d2e7-59904",
+   "配る": true
+  },
+  {
+   "rel": "docs/CODEMAP.md",
+   "印": "r2tj3d-64719",
+   "配る": false
+  },
+  {
+   "rel": "docs/HANDOVER.md",
+   "印": "56r6wh-12502",
+   "配る": false
+  },
+  {
+   "rel": "githooks/pre-commit",
+   "印": "1y3b1ae-2062",
+   "配る": true
+  },
+  {
+   "rel": "guardian.config.json",
+   "印": "1taoli2-2679",
+   "配る": false
+  },
+  {
+   "rel": "hooks/clock.js",
+   "印": "11jtcma-3947",
+   "配る": true
+  },
+  {
+   "rel": "hooks/codemap.js",
+   "印": "otaclp-11261",
+   "配る": true
+  },
+  {
+   "rel": "hooks/in-loop.js",
+   "印": "uaw53f-3845",
+   "配る": true
+  },
+  {
+   "rel": "hooks/lib-root.js",
+   "印": "ok4uju-3316",
+   "配る": true
+  },
+  {
+   "rel": "hooks/no-fixed-names.js",
+   "印": "1m99a7m-3204",
+   "配る": true
+  },
+  {
+   "rel": "hooks/no-reflex.js",
+   "印": "1nt3h1b-5741",
+   "配る": true
+  },
+  {
+   "rel": "hooks/stop.js",
+   "印": "13ad4ih-13089",
+   "配る": true
+  },
+  {
+   "rel": "hunch.md",
+   "印": "ukokyc-2956",
+   "配る": true
+  },
+  {
+   "rel": "index.mjs",
+   "印": "1lil88u-6731",
+   "配る": true
+  },
+  {
+   "rel": "install.md",
+   "印": "a9q5zm-4942",
+   "配る": true
+  },
+  {
+   "rel": "install.mjs",
+   "印": "n58iid-43080",
+   "配る": true
+  },
+  {
+   "rel": "neighbors.mjs",
+   "印": "16b7g8p-53886",
+   "配る": true
+  },
+  {
+   "rel": "package.json",
+   "印": "s5qqdo-524",
+   "配る": true
+  },
+  {
+   "rel": "pull.mjs",
+   "印": "ekjj0h-34872",
+   "配る": true
+  },
+  {
+   "rel": "research/council/README.md",
+   "印": "1o5y2g2-1797",
+   "配る": false
+  },
+  {
+   "rel": "research/council/VISION.md",
+   "印": "1kjxwhz-6634",
+   "配る": false
+  },
+  {
+   "rel": "research/council/experiments/EXP-001/context.md",
+   "印": "1bppks7-2947",
+   "配る": false
+  },
+  {
+   "rel": "research/council/experiments/EXP-001/question.md",
+   "印": "1xx8mpp-529",
+   "配る": false
+  },
+  {
+   "rel": "research/council/experiments/EXP-001/round0/chatgpt.md",
+   "印": "7moyo6-4527",
+   "配る": false
+  },
+  {
+   "rel": "research/council/experiments/EXP-001/round0/claude.md",
+   "印": "5lwfqf-2568",
+   "配る": false
+  },
+  {
+   "rel": "research/council/experiments/EXP-001/round0/gemini.md",
+   "印": "1v9hhge-955",
+   "配る": false
+  },
+  {
+   "rel": "research/council/experiments/EXP-001/round1/chatgpt.md",
+   "印": "gy0pyi-6610",
+   "配る": false
+  },
+  {
+   "rel": "research/council/experiments/EXP-001/round1/claude.md",
+   "印": "1l5p8gk-4437",
+   "配る": false
+  },
+  {
+   "rel": "research/council/experiments/EXP-001/round1/gemini.md",
+   "印": "oqt69j-1318",
+   "配る": false
+  },
+  {
+   "rel": "research/council/experiments/EXP-001/round2/chatgpt.md",
+   "印": "1pl93dn-3551",
+   "配る": false
+  },
+  {
+   "rel": "research/council/experiments/EXP-001/round2/claude.md",
+   "印": "8o639o-1826",
+   "配る": false
+  },
+  {
+   "rel": "research/council/experiments/EXP-001/round2/gemini.md",
+   "印": "ktgbjh-1363",
+   "配る": false
+  },
+  {
+   "rel": "research/council/findings/FIND-001.md",
+   "印": "2gce3q-3759",
+   "配る": false
+  },
+  {
+   "rel": "research/council/findings/README.md",
+   "印": "h0y2ga-118",
+   "配る": false
+  },
+  {
+   "rel": "research/council/protocol/debate.md",
+   "印": "jlqb9m-1030",
+   "配る": false
+  },
+  {
+   "rel": "research/council/protocol/experiment.md",
+   "印": "w11jtm-1219",
+   "配る": false
+  },
+  {
+   "rel": "research/council/protocol/falsification.md",
+   "印": "1nmwfy6-640",
+   "配る": false
+  },
+  {
+   "rel": "research/council/protocol/promotion.md",
+   "印": "wfhecm-1398",
+   "配る": false
+  },
+  {
+   "rel": "research/council/roles/architect.md",
+   "印": "w4x9ba-283",
+   "配る": false
+  },
+  {
+   "rel": "research/council/roles/critic.md",
+   "印": "v3tl08-304",
+   "配る": false
+  },
+  {
+   "rel": "research/council/roles/investigator.md",
+   "印": "jbg4n8-233",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/ANSWER.md",
+   "印": "bxts48-1913",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/README.md",
+   "印": "njctli-1090",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/pristine/src/calc.js",
+   "印": "aqadiw-1477",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/pristine/src/format.js",
+   "印": "u2zdxd-1052",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/pristine/src/main.js",
+   "印": "17yfjv1-772",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/RESULT-round1.md",
+   "印": "v3atf8-2184",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/RESULT-round2-partial.md",
+   "印": "gwdfhz-1400",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/RESULT-round2.md",
+   "印": "k0qr5q-2505",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/SCORING-round2.md",
+   "印": "1mgq2yk-1171",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/cases.json",
+   "印": "itu5s3-1545",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/compare.js",
+   "印": "qfkjef-1845",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/control-after/calc.js",
+   "印": "2bplfz-1620",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/control-after/format.js",
+   "印": "1xovz35-1109",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/control-after/main.js",
+   "印": "17yfjv1-772",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-A/DECISIONS.md",
+   "印": "17rf1zd-4926",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-A/demo.js",
+   "印": "85wd9u-1133",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-A/index.js",
+   "印": "r9no3m-643",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-A/src/calculate.js",
+   "印": "17ig0o7-1844",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-A/src/kinds.js",
+   "印": "8f5rn9-1715",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-A/src/money.js",
+   "印": "1v2wk3o-1590",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-A/src/order.js",
+   "印": "1mdlo72-1969",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-A/src/receipt.js",
+   "印": "1ibyg90-1768",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-A/test.js",
+   "印": "4yzuo7-7644",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-B/DECISIONS.md",
+   "印": "mig3j4-5447",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-B/demo.js",
+   "印": "1bi5onu-636",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-B/index.js",
+   "印": "188gyxj-748",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-B/lib/catalog.js",
+   "印": "13wlf98-1736",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-B/lib/compute.js",
+   "印": "x0oa6m-2227",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-B/lib/render.js",
+   "印": "1v7syq8-2340",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-B/lib/validate.js",
+   "印": "7ss41q-2599",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-B/test.js",
+   "印": "wdbm6a-9088",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-C/DECISIONS.md",
+   "印": "kp2t0u-5488",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-C/demo.js",
+   "印": "uwm59e-2407",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-C/index.js",
+   "印": "t9gtk9-941",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-C/lib/calculate.js",
+   "印": "reaq6q-3466",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-C/lib/format.js",
+   "印": "1q70x2g-1722",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-C/lib/receipt.js",
+   "印": "673cff-1387",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-C/lib/rules.js",
+   "印": "18p2uaf-2030",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/impl-C/package.json",
+   "印": "16wl061-206",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/rung1-spec.md",
+   "印": "suobpo-4132",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/runs/vs-original.js",
+   "印": "2cvfeq-640",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/subject/src/calc.js",
+   "印": "aqadiw-1477",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/subject/src/format.js",
+   "印": "u2zdxd-1052",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-002/subject/src/main.js",
+   "印": "17yfjv1-772",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/ANSWER.md",
+   "印": "xevm77-2134",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/RESULT.md",
+   "印": "1mde8o2-2534",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/compare3.js",
+   "印": "1xgjud0-1885",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-A/DECISIONS.md",
+   "印": "15ho7il-5366",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-A/demo.js",
+   "印": "10cv430-9256",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-A/index.js",
+   "印": "ih2gan-1192",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-A/lib/config.js",
+   "印": "w3n4xh-1868",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-A/lib/outcome.js",
+   "印": "114pr54-1753",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-A/lib/progress.js",
+   "印": "ppoh2-3022",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-A/lib/sendQueue.js",
+   "印": "1jbwq52-6127",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-B/DECISIONS.md",
+   "印": "rt4wo6-5529",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-B/attempt.js",
+   "印": "1qa7yji-1634",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-B/defaults.js",
+   "印": "h60n4e-2681",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-B/demo.js",
+   "印": "1pwo4xb-7013",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-B/index.js",
+   "印": "1phv04n-1029",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-B/outcome.js",
+   "印": "hy4bg6-2356",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-B/progress.js",
+   "印": "v6v0w0-2832",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-B/queue.js",
+   "印": "15p48ze-5605",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-C/DECISIONS.md",
+   "印": "rtv8du-5338",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-C/config.js",
+   "印": "c3blam-2119",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-C/demo.js",
+   "印": "xyb2b3-12490",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-C/index.js",
+   "印": "rnhgau-1330",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-C/outcome.js",
+   "印": "tzgaxk-3080",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-C/progress.js",
+   "印": "1x96sn-2855",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/impl-C/queue.js",
+   "印": "1awoulm-8656",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/runs/rung1-spec.md",
+   "印": "1xd1z4f-4053",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/subject/src/queue.js",
+   "印": "1ejlk8j-1009",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-003/subject/src/sender.js",
+   "印": "9c1i7q-1445",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-004/ANSWER.md",
+   "印": "12hqkw5-2126",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-004/runs/RESULT.md",
+   "印": "mji5b8-1824",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-004/subject/src/cli.js",
+   "印": "1jifry9-720",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/EXP-004/subject/src/sync.js",
+   "印": "7xvgum-1397",
+   "配る": false
+  },
+  {
+   "rel": "research/lab/FINDINGS.md",
+   "印": "1txo99p-3648",
+   "配る": false
+  },
+  {
+   "rel": "selfcheck.mjs",
+   "印": "1241uib-195603",
+   "配る": true
+  },
+  {
+   "rel": "talk/talk.mjs",
+   "印": "1gmaw5u-2097",
+   "配る": false
+  },
+  {
+   "rel": "templates/CLAUDE-snippet.md",
+   "印": "1y7ghqv-1478",
+   "配る": true
+  },
+  {
+   "rel": "templates/CODEMAP.md",
+   "印": "1iwybyg-827",
+   "配る": true
+  },
+  {
+   "rel": "templates/guardian-audit-command.md",
+   "印": "hyfuh-175",
+   "配る": true
+  },
+  {
+   "rel": "templates/guardian.config.json",
+   "印": "128yym3-2262",
+   "配る": true
+  },
+  {
+   "rel": "templates/nightly-check.yml",
+   "印": "1ybpxvw-2843",
+   "配る": true
+  },
+  {
+   "rel": "verdict.mjs",
+   "印": "15ulyx2-16303",
+   "配る": true
+  },
+  {
+   "rel": "保持一覧.json",
+   "印": "tfn9m3-1146",
+   "配る": true
+  },
+  {
+   "rel": "台帳.mjs",
+   "印": "15m74zk-3728",
+   "配る": true
+  },
+  {
+   "rel": "外す.mjs",
+   "印": "d21k3u-93299",
+   "配る": true
+  },
+  {
+   "rel": "書き手.cjs",
+   "印": "40b527-6876",
+   "配る": true
+  },
+  {
+   "rel": "道.cjs",
+   "印": "1mpvcnl-2966",
+   "配る": true
+  }
+ ]
+}
