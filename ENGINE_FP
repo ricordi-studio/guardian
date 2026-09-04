@@ -1,4 +1,4 @@
-27.54
+27.55
 AUTHORS ayh30t-294
 CONTRIBUTING.md h64xvo-1202
 LICENSE hd5n6m-34523
@@ -16,7 +16,7 @@ hooks/codemap.js otaclp-11261
 hooks/lib-root.js ok4uju-3316
 hooks/no-fixed-names.js 1m99a7m-3204
 hooks/no-reflex.js 1nt3h1b-5741
-hooks/stop.js 1b6iogl-12315
+hooks/stop.js 13ad4ih-13089
 hunch.md ukokyc-2956
 index.mjs 1lil88u-6731
 install.md a9q5zm-4942
@@ -24,13 +24,13 @@ install.mjs kb0bzz-41787
 neighbors.mjs 16b7g8p-53886
 package.json s5qqdo-524
 pull.mjs 1y53jhz-32820
-selfcheck.mjs 1juktk4-190746
+selfcheck.mjs 6kb8fg-191606
 templates/CLAUDE-snippet.md 1y7ghqv-1478
 templates/CODEMAP.md 1iwybyg-827
 templates/guardian-audit-command.md hyfuh-175
 templates/guardian.config.json 128yym3-2262
 templates/nightly-check.yml 1ybpxvw-2843
-verdict.mjs 1cyvxqj-15560
+verdict.mjs 15ulyx2-16303
 保持一覧.json tfn9m3-1146
 台帳.mjs 15m74zk-3728
 外す.mjs 1f4dgg7-90640
