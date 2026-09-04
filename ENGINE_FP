@@ -1,4 +1,4 @@
-27.49
+27.50
 AUTHORS ayh30t-294
 CONTRIBUTING.md h64xvo-1202
 LICENSE hd5n6m-34523
@@ -7,7 +7,7 @@ NOTICE 1ciw0fb-702
 PROTOCOL.json 1tyeirq-344
 README.md 19j6uks-10494
 RULES.md t55p66-12134
-SPEC.md 1oij99u-19875
+SPEC.md 1l8mtc1-20315
 audit.md s1728l-2740
 check.mjs s7d2e7-59904
 githooks/pre-commit 1y3b1ae-2062
@@ -33,6 +33,6 @@ templates/nightly-check.yml 1ybpxvw-2843
 verdict.mjs 1cyvxqj-15560
 保持一覧.json tfn9m3-1146
 台帳.mjs 15m74zk-3728
-外す.mjs cjiqxe-84816
+外す.mjs 1l27wyn-88612
 書き手.cjs 1376kfd-6358
 道.cjs 1mpvcnl-2966
