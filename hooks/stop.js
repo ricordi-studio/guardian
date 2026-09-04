@@ -41,10 +41,26 @@ const { findRoot, loadConfig, 既定の見る所 } = require('./lib-root');
  *   ★いちばん読み違えられるのは【完了を名乗る その瞬間】── つまり ここ。
  *   ★★だから 止める枝・不明の枝・通す枝の【3つとも】に同じ文を置く。
  *   ★★★条件を付けない ── 条件を付けると、また枝に落ちる(27.13 で踏んだ形)。 */
+/* ★★★この文は【腐った】── 27.55 で B28(撤去の門)が 出来たのに、
+ *   ここは「撤去側には合否の口が1つも在りません」と 言い続けた(2026-09-05、@guardian)。
+ *   ★私は 27.41 に「写すと 写した瞬間から 古くなる」と 書き、★★同じ紙の 別の行で 写していた。
+ *   ★★★だから ここも【読む】に する ── 名乗るのは verdict.mjs。
+ *   ★下の定数は【verdict が 読めなかった時】だけの 控え。
+ *   ★★控えは 中身を 名乗らない ── ★★★知らない事を 知っているふりで 書かないため。 */
 const 見ていない所 = '★この合否は【入れた後の現場】を見ます ── '
-  + '撤去(外す.mjs)の結果は、いま どの合否の口にも 出ません。'
-  + '★★撤去側には合否の口が1つも在りません ── '
-  + '「不明が無い」は「撤去が安全」という意味では ありません。';
+  + '撤去(外す.mjs)の結果が この走行で 測られたかは、★★ここでは 分かりません'
+  + '(合否の JSON を 読めませんでした)。'
+  + '★★★「不明が無い」は「撤去が安全」という意味では ありません。';
+
+/* ★合否が【自分で 名乗った】撤去の欄を そのまま 出す(27.55)。
+ *   ★★読めない時だけ 上の控えに 落ちる。 */
+const 見ていない所を言う = (v) => {
+  const m = v && v.見ていない所;
+  if (!m || !m.撤去) return 見ていない所;
+  return '★この合否は【入れた後の現場】を見ます ── 撤去: ' + m.撤去
+    + (m.意味 ? ' ★★' + m.意味 : '')
+    + (m.建てるには ? ' ★★★' + m.建てるには : '');
+};
 
 /* ★通す枝も、この1文だけは言う(27.17)── ★★緑こそ「残滓ゼロ」と読まれる所なので。
  *   ★★★止めない・decision も足さない(通す動きは変えていない)。文を1つ添えるだけ。 */
@@ -243,7 +259,7 @@ function main(ev) {
       + (of('不明').length ? '\n  ※あわせて【不明】が ' + of('不明').length + ' 件あります(測れていない=通っていない)。' : '')
       + '\n手元で見るには: node guardian/verdict.mjs';
     process.stdout.write(JSON.stringify({ decision: 'block',
-      reason: reason + String.fromCharCode(10) + 見ていない所 }));
+      reason: reason + String.fromCharCode(10) + 見ていない所を言う(v) }));
     return process.exit(0);
   }
 
@@ -296,7 +312,7 @@ function main(ev) {
       不明: unknown.length, 注意: warn.length,
       内訳: [...unknown, ...warn].map((x) => ({ name: x.name, verdict: x.verdict })),
       hookSpecificOutput: { hookEventName: 'Stop',
-        additionalContext: reason + String.fromCharCode(10) + 見ていない所 },
+        additionalContext: reason + String.fromCharCode(10) + 見ていない所を言う(v) },
     }));
     return process.exit(0);
   }
