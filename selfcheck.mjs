@@ -319,7 +319,10 @@ let whyLoose = null;      // 守りが下限より増えている(--tighten で�
  *   外したままだと、配布先が作法を書き換えても `selfcheck` は緑を返し、
  *   `--report` にも載らず、**その現場の改善が正本へ還る道が無い**。
  *   ★理由が1つの仲間にしか当てはまらないのに、同じ袋へ入っていた。 */
-const FP_SKIP = new Set(['WHY.md', 'WHY_INDEX.md', 'WHY_SEEN', 'CHANGELOG.md', 'KIT_VERSION', 'ENGINE_FP']);
+/* ★目録.json は 指紋の 対象から 外す(27.59)── ★★目録は【最後に】作り直す物で、
+ *   その中に ENGINE_FP の 新しい値も 入る。★★★指紋の 対象に すると 鶏と卵に なる。
+ *   ★目録が 古くないかは B29 が 別に 見ている ── ★★見ていない訳では ない。 */
+const FP_SKIP = new Set(['WHY.md', 'WHY_INDEX.md', 'WHY_SEEN', 'CHANGELOG.md', 'KIT_VERSION', 'ENGINE_FP', '目録.json']);
 /* ★pull.mjs の分類表を切り出す【1つの口】(2026-08-30)。
  *   直す前は同じ切り出しが3箇所に写されていた(ENGINE_FILES / 配布境界の照合 / 配布の網羅)。
  *   書き方が変わったときに1箇所だけ直す事故を呼ぶので、ここに集めた(39条)。
