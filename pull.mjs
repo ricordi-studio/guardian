@@ -151,8 +151,13 @@ const 配るもの = new Set([
    *   綴りで能力を測ると、コメントや死にコードで偽陽性・書き換えで偽陰性になる。
    *   ★嘘は書けるので、selfcheck B8g が実際の振る舞いと突き合わせる(44条の双子)。 */
   'PROTOCOL.json',
+  /* ★許諾と 著作権の表示(27.46、2026-09-04)。
+   *   ★★AGPL は【許諾の写しを 一緒に 渡す事】を 求める ── 塊だけ配ると 義務違反になる。
+   *   ★★★NOTICE と AUTHORS が 落ちると【誰が 始めたか】が 配布先で 消える。 */
+  'LICENSE', 'NOTICE', 'AUTHORS', 'CONTRIBUTING.md',
 ]);
 const 現場のもの = new Set([
+  '.github',                 // ★この repo の issue の型。★★塊の持ち物では ない(27.46)
   'guardian.config.json',   // Guardian 自身の現場の宣言
   'docs',                   // Guardian 自身の地図
   '.guardian',              // Guardian 自身の作業記録

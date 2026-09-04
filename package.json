@@ -1,5 +1,8 @@
 {
   "name": "guardian-kit",
+  "version": "27.45",
+  "license": "AGPL-3.0-or-later",
+  "author": "Ricordi.studio <info@ricordi.studio>",
   "private": true,
   "type": "commonjs",
   "_": "★このファイルは【フックを守るためだけ】に在る(2026-08-30、配布先からの報告)。",

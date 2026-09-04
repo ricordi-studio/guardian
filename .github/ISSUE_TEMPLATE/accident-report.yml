@@ -1,0 +1,46 @@
+name: 事故報告 / Accident report
+description: 転んだ話を 教えてください(★この塊が 一番 欲しい物です)
+title: "[事故] "
+labels: ["事故"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ★★**「〜のはずです」は 要りません。★★★測った物だけ ください。**
+        ★直し方が 分からなくても 構いません ── ★★事故そのものが 材料です。
+  - type: textarea
+    id: what-i-did
+    attributes:
+      label: ★① 何を したか
+      description: 叩いたコマンドを そのまま
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: ★★② 何が 起きたか
+      description: 出力を そのまま(★要約しないでください)
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: what-i-expected
+    attributes:
+      label: ★③ 何を 期待したか
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ★④ 版
+      description: KIT_VERSION の中身、または selfcheck の 出力の 先頭
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: ★⑤ 走らせた場所
+      description: OS と node の版(例 Windows 10 / node v22.x)
+    validations:
+      required: false

@@ -58,6 +58,12 @@ function 親を作る(ROOT, 先) {
 }
 
 /** 走行中に書いた物を、台帳へ1件 登録する(同じ道は二度 載せない)。 */
+/* ★【走行中の種類】── ★★ここが 正本(27.46、2026-09-04、14:47 の監査)。
+ *   ★★★外す側は これを 前方一致で 見ていた ── ★「走行中の物ではない何か」も 同じ枝に 入る。
+ *   ★★出す側(ここ)と 読む側(外す.mjs)で 名が ずれる事故を 何度も やったので、
+ *   ★★★名は ここ1箇所で 決め、読む側は これを 読む(綴りの写しを 持たない)。 */
+const 走行中の種類 = Object.freeze(['走行中の物', '走行中の物(追記)']);
+
 /* ★【追記】の共通の口(27.6、2026-09-03、会議で @kozo が実測 → @codex が形を出した)。
  *
  *   ★★事故: 27.2 で受け取りを 追記(JSONL)に直したとき、
@@ -92,7 +98,7 @@ function 追記(ROOT, 相対の道, 行, writer, 種類) {
     }
   } catch (_) { /* 無い or 読めない ── 新しく作る扱い */ }
   fs.appendFileSync(先, 行 + String.fromCharCode(10));
-  const 載った = 登録(ROOT, 相対の道, writer, 種類 || "走行中の物(追記)");
+  const 載った = 登録(ROOT, 相対の道, writer, 種類 || 走行中の種類[1]);
   return { 載った, 前の行が壊れていた };
 }
 
@@ -110,7 +116,7 @@ function 登録(ROOT, 相対の道, writer, 種類) {
 
     if (走.項.some((x) => x.rel === 相対の道)) return true;   /* もう載っている */
     走.項.push({
-      rootKind: 'TARGET', rel: 相対の道, 種類: 種類 || '走行中の物',
+      rootKind: 'TARGET', rel: 相対の道, 種類: 種類 || 走行中の種類[0],
       作った: true, hash: null, writer, 時刻: new Date().toISOString(),
     });
     fs.mkdirSync(path.dirname(先), { recursive: true });
@@ -175,4 +181,4 @@ function 書き換える(ROOT, 相対の道, 中身, writer) {
   更新(ROOT, 相対の道, 中身, writer);
 }
 
-module.exports = { 書く, 追記, 登録, 更新, 書き換える, 指紋, 親を作る, 台帳の道, 台帳の相対 };
+module.exports = { 書く, 追記, 登録, 更新, 書き換える, 指紋, 親を作る, 台帳の道, 台帳の相対, 走行中の種類 };
