@@ -2011,12 +2011,25 @@ if (残る束.length) {
         + '★★★束を 消すと、その道具が 無くなり、★いま出した文が 嘘に なります。'
         + '★★先に 上の物を 片づけて PASS にしてから、もう一度 --外す --束も を 打ってください');
     } else {
+      /* ★★★塊が【自分について 宣言している物】を 全部 集める(27.51、@guardian 02:50)。
+       *   ★27.50 は【配るもの】だけを 見ていた ── ★★だから clone で 入れた束が 断られた:
+       *     「配る宣言に 無い物が 10件: .claude .gitattributes .github .gitignore .guardian
+       *       CLAUDE.md docs guardian.config.json research talk」
+       *   ★★★これは【普通の入れ方】(README ①「正本から取る」)で 起きる ──
+       *   ★clone は 宣言を 読まないので、repo の物が 丸ごと 付いてくる。
+       *   ★★塊は それも 宣言している(pull.mjs の【現場のもの】)── ★★★だから 両方 読む。
+       *   ★どちらにも 無い物だけが【塊が 知らない物】= あなたの物かもしれない物。 */
       const 宣言 = (() => { try {
         const p = fs.readFileSync(path.join(ROOT, 残る束[0].名, 'pull.mjs'), 'utf8');
-        const i = p.indexOf('const 配るもの = new Set([');
-        const j = i < 0 ? -1 : p.indexOf(']);', i);
-        if (i < 0 || j < 0) return null;
-        return new Set([...p.slice(i, j).matchAll(/'([^']+)'/g)].map((m) => m[1]));
+        const 取る = (名) => {
+          const i = p.indexOf('const ' + 名 + ' = new Set([');
+          const j = i < 0 ? -1 : p.indexOf(']);', i);
+          if (i < 0 || j < 0) return null;
+          return [...p.slice(i, j).matchAll(/'([^']+)'/g)].map((m) => m[1]);
+        };
+        const 配 = 取る('配るもの'), 現 = 取る('現場のもの');
+        if (!配 || !現) return null;   /* ★片方でも 読めなければ 言えない(★★安全側) */
+        return new Set([...配, ...現]);
       } catch (_) { return null; } })();
       const 宣言外 = [], 外を指す = [];
       if (宣言) {
@@ -2039,9 +2052,10 @@ if (残る束.length) {
           + 'この道具は 言えません。手で 確かめてから 消してください');
       } else if (宣言外.length) {
         console.log('  ★★★--束も は 付いていますが、束は 消しません ── ★束の中に'
-          + '【塊の 配る宣言に 無い物】が ' + 宣言外.length + '件 在ります: ' + 宣言外.join(', '));
-        console.log('    ★★これは【あなたの物かもしれません】── ★★★所有を 言えない物を'
-          + 'フォルダごと 消す事は しません。中を 見て、要らなければ 手で 消してください');
+          + '【塊が 知らない物】が ' + 宣言外.length + '件 在ります: ' + 宣言外.join(', '));
+        console.log('    ★★塊は【配る物】と【自分の repo の物】の どちらも 宣言しています ── '
+          + 'その どちらにも 無い、という事です。★★★あなたの物かもしれません。'
+          + '★所有を 言えない物を フォルダごと 消す事は しません ── 中を 見て、要らなければ 手で 消してください');
       } else {
         const 先 = path.join(ROOT, 残る束[0].名);
         /* ★消す前に【根の中か】を もう一度 確かめる(27.50、@codex)── ★★案Cと 同じ枷を 束にも */
@@ -2052,12 +2066,27 @@ if (残る束.length) {
         try {
           fs.rmSync(先, { recursive: true, force: true });
           console.log('  ★★★束を 消しました: ' + 残る束[0].名 + '(' + 残る束[0].点 + '点)'
-            + ' ── ★中身は 全部【配ると宣言された物】でした');
+            + ' ── ★中身は 全部【塊が 宣言している物】でした'
+            + '(★★配る物 と、塊 自身の repo の物 ── ★★★27.51 で 両方を 見るように した)');
           console.log('  ★★これで【束の 中も 外も】残り 0 件です'
             + '(★見た場所の 中で、という意味は 変わりません)');
         } catch (e) {
-          console.log('  ★★★束を 消せませんでした: ' + String(e && e.message).slice(0, 90)
-            + ' ── ★手で 消してください');
+          /* ★★★途中で 落ちた時は【途中まで 消えている】(27.51、@codex 02:48)。
+           *   ★rmSync は 1つずつ 消す ── ★★権限 / ロック / 長い道で 途中で 止まり得る。
+           *   ★★★「消せませんでした」だけだと【何も 消えていない】と 読まれる ──
+           *   ★それは 今日 何度も 直した形(言葉と 動きの 食い違い)そのもの。
+           *   ★★だから【いま 何が 残っているか】を 数えて 出す。 */
+          const 残り = (() => { let n = 0;
+            const 数え = (d) => { let es = [];
+              try { es = fs.readdirSync(d, { withFileTypes: true }); } catch (_) { return; }
+              for (const x of es) { const p = path.join(d, x.name);
+                if (x.isDirectory()) 数え(p); else n += 1; } };
+            数え(先); return n; })();
+          console.log('  ★★★束を 消しきれませんでした: ' + String(e && e.message).slice(0, 90));
+          console.log('    ★★これは【何も 消えていない】という意味では ありません ── '
+            + '★rmSync は 1つずつ 消すので、★★★途中まで 消えている事が 在ります。');
+          console.log('    ★いま 束に 残っているのは ' + 残り + '点です(消す前は ' + 残る束[0].点 + '点)。'
+            + '★★手で 消すか、★★★塊を 取り直してから もう一度 打ってください');
         }
       }
     }
