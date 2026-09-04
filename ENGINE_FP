@@ -1,11 +1,11 @@
-27.42
+27.43
 METHOD.md 1kv4bye-22912
-PROTOCOL.json aajo32-354
+PROTOCOL.json 1tyeirq-344
 README.md tg19vg-10003
 RULES.md t55p66-12134
 SPEC.md khtv3w-19784
 audit.md s1728l-2740
-check.mjs 57gj7-59914
+check.mjs s7d2e7-59904
 githooks/pre-commit 1y3b1ae-2062
 hooks/clock.js 11jtcma-3947
 hooks/codemap.js otaclp-11261
@@ -14,21 +14,21 @@ hooks/no-fixed-names.js 1m99a7m-3204
 hooks/no-reflex.js 1nt3h1b-5741
 hooks/stop.js 1b6iogl-12315
 hunch.md ukokyc-2956
-index.mjs xos40e-6741
+index.mjs 1lil88u-6731
 install.md a9q5zm-4942
-install.mjs 1b00iwx-36517
-neighbors.mjs kmtzpd-53902
+install.mjs e5pf8d-36507
+neighbors.mjs 16b7g8p-53886
 package.json zx7jrx-416
-pull.mjs x1k8n8-32566
-selfcheck.mjs 1ma6qnw-178240
+pull.mjs ymwxyk-32546
+selfcheck.mjs 18mu0tx-178197
 templates/CLAUDE-snippet.md 1y7ghqv-1478
 templates/CODEMAP.md 1iwybyg-827
 templates/guardian-audit-command.md hyfuh-175
 templates/guardian.config.json 128yym3-2262
 templates/nightly-check.yml 1ybpxvw-2843
-verdict.mjs 10j8vz3-15570
+verdict.mjs 1cyvxqj-15560
 保持一覧.json tfn9m3-1146
-台帳.mjs kl8ahu-3737
-外す.mjs kv1kh8-79344
-書き手.cjs v9l4t4-6095
+台帳.mjs 15m74zk-3728
+外す.mjs n2om43-79323
+書き手.cjs 5ek4qg-6086
 道.cjs 1mpvcnl-2966

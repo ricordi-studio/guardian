@@ -8,3 +8,12 @@ talk/turn
 #     ・★配った先で【他人の機械の時刻】が残る
 #     ・その時刻より古い実装しか無い現場では、門が【測らずに通る】(26.13 の道)
 .claude/verdict_at
+
+# ★2026-09-04 ── ★★【走った跡】だけ 配らない(★機械ごとに 変わる物)
+#   ★★★.guardian/ を 丸ごと 外すと hooks/in-loop.js が 落ちる(★印の場所.cjs を require している)
+.guardian/audit_at
+.guardian/coverage
+.guardian/neighbors.answer.json
+.guardian/neighbors.escaped.json
+.guardian/neighbors.need.json
+.guardian/予想.json

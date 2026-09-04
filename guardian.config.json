@@ -44,15 +44,7 @@
   "selectors": [],
   "okMarker": "guardian:ok|lint-deps:ok",
   "_private": "塊へ混ぜてはいけない個人情報。事故を書くときに人名が入るので、ここでも見張る",
-  "private": [
-    "依頼主",
-    "人1",
-    "人2",
-    "人3",
-    "yosuke",
-    "現場Aのrepo",
-    "現場A"
-  ],
+  "private": [],
   "_neighbors": "修正の2つ外側に答えたか",
   "neighbors": {
     "rings": 2,
