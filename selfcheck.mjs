@@ -3904,12 +3904,22 @@ if (process.env.GUARDIAN_FIXTURE === "1" || !撤去を建てる) {
         return Array.isArray(a) && a.length ? String(a[0]) : null;
       } catch (_) { return null; }
     })();
+    const 人の印 = "★これは 私の 印です(guardian の 受領証では ありません)";
     let 名前の例外 = null;
     if (除外の名) {
+      /* ★★★【形は 揃っている】紙で 測る(27.64、2026-09-05、@codex 07:13)。
+       *   ★ただの文字だと、★★「形の検査を 通らない」事しか 示せない。
+       *   ★★★道具が 本物と 判ずる 形(sha / 正本 / at)を 揃え、その上に 人の印を 置く。
+       *   ★これで 見分けているのが【形】か【誰が 書いたか】かが 分かれる。 */
       名前の例外 = 撤去見本((束) => {
         const 道 = path.join(束, 除外の名);
         fs.mkdirSync(path.dirname(道), { recursive: true });
-        fs.writeFileSync(道, "★これは 私が 書いた紙です。走行が 作った物では ありません。", "utf8");
+        fs.writeFileSync(道, JSON.stringify({
+          sha: "0000000000000000000000000000000000000000",
+          正本: "https://github.com/ricordi-studio/guardian.git",
+          at: new Date().toISOString(),
+          私の印: 人の印,
+        }, null, 2), "utf8");
       }, 承知);
       if (名前の例外 && 名前の例外.未測) throw new Error(名前の例外.未測);
     }
@@ -3946,8 +3956,15 @@ if (process.env.GUARDIAN_FIXTURE === "1" || !撤去を建てる) {
       if (!私の行) 所有の外れ.push("改変: 束は 残ったのに 私の行が 消えた");
     }
     if (名前の例外) {
-      見る("目録の【走行が作る】の 名前で 人が 置いた物(" + 除外の名 + ")", 名前の例外,
-        (r) => path.join(r.束, 除外の名));
+      見る("目録の【走行が作る】の 名前で 人が 置いた物(★形は 揃っている / " + 除外の名 + ")",
+        名前の例外, (r) => path.join(r.束, 除外の名));
+      /* ★中身まで 見る ── ★★消えていなくても【書き換えられて】いたら 同じ事 */
+      if (名前の例外.束が残る) {
+        let 印が残る = false;
+        try { 印が残る = fs.readFileSync(path.join(名前の例外.束, 除外の名), "utf8").includes(人の印); }
+        catch (_) { }
+        if (!印が残る) 所有の外れ.push("目録の 除外名: 束は 残ったが、人の印が 消えた(★書き換えられた)");
+      }
     } else {
       所有の外れ.push("(★目録の【走行が作る】が 読めず、この1通りは 測れていません)");
     }
