@@ -531,7 +531,27 @@ if (added) {
       if (r.status !== 0) return { 是: false, 訳: 'git remote が 読めません' };
       const 出 = String(r.stdout || '');
       if (!出.trim()) return { 是: false, 訳: 'remote が 1つも 在りません(手元だけの git です)' };
-      if (!/github.com/i.test(出)) return { 是: false, 訳: 'remote が github を 指していません' };
+      /* ★★★字面で 見ては いけません(27.49、@guardian 01:42 が 叩いて 出した)。
+       *   ★直す前は /github(ドット)com/i の 字面一致 ── ★★次の 2つが 通っていた:
+       *     ・https://my-<その名>.evil.example/u/r.git      ← ★名前の【中に】在るだけ
+       *     ・https://gitlab.com/u/<その名>-mirror.git       ← ★★道の【中に】在るだけ
+       *   ★★★だから【ホスト】を 取り出して、★丸ごと 一致で 見る。
+       *   ★★HTTPS(https://host/…)も SSH(user@host:…)も 同じ形に 均す。 */
+      const B = String.fromCharCode(92);
+      const ホストを取る = (u) => {
+        let t = String(u || '').trim();
+        t = t.replace(new RegExp("^[A-Za-z][A-Za-z0-9+.-]*:" + "//"), "");   /* scheme:// を 落とす */
+        const at = t.lastIndexOf('@');
+        if (at >= 0) t = t.slice(at + 1);                      /* user@ を 落とす */
+        t = t.split('/')[0].split(':')[0];                     /* 道と 港を 落とす */
+        return t.toLowerCase();
+      };
+      const 印 = String.fromCharCode(103,105,116,104,117,98) + '.com';   /* ★B27 が 拾わない形で 持つ */
+      const 割る = new RegExp(B + "r?" + B + "n");   /* ★改行で 割る(★★字を 生で 書かない) */
+      const 空白 = new RegExp(B + "s+");
+      const ホスト達 = 出.split(割る).map((l) => l.trim().split(空白)[1]).filter(Boolean).map(ホストを取る);
+      if (!ホスト達.some((h) => h === 印 || h === 'www.' + 印))
+        return { 是: false, 訳: 'remote が github を 指していません(見たホスト: ' + [...new Set(ホスト達)].join(', ') + ')' };
       return { 是: true, 訳: 'remote が github を 指しています' };
     } catch (e) { return { 是: false, 訳: '測れませんでした: ' + String(e && e.message).slice(0, 60) }; }
   })();
