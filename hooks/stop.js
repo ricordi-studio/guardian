@@ -49,7 +49,7 @@ const { findRoot, loadConfig, 既定の見る所 } = require('./lib-root');
  *   ★★控えは 中身を 名乗らない ── ★★★知らない事を 知っているふりで 書かないため。 */
 const 見ていない所 = '★この合否は【入れた後の現場】を見ます ── '
   + '撤去(外す.mjs)の結果が この走行で 測られたかは、★★ここでは 分かりません'
-  + '(合否の JSON を 読めませんでした)。'
+  + '(合否が 撤去の欄を 名乗っていないか、まだ 合否を 読んでいません)。'
   + '★★★「不明が無い」は「撤去が安全」という意味では ありません。';
 
 /* ★合否が【自分で 名乗った】撤去の欄を そのまま 出す(27.55)。
@@ -64,9 +64,12 @@ const 見ていない所を言う = (v) => {
 
 /* ★通す枝も、この1文だけは言う(27.17)── ★★緑こそ「残滓ゼロ」と読まれる所なので。
  *   ★★★止めない・decision も足さない(通す動きは変えていない)。文を1つ添えるだけ。 */
-const pass = () => {
+/* ★v を 受け取れる時は【読む】── ★★受け取れない呼びは 合否を まだ 回していない所。
+ *   ★★★実測(27.55 で 私が 作った 嘘): 通す枝が「JSON を 読めませんでした」と 言った ──
+ *   ★読めていたのに。控えの文が【理由まで】名乗っていたのが 誤り。 */
+const pass = (v) => {
   process.stdout.write(JSON.stringify({
-    hookSpecificOutput: { hookEventName: 'Stop', additionalContext: 見ていない所 },
+    hookSpecificOutput: { hookEventName: 'Stop', additionalContext: 見ていない所を言う(v) },
   }));
   return process.exit(0);
 };
@@ -317,5 +320,5 @@ function main(ev) {
     return process.exit(0);
   }
 
-  return pass();
+  return pass(v);
 }
