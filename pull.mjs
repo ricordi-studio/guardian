@@ -210,7 +210,7 @@ if (process.argv.includes('--目録を作る')) {
   項.sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
   const 版 = (() => { try { return fs.readFileSync(path.join(HERE, 'KIT_VERSION'), 'utf8').trim(); } catch (_) { return null; } })();
   fs.writeFileSync(path.join(HERE, '目録.json'),
-    JSON.stringify({ 版, 作った: new Date().toISOString(), 数え方: 'CR を 落としてから 指紋', 項 }, null, 1)
+    JSON.stringify({ 版, 作った: new Date().toISOString(), 数え方: 'CR を 落としてから 指紋', 走行が作る: ['.guardian/pulled.json'], 項 }, null, 1)
     + String.fromCharCode(10));
   console.log('★目録を 書きました: 目録.json(' + 項.length + '項 / 版 ' + 版 + ')');
   if (読めない.length) console.log('★★読めなかった道 ' + 読めない.length + '件は 載せていません: ' + 読めない.slice(0, 5).join(', '));

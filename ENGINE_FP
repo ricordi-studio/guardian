@@ -1,4 +1,4 @@
-27.60
+27.61
 AUTHORS ayh30t-294
 CONTRIBUTING.md h64xvo-1202
 LICENSE hd5n6m-34523
@@ -20,10 +20,10 @@ hooks/stop.js 13ad4ih-13089
 hunch.md ukokyc-2956
 index.mjs 1lil88u-6731
 install.md a9q5zm-4942
-install.mjs n58iid-43080
+install.mjs r5ail3-43451
 neighbors.mjs 16b7g8p-53886
 package.json s5qqdo-524
-pull.mjs ekjj0h-34872
+pull.mjs 1nvinye-34906
 selfcheck.mjs 1ockx9j-199145
 templates/CLAUDE-snippet.md 1y7ghqv-1478
 templates/CODEMAP.md 1iwybyg-827
@@ -33,6 +33,6 @@ templates/nightly-check.yml 1ybpxvw-2843
 verdict.mjs ruleuo-16689
 保持一覧.json tfn9m3-1146
 台帳.mjs 15m74zk-3728
-外す.mjs d21k3u-93299
+外す.mjs jmg9vf-93707
 書き手.cjs 40b527-6876
 道.cjs 1mpvcnl-2966

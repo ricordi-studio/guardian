@@ -891,7 +891,7 @@ if (!DRY) {
         if (!j || !Array.isArray(j.項)) return null;
         const m = new Map();
         for (const x of j.項) if (x && x.rel) m.set(String(x.rel), String(x.印));
-        return { 版: j.版, 印: m };
+        return { 版: j.版, 印: m, 走行が作る: new Set(Array.isArray(j.走行が作る) ? j.走行が作る : []) };
       } catch (_) { return null; }
     })();
     const 項 = [];
@@ -907,6 +907,11 @@ if (!DRY) {
         const 印 = 中 == null ? '読めない' : 書き手.均した指紋(中);   /* ★正本は 書き手.cjs に 1本 */
         項.push({ rel: 名, 印 });
         if (名 === '目録.json') continue;   /* ★目録は 自分を 数えない */
+        /* ★★★配る側が【走行が 作る物】と 宣言した物は 照らさない(27.61、@guardian が 公開物で 再現)。
+         *   ★pull は 受領証(.guardian/pulled.json)を 束の中に 書く ── 配る時には 無い。
+         *   ★★照らすと【pull で 入れた現場は 永久に --束も が 使えない】に なる。
+         *   ★★★断り文は「取り直して 入れ直せ」と 言うが、取り直す = pull = また 受領証 ── 出口の 無い 輪。 */
+        if (目録 && 目録.走行が作る.has(名)) continue;
         if (!目録) return;
         if (!目録.印.has(名)) { 外れ.push(名 + '(目録に 無い)'); continue; }
         if (目録.印.get(名) !== 印) 外れ.push(名 + '(目録と 指紋が 違う)');
