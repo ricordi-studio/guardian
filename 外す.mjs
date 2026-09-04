@@ -242,6 +242,25 @@ if (静かにする) console.log = (...a) => { 人の文.push(a.map(String).join
  *   1つずれるだけで、外す側は「人が触った」と読んで止まる ── ★★★誰のせいでもない CONFLICT が出る。 */
 const 書き手 = __cr(import.meta.url)('./書き手.cjs');
 const 指紋 = 書き手.指紋;
+/* ★★★【束の控え】を、走行の【いちばん 早い所】で 読む(27.54)。
+ *   ★控えは 台帳に 載っているので、--外す の途中で 消える ──
+ *   ★★束を 判じる時には もう 無い。★★★だから ここで 先に 抱えておく。
+ *
+ *   ★★私(claude)は 1度 これを【残る束 の すぐ上】に 置いた ── ★そこは もう
+ *   ★★消した後 だった。★★★見本① が「控えが 在りません」で 落ちて 気づいた。
+ *   ★= 「早い所で 読む」と 注釈に 書きながら、★★実際は 遅い所に 置いていた ──
+ *   ★★★今日 何度も 直した【言葉と 動きの 食い違い】を、また やった。 */
+const 束の控え = (() => {
+  try {
+    const t = fs.readFileSync(path.join(ROOT, '.guardian', '束の控え.json'), 'utf8');
+    const j = JSON.parse(t);
+    if (!j || !Array.isArray(j.項)) return null;
+    const m = new Map();
+    for (const x of j.項) if (x && x.rel) m.set(String(x.rel), String(x.印));
+    return { 束: j.束, 時刻: j.時刻, 印: m };
+  } catch (_) { return null; }
+})();
+
 /* ★道は 書き手.cjs が正本(2026-09-03、会議で @kozo が「写しが5箇所」と数えた) */
 const 台帳の道 = 書き手.台帳の道(ROOT);
 
@@ -2011,54 +2030,44 @@ if (残る束.length) {
         + '★★★束を 消すと、その道具が 無くなり、★いま出した文が 嘘に なります。'
         + '★★先に 上の物を 片づけて PASS にしてから、もう一度 --外す --束も を 打ってください');
     } else {
-      /* ★★★塊が【自分について 宣言している物】を 全部 集める(27.51、@guardian 02:50)。
-       *   ★27.50 は【配るもの】だけを 見ていた ── ★★だから clone で 入れた束が 断られた:
-       *     「配る宣言に 無い物が 10件: .claude .gitattributes .github .gitignore .guardian
-       *       CLAUDE.md docs guardian.config.json research talk」
-       *   ★★★これは【普通の入れ方】(README ①「正本から取る」)で 起きる ──
-       *   ★clone は 宣言を 読まないので、repo の物が 丸ごと 付いてくる。
-       *   ★★塊は それも 宣言している(pull.mjs の【現場のもの】= ★★★Guardian 自身の repo の物
-       *   であって、あなたの現場の 物では ない ── 注釈が そう 書いている)── だから 両方 読む。
-       *   ★見るのは【束の 直下】だけ(:readdirSync(ROOT/<束>))── ★★あなたの プロジェクトの
-       *   ファイルは 一度も 見ていない(27.52、@codex 03:13 の 問いから 確かめた)。
-       *   ★どちらにも 無い物だけが【塊が 知らない物】= あなたの物かもしれない物。 */
-      const 宣言 = (() => { try {
-        const p = fs.readFileSync(path.join(ROOT, 残る束[0].名, 'pull.mjs'), 'utf8');
-        const 取る = (名) => {
-          const i = p.indexOf('const ' + 名 + ' = new Set([');
-          const j = i < 0 ? -1 : p.indexOf(']);', i);
-          if (i < 0 || j < 0) return null;
-          return [...p.slice(i, j).matchAll(/'([^']+)'/g)].map((m) => m[1]);
+      /* ★★★所有を【証明して】から 消す(27.54、@codex 03:22 / @guardian の実測)。
+       *   ★27.50〜53 は【束の 直下の 名前】だけを 見ていた ──
+       *   ★★許した名前の【中】に 現場が 置いた物・変えた物は、★★★束ごと 消えた。
+       *   ★名前では 照らせない(塊の宣言は 直下の名前しか 持たない)。
+       *   ★★だから install が 入れた時に 控えた【相対の道 × 指紋】と 突き合わせる。
+       *   ★★★控えが 無い / 1つでも 食い違う → 消さない。 */
+      const 食い違い = [];
+      if (束の控え) {
+        const 見た = new Set();
+        const 歩く = (d, 親) => {
+          let es = []; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch (_) { return; }
+          for (const x of es) {
+            if (x.name === '.git' || x.name === 'node_modules') continue;
+            const 名 = 親 ? 親 + '/' + x.name : x.name;
+            if (x.isSymbolicLink()) { 食い違い.push(名 + '(近道)'); 見た.add(名); continue; }
+            if (x.isDirectory()) { 歩く(path.join(d, x.name), 名); continue; }
+            見た.add(名);
+            if (!束の控え.印.has(名)) { 食い違い.push(名 + '(入れた時に 無かった)'); continue; }
+            let 中 = null; try { 中 = fs.readFileSync(path.join(d, x.name)); } catch (_) {}
+            const 今 = 中 == null ? '読めない' : 書き手.指紋(中);
+            if (今 !== 束の控え.印.get(名)) 食い違い.push(名 + '(入れた時から 変わっている)');
+          }
         };
-        const 配 = 取る('配るもの'), 現 = 取る('現場のもの');
-        if (!配 || !現) return null;   /* ★片方でも 読めなければ 言えない(★★安全側) */
-        return new Set([...配, ...現]);
-      } catch (_) { return null; } })();
-      const 宣言外 = [], 外を指す = [];
-      if (宣言) {
-        try { for (const e of fs.readdirSync(path.join(ROOT, 残る束[0].名), { withFileTypes: true })) {
-          if (e.name === '.git' || e.name === 'node_modules') continue;
-          /* ★近道(symlink / junction)は【外を 指せる】(27.50、@codex 02:32)。
-           *   ★★束の中に 見えても、実体は 現場の 外に 在り得る ──
-           *   ★★★フォルダごと 消す前に、1つでも 在れば 止まる。 */
-          if (e.isSymbolicLink()) { 外を指す.push(e.name); continue; }
-          if (!宣言.has(e.name)) 宣言外.push(e.name);
-        } } catch (_) {}
+        歩く(path.join(ROOT, 残る束[0].名), '');
+        for (const rel of 束の控え.印.keys()) if (!見た.has(rel)) 食い違い.push(rel + '(もう 在りません)');
       }
-      if (宣言 == null) {
-        console.log('  ★★★--束も は 付いていますが、束は 消しません ── ★束の 配る宣言(pull.mjs)が 読めません。'
-          + '★★何が 塊の物かを 言えないまま フォルダごと 消す事は しません');
-      } else if (外を指す.length) {
-        console.log('  ★★★--束も は 付いていますが、束は 消しません ── ★束の中に'
-          + '【近道(symlink / junction)】が ' + 外を指す.length + '件 在ります: ' + 外を指す.join(', '));
-        console.log('    ★★近道は【この現場の 外】を 指せます ── ★★★実体が どこに 在るかを'
-          + 'この道具は 言えません。手で 確かめてから 消してください');
-      } else if (宣言外.length) {
-        console.log('  ★★★--束も は 付いていますが、束は 消しません ── ★束の中に'
-          + '【塊が 知らない物】が ' + 宣言外.length + '件 在ります: ' + 宣言外.join(', '));
-        console.log('    ★★塊は【配る物】と【自分の repo の物】の どちらも 宣言しています ── '
-          + 'その どちらにも 無い、という事です。★★★あなたの物かもしれません。'
-          + '★所有を 言えない物を フォルダごと 消す事は しません ── 中を 見て、要らなければ 手で 消してください');
+      if (!束の控え) {
+        console.log('  ★★★--束も は 付いていますが、束は 消しません ── ★束の控え'
+          + '(.guardian/束の控え.json)が 在りません。'
+          + '★★これは【入れた時の 姿】── 無いと、束の中の どれが あなたの物かを 言えません。'
+          + '★★★27.54 より前に 入れた現場です ── 手で 消すか、入れ直してから もう一度 打ってください');
+      } else if (食い違い.length) {
+        console.log('  ★★★--束も は 付いていますが、束は 消しません ── ★束が'
+          + '【入れた時の 姿】と ' + 食い違い.length + '件 違います: '
+          + 食い違い.slice(0, 8).join(' / ')
+          + (食い違い.length > 8 ? ' ほか' + (食い違い.length - 8) + '件' : ''));
+        console.log('    ★★足された物・変えられた物は【あなたの物かもしれません】── '
+          + '★★★所有を 言えない物を フォルダごと 消す事は しません');
       } else {
         const 先 = path.join(ROOT, 残る束[0].名);
         /* ★消す前に【根の中か】を もう一度 確かめる(27.50、@codex)── ★★案Cと 同じ枷を 束にも */
@@ -2069,8 +2078,11 @@ if (残る束.length) {
         try {
           fs.rmSync(先, { recursive: true, force: true });
           console.log('  ★★★束を 消しました: ' + 残る束[0].名 + '(' + 残る束[0].点 + '点)'
-            + ' ── ★中身は 全部【塊が 宣言している物】でした'
-            + '(★★配る物 と、塊 自身の repo の物 ── ★★★あなたの現場の 物では ありません)');
+            + ' ── ★中身は【入れた時の 姿】と 1点も 違いませんでした'
+            + '(★★束の控え ' + 束の控え.印.size + '点 と、入れ子まで 指紋で 突き合わせた)');
+          console.log('    ★★★見ていない物: 近道の【先】(実体が どこに 在るか)/ '
+            + '控えを 書いた 後に あなたが 消した物の 跡。'
+            + '★足された物・変えられた物が 1つでも 在れば、ここには 来ていません');
           console.log('  ★★これで【束の 中も 外も】残り 0 件です'
             + '(★見た場所の 中で、という意味は 変わりません)');
         } catch (e) {

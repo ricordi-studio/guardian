@@ -870,6 +870,44 @@ if (!DRY && 台帳が在る) {
   todo.push('★所有台帳を残していません(' + KIT + '/台帳.mjs が読めませんでした)。★★外すときに【何を消してよいか】の材料が在りません ── 外す側は UNKNOWN になります');
 }
 
+/* ★★★【束の控え】(27.54、2026-09-05、@codex 03:22 / @guardian の実測)。
+ *
+ *   ★27.50〜53 の --束も は【束の 直下の 名前】しか 見ていなかった ──
+ *   ★★許した名前の【中】(例 docs/ の 下)に 現場が 置いた物は、★★★束ごと 消えた。
+ *   ★塊の宣言は【直下の 名前】しか 持たないので、名前では 照らせない。
+ *
+ *   ★★だから【入れた時の 姿】を ここで 控える ── 相対の道と 指紋。
+ *   ★★★外す側は これと 突き合わせ、足された物・変えられた物が 1つでも 在れば 束を 消さない。
+ *   ★= 所有を【証明できる】形にする(★★この道具の 太い線)。
+ *
+ *   ★★控え自身は 台帳に 載る(書き手を 通す)ので、--外す で 一緒に 消える。 */
+if (!DRY) {
+  try {
+    const 束の根 = path.join(ROOT, KIT);
+    const 項 = [];
+    const 歩く = (d, 親) => {
+      let es = []; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch (_) { return; }
+      for (const x of es) {
+        if (x.name === '.git' || x.name === 'node_modules') continue;
+        const 名 = 親 ? 親 + '/' + x.name : x.name;
+        if (x.isSymbolicLink()) { 項.push({ rel: 名, 印: '近道' }); continue; }
+        if (x.isDirectory()) { 歩く(path.join(d, x.name), 名); continue; }
+        let 中 = null; try { 中 = fs.readFileSync(path.join(d, x.name)); } catch (_) {}
+        項.push({ rel: 名, 印: 中 == null ? '読めない' : 書き手.指紋(中) });
+      }
+    };
+    歩く(束の根, '');
+    書き手.書く(ROOT, '.guardian/束の控え.json',
+      JSON.stringify({ 束: KIT, 時刻: new Date().toISOString(), 項 }, null, 1) + String.fromCharCode(10),
+      'install.mjs');
+    did.push('束の控えを置きました(.guardian/束の控え.json ── ★' + 項.length
+      + '点。★★--外す --束も が【入れた時から 変わっていないか】を これで 見ます)');
+  } catch (e) {
+    todo.push('★束の控えを 置けませんでした: ' + String(e && e.message).slice(0, 80)
+      + ' ── ★★--外す --束も は【所有を 証明できない】ので 束を 消しません');
+  }
+}
+
 console.log(DRY ? '【下見】以下を行います\n' : '【導入しました】\n');
 for (const d of did) console.log('  ✓ ' + d);
 for (const s of skipped) console.log('  ・' + s);

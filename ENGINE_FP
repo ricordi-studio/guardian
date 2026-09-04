@@ -1,4 +1,4 @@
-27.52
+27.54
 AUTHORS ayh30t-294
 CONTRIBUTING.md h64xvo-1202
 LICENSE hd5n6m-34523
@@ -7,7 +7,7 @@ NOTICE 1ciw0fb-702
 PROTOCOL.json 1tyeirq-344
 README.md 19j6uks-10494
 RULES.md t55p66-12134
-SPEC.md 1l8mtc1-20315
+SPEC.md 1ib47km-20366
 audit.md s1728l-2740
 check.mjs s7d2e7-59904
 githooks/pre-commit 1y3b1ae-2062
@@ -20,11 +20,11 @@ hooks/stop.js 1b6iogl-12315
 hunch.md ukokyc-2956
 index.mjs 1lil88u-6731
 install.md a9q5zm-4942
-install.mjs 1m97mik-40286
+install.mjs kb0bzz-41787
 neighbors.mjs 16b7g8p-53886
 package.json s5qqdo-524
 pull.mjs 1y53jhz-32820
-selfcheck.mjs m3s7lv-186980
+selfcheck.mjs 1juktk4-190746
 templates/CLAUDE-snippet.md 1y7ghqv-1478
 templates/CODEMAP.md 1iwybyg-827
 templates/guardian-audit-command.md hyfuh-175
@@ -33,6 +33,6 @@ templates/nightly-check.yml 1ybpxvw-2843
 verdict.mjs 1cyvxqj-15560
 保持一覧.json tfn9m3-1146
 台帳.mjs 15m74zk-3728
-外す.mjs 2wczji-90475
+外す.mjs 1f4dgg7-90640
 書き手.cjs 1376kfd-6358
 道.cjs 1mpvcnl-2966
