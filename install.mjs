@@ -40,7 +40,7 @@ const 書き手 = __cr(import.meta.url)('./書き手.cjs');
  *   selfcheck の B11 が、SPEC.md の表と**この出力**を突き合わせる(44条の双子)。
  * ★穴として書く: これが証明するのは「その口を受け付ける」までで、
  *   **その口が仕事をする**ことではない。そこは各口の検査の仕事。 */
-const 知っている口 = ['--口一覧', '--dry', '--hooks', '--no-hooks'];
+const 知っている口 = ['--口一覧', '--dry', '--hooks', '--no-hooks', '--夜間', '--夜間なし'];
 const 値を取る口 = {};
 const 残りを全部取る口 = [];
 /* ★順番: **未知の口の走査が先、`--口一覧` は後**(2026-08-31、配布先の実測)。
@@ -495,6 +495,47 @@ if (added) {
    *   ★★中身は触らず(所有を証明できないので)、**直らないことを名指しで言う**。
    *   ★★★@codex の条文:「証明できない場合は【直らない。手で直すか撤去】と出し、
    *   名指しだけで更新済みと見せない」。 */
+  /* ★★★【夜間は GitHub の 仕掛けです】(27.48、2026-09-05、依頼主の指摘)。
+   *
+   *   ★依頼主:「デスクトップアプリ / Web アプリ / 手元のドライブ / GitHub と バラバラなのに、
+   *     ★★夜間監査が【基本実装】なのは オカシイ。★★★GitHub に repo が 在る時だけ の
+   *     オプションで いいのでは」
+   *
+   *   ★★測ったら そのとおりだった:
+   *     ・非 git の 現場に --hooks を付けたら ── ★★★guardian-nightly.yml が 置かれた
+   *     ・条件は【GitHub が 在るか】では なく【Claude Code が 在るか】だった
+   *       → ★別の物に 掛かっていた。★★動かない紙が 現場に 残る
+   *
+   *   ★★★だから【測れる事実】で 決める: git の remote が github を 指しているか。
+   *   ★測れない事(Actions が 有効か / 権限が 在るか)は【測れないと 言う】── 決めない。
+   *   ★★--夜間 で 強いて置く / --夜間なし で 置かない(★どちらも 人が 決める口)。
+   *
+   *   ★★★【この判定の 境目】(27.48、@codex 01:27 の 洗い出し ── ★10通りで 測った):
+   *     ✔ 置く   … remote の どれかが github.com(★HTTPS も SSH も ── 字面で 見る)
+   *     ✔ 置く   … 複数 remote で、origin 以外が github(★fetch/push を 分けない ──
+   *                ★★どれか1つでも github なら Actions は 回り得る)
+   *     ✘ 置かない … 非git / remote 0本 / github.com 以外(gitlab など)
+   *     ✘ 置かない … ★★★GitHub Enterprise(別ドメイン)
+   *        → ★これは【決めない】。別ドメインを 自動で GitHub と 見なすのは
+   *          ★★測れない事を 決める事に なる ── ★★★--夜間 で 人が 決める
+   *     ✘ 置かない … これから 上げる現場 → ★--夜間 で 拾える
+   *
+   *   ★★★測れない事(★決めていません):Actions が 有効か / workflow の 権限が 在るか。
+   *     → ★置いても 回らない事は 在り得ます。★★それは この口からは 見えません。 */
+  const 夜間の口 = process.argv.includes('--夜間') ? true
+    : process.argv.includes('--夜間なし') ? false : null;
+  const GitHubを指すか = (() => {
+    try {
+      if (!fs.existsSync(path.join(ROOT, '.git'))) return { 是: false, 訳: 'この現場は git では ありません' };   // guardian:read
+      const r = spawnSync('git', ['remote', '-v'], { cwd: ROOT, encoding: 'utf8', windowsHide: true, timeout: 30000 });
+      if (r.status !== 0) return { 是: false, 訳: 'git remote が 読めません' };
+      const 出 = String(r.stdout || '');
+      if (!出.trim()) return { 是: false, 訳: 'remote が 1つも 在りません(手元だけの git です)' };
+      if (!/github.com/i.test(出)) return { 是: false, 訳: 'remote が github を 指していません' };
+      return { 是: true, 訳: 'remote が github を 指しています' };
+    } catch (e) { return { 是: false, 訳: '測れませんでした: ' + String(e && e.message).slice(0, 60) }; }
+  })();
+  const 夜間を置く = 夜間の口 === null ? GitHubを指すか.是 : 夜間の口;
   const 置く先 = 'guardian-nightly.yml';
   const 置く先が壊れている = 壊れた参照.find((x) => x.f === 置く先);
   if (置く先が壊れている) {
@@ -507,6 +548,16 @@ if (added) {
   /* ★子は【字面のまま】置く(27.3)── 変数にしたら B22 の網から消え、
    *   ★★解決した子 1件 → 0件 になった(24.12 で直したのと同じ形)。
    *   ★★★見える形を、見えない形に替えない。 */
+  else if (!already && !夜間を置く) {
+    skipped.push('夜間の見張り(.github/workflows/' + 置く先 + ')は 置いていません ── '
+      + GitHubを指すか.訳 + '。★夜間は【GitHub Actions の 仕掛け】なので、'
+      + 'そこに 無いと ★★動かない紙が 残るだけです。'
+      + '★★★要るなら `--夜間` を 付けて もう一度 打ってください');
+    todo.push('★この現場では 夜間の見張りが 効きません(' + GitHubを指すか.訳 + ')。'
+      + '★★合否は Stop フック(AIが「できました」と言う手前)だけが 回します ── '
+      + '★★★AI の セッションの【外】で 起きた ずれは、誰も 見ていません。'
+      + '★GitHub に 上げたら `--夜間` を 付けて もう一度 導入してください');
+  }
   else if (!already) write(path.join(ワークフローの置き場, 'guardian-nightly.yml'),
     fs.readFileSync(path.join(HERE, 'templates', 'nightly-check.yml'), 'utf8').replace(/tools\/guardian/g, KIT),
     '毎晩01:00に検査し、赤ければIssueを立てる。緑に戻れば閉じる');
