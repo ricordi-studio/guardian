@@ -1,4 +1,4 @@
-27.55
+27.56
 AUTHORS ayh30t-294
 CONTRIBUTING.md h64xvo-1202
 LICENSE hd5n6m-34523
@@ -24,7 +24,7 @@ install.mjs kb0bzz-41787
 neighbors.mjs 16b7g8p-53886
 package.json s5qqdo-524
 pull.mjs 1y53jhz-32820
-selfcheck.mjs 6kb8fg-191606
+selfcheck.mjs q5j3ni-191882
 templates/CLAUDE-snippet.md 1y7ghqv-1478
 templates/CODEMAP.md 1iwybyg-827
 templates/guardian-audit-command.md hyfuh-175
@@ -33,6 +33,6 @@ templates/nightly-check.yml 1ybpxvw-2843
 verdict.mjs 15ulyx2-16303
 保持一覧.json tfn9m3-1146
 台帳.mjs 15m74zk-3728
-外す.mjs 1f4dgg7-90640
+外す.mjs g5npbe-90912
 書き手.cjs 1376kfd-6358
 道.cjs 1mpvcnl-2966
