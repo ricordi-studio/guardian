@@ -283,7 +283,7 @@ SPEC を読む検査(B11)が持ち主を取り違え、★★★別の道具の�
 | | 予想を置く口 | ★値を渡した時だけ(値なしは門が弾く・出口1) | `.guardian/予想.json`(＋台帳) |
 | | 上限を下げる口 | その口を打った時 | `guardian.config.json`(＋台帳) |
 | `verdict.mjs` | 素 / fast | ★★常に | `.guardian/coverage`(＋台帳) |
-| `neighbors.mjs` | 一覧を出す口 | ★近傍が在る時だけ(0件なら手前で終わる) | `.guardian/neighbors.need.json` / `.guardian/neighbors.answer.json` / ★★近傍から 落ちる回答が 在る回だけ `.guardian/neighbors.answer.<時刻>.json`(27.71 ── ★落とす前の 全文。控えが 書けなければ 落とさず 出口2) |
+| `neighbors.mjs` | 一覧を出す口 | ★近傍が在る時だけ(0件なら手前で終わる) | `.guardian/neighbors.need.json` / `.guardian/neighbors.answer.json` / ★★近傍から 落ちる回答が 在る回だけ `.guardian/neighbors.answer.<時刻>-<8字>.json`(27.71/27.72 ── ★落とす前の 全文。★★名は 一意(randomUUID)で、先に wx で 場所を 取る ── 既に 在れば 書かない。★★★控えが 書けなければ 落とさず 出口2) |
 | | 門 / 棚卸し / 定義一覧 / 口一覧 | ── | ★★**何も書かない**(実測。台帳も動かない) |
 | | 逃した事故を測る口 | その口を打った時 | `.guardian/neighbors.escaped.json` |
 | `selfcheck.mjs` | 素 / 変更分 | ── | ★**何も書かない**(押し直す口は塊の `ENGINE_FP` を押す ── 現場には書かない) |

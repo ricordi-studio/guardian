@@ -57,6 +57,7 @@ const 書き手 = __cr(import.meta.url)('./書き手.cjs');
 /* ★git から道の一覧を取る唯一の口(2026-09-03) */
 const 道 = __cr(import.meta.url)('./道.cjs');
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';   // ★控えの 名を 一意に する(27.72、@codex 11:30)
 import { spawnSync } from 'node:child_process';
 
 /* ★【この道具が知っている口】── 宣言ではなく、ここが実装そのものである
@@ -1186,8 +1187,12 @@ if (!GATE) {
   const 戻した = 一覧.filter((x) => prev[x.key] && prev[x.key].判定 && !draft[x.key].判定);
   let 控えの道 = '';
   if (外れた.length || 戻した.length) {
-    控えの道 = ANSWER_PATH.replace(/.json$/, '') + '.' + new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14) + '.json';
-    try { 書き出す(控えの道, 生); }
+    /* ★名は 時刻【だけ】に しない(27.72、@codex 11:30「同秒衝突が ある」)。
+     *   ★★先に 'wx' で【場所を 取る】── 既に 在れば 例外に なり、下で 止まる。
+     *   ★★★= 人の 控えを 上書きしてから 気づく道が 無い。 */
+    控えの道 = ANSWER_PATH.replace(/.json$/, '') + '.' + new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14)
+      + '-' + randomUUID().slice(0, 8) + '.json';
+    try { fs.closeSync(fs.openSync(path.join(ROOT, 控えの道), 'wx')); 書き出す(控えの道, 生); }
     catch (e) {
       console.log('✗ 控えが 書けません: ' + 控えの道);
       console.log('    ' + String(e.message).slice(0, 160));
