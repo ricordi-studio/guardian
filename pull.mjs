@@ -210,7 +210,7 @@ if (process.argv.includes('--目録を作る')) {
   項.sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0));
   const 版 = (() => { try { return fs.readFileSync(path.join(HERE, 'KIT_VERSION'), 'utf8').trim(); } catch (_) { return null; } })();
   fs.writeFileSync(path.join(HERE, '目録.json'),
-    JSON.stringify({ 版, 作った: new Date().toISOString(), 数え方: 'CR を 落としてから 指紋', 走行が作る: ['.guardian/pulled.json'], 項 }, null, 1)
+    JSON.stringify({ 版, 作った: new Date().toISOString(), 数え方: 'CR を 落としてから 指紋', 項 }, null, 1)
     + String.fromCharCode(10));
   console.log('★目録を 書きました: 目録.json(' + 項.length + '項 / 版 ' + 版 + ')');
   if (読めない.length) console.log('★★読めなかった道 ' + 読めない.length + '件は 載せていません: ' + 読めない.slice(0, 5).join(', '));
@@ -494,7 +494,24 @@ if (依頼SHA && 取得SHA && !取得SHA.startsWith(依頼SHA)) {
  *   selfcheck はこれを見て **未測**(=途中で終わっている)と言う。分からないを緑に混ぜない。
  * ★これでも「いまの中身がその SHA である」証明にはならない(取ったあと人が壊しうる)。
  *   そこは selfcheck --receipt が、合否と現在の指紋を同じ1回で返して閉じる。 */
-const 受領証の置き場 = path.join(HERE, ".guardian");
+/* ★★★受領証は【束の 外】に 書く(27.69、2026-09-05、依頼主「人の手を 1つも 煩わすな」)。
+ *
+ *   ★これまでは 束の中(HERE/.guardian)に 書いていた ──
+ *   ★★束は【配る側の 目録と 1点も 違わない】事で 所有を 証明する。
+ *   ★★★配る時に 無い物が 束の中に 生まれると、その証明が 立たない。
+ *   ★実測(27.61〜27.68): pull した現場は --束も が 使えず、
+ *     人に「退避してから もう一度 導入」と 3手 頼む形に なっていた。
+ *
+ *   ★★受領証は【撤去の対象】では なく【取得の 由来】── ★束の中に 置く必然が 無い。
+ *   ★★★だから 現場の根の .guardian/ へ 出す。★束は 目録と 完全に 一致する。
+ *   ★根が 見つからない時(正本自身 / まだ 導入していない現場)は 今までどおり 束の中。 */
+const 受領証の置き場 = (() => {
+  try {
+    const 根 = __cr2('./書き手.cjs').現場の根(HERE);
+    if (根 && path.resolve(根) !== path.resolve(HERE)) return path.join(根, '.guardian');
+  } catch (_) {}
+  return path.join(HERE, '.guardian');
+})();
 const 受領証の先 = path.join(受領証の置き場, "pulled.json");
 let 受領証が書けなかった = false;
 

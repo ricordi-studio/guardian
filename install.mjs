@@ -882,6 +882,34 @@ if (!DRY && 台帳が在る) {
  *   ★証明できない時も 控えは 書く ── ★★但し 証明: null。★★★外す側が それを 見て 断る。
  *
  *   ★改行: 目録は CR を 落として 数えている ── ★★ここも 同じに する。 */
+/* ★★★束の中の 受領証を【外へ 移す】(27.69、依頼主「人の手を 1つも 煩わすな」)。
+ *
+ *   ★27.68 までの pull は 受領証を 束の中に 書いた ── ★★その現場は --束も が 使えない。
+ *   ★★★人に「退避してから もう一度」と 頼む形だった ── ★それを 道具が やる。
+ *   ★★移す(消さない)── ★★★人の物だった場合でも 失われない。
+ *   ★形が 受領証で ない物は 触らない(★★誰の物か 言えないので)。 */
+if (!DRY) {
+  try {
+    const 束の受領証 = path.join(ROOT, KIT, '.guardian', 'pulled.json');
+    if (fs.existsSync(束の受領証)) {
+      let 形 = false;
+      try {
+        const j = JSON.parse(fs.readFileSync(束の受領証, 'utf8'));
+        形 = !!j && typeof j.sha === 'string' && typeof j.正本 === 'string' && typeof j.at === 'string';
+      } catch (_) {}
+      if (形) {
+        書き手.書く(ROOT, '.guardian/pulled.json', fs.readFileSync(束の受領証, 'utf8'), 'install.mjs');
+        fs.rmSync(束の受領証, { force: true });
+        did.push('束の中に 在った 受領証を .guardian/pulled.json へ 移しました'
+          + '(★束を【配る側の 目録】と 一致させる為 ── ★★これで --外す --束も が そのまま 使えます)');
+      } else {
+        todo.push('★' + KIT + '/.guardian/pulled.json が 受領証の 形では ありません ── '
+          + '★★誰の物か 言えないので 触っていません。★★★中を 見てください');
+      }
+    }
+  } catch (e) { todo.push('★束の中の 受領証を 移せませんでした: ' + String(e && e.message).slice(0, 80)); }
+}
+
 if (!DRY) {
   try {
     const 束の根 = path.join(ROOT, KIT);
@@ -891,7 +919,7 @@ if (!DRY) {
         if (!j || !Array.isArray(j.項)) return null;
         const m = new Map();
         for (const x of j.項) if (x && x.rel) m.set(String(x.rel), String(x.印));
-        return { 版: j.版, 印: m, 走行が作る: new Set(Array.isArray(j.走行が作る) ? j.走行が作る : []) };
+        return { 版: j.版, 印: m };
       } catch (_) { return null; }
     })();
     const 項 = [];
@@ -925,11 +953,9 @@ if (!DRY) {
          *   ★★★「これは pull が 書く物の 名前です。あなたの物でなければ 消してから
          *   もう一度 打てば、束を 外せます」と 出口を 名指しで 出す。
          *   ★= 証明できない事を 認めた上で、人が 決められる 形に する。 */
-        if (目録 && 目録.走行が作る.has(名)) {
-          走行の跡.push(名);
-          外れ.push(名 + '(pull が 書く物の 名前 ── ★誰が 書いたかは 証明できません)');
-          continue;
-        }
+        /* ★★★【走行が作る】の 例外は 27.69 で 外した ──
+         *   ★受領証を 束の外へ 出したので、束の中に【配る時に 無い物】は 生まれない。
+         *   ★★例外が 無い = ★★★人の物と 見間違える余地も 無い。 */
         if (!目録) return;
         if (!目録.印.has(名)) { 外れ.push(名 + '(目録に 無い)'); continue; }
         if (目録.印.get(名) !== 印) 外れ.push(名 + '(目録と 指紋が 違う)');

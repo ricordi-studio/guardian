@@ -33,6 +33,15 @@ import { createRequire as __cr2 } from 'node:module';
 /* ★取り込み名を 道の口 にする(2026-09-03)── ★★この現場には 道 という局所変数が別に在り(65行)、
  * ★★★同じ名前だと影になる。名前で衝突する形は、後から足す人に見えない。 */
 const 道の口 = __cr2(import.meta.url)('./道.cjs');
+/* ★★★受領証は 27.69 から【束の 外】に 在る ── ★現場の根の .guardian/。
+ *   ★★古い現場(束の中)も 読める形に する ── ★★★片方だけ 見ると 出どころを 見失う。 */
+const 受領証の道 = () => {
+  try {
+    const 根 = __cr2(import.meta.url)('./書き手.cjs').現場の根(HERE);
+    if (根) { const p = path.join(根, '.guardian', 'pulled.json'); if (fs.existsSync(p)) return p; }
+  } catch (_) {}
+  return path.join(HERE, '.guardian', 'pulled.json');
+};
 /* ★共通の書き手 ── ★★B14 の期待値(正本の綴り)を、ここから受け取る(2026-09-03、@codex の線)。
  *   ★★★読み込んでも何も起きないことは、下の B16 が毎回 測る。 */
 const 書き手の口 = __cr2(import.meta.url)('./書き手.cjs');
@@ -3072,7 +3081,7 @@ if (process.argv.includes("--why")) {
    *   「どれを取ったか」と「どれを測ったか」を、同じ値かどうか機械で照合できるようにする。 */
   if (process.argv.includes("--sha")) {
     let sha = "";
-    try { sha = String(JSON.parse(fs.readFileSync(path.join(HERE, ".guardian", "pulled.json"), "utf8")).sha || ""); }
+    try { sha = String(JSON.parse(fs.readFileSync(受領証の道(), "utf8")).sha || ""); }
     catch (_) { sha = ""; }
     /* ★空は0行、そして「無い」は【不明】の符号で返す(2026-08-31、9.67 の規律を自分に当てた)。
      *   直す前は受領証が無くても【空行を1行】出して出口0だった ──
@@ -3082,11 +3091,11 @@ if (process.argv.includes("--why")) {
     process.exit(2);          /* 受領証が無い = 不明(この塊の符号) */
   }
   let 受領証 = null;
-  try { 受領証 = JSON.parse(fs.readFileSync(path.join(HERE, '.guardian', 'pulled.json'), 'utf8')); } catch (_) {}
+  try { 受領証 = JSON.parse(fs.readFileSync(受領証の道(), 'utf8')); } catch (_) {}
   if (受領証 && /^[0-9a-f]{40}$/.test(受領証.sha || '')) {
     ok.push('この塊の出どころ: ' + 受領証.sha.slice(0, 12) + '(' + (受領証.at || '').slice(0, 19) + ')'
       + ' ── 緑を報告するときは、この SHA を添えてください');
-  } else if (fs.existsSync(path.join(HERE, '.guardian', 'pulled.json.updating'))) {
+  } else if (fs.existsSync((受領証の道() + '.updating'))) {
     /* ★【取り直しが途中で終わっている】(2026-08-31、配布先が実走した反例)。
      *   pull は1文字でも書き換える前に古い受領証を .updating へ退避する。
      *   それが残っているということは、置き換えの途中で死んだか、受領証が書けなかったということ。
@@ -3412,7 +3421,7 @@ if (process.argv.includes('--tighten')) {
  *   ★赤や未測のときは【成功の受領証を出さない】── verdict を明記し、出口も 0 にしない。 */
 if (process.argv.includes('--receipt')) {
   let 取得元 = null;
-  try { 取得元 = JSON.parse(fs.readFileSync(path.join(HERE, '.guardian', 'pulled.json'), 'utf8')).sha || null; } catch (_) {}
+  try { 取得元 = JSON.parse(fs.readFileSync(受領証の道(), 'utf8')).sha || null; } catch (_) {}
   const 並び = Object.keys(現在の指紋).sort();
   let h = 2166136261;
   for (const f of 並び) { const t = f + '=' + 現在の指紋[f] + ';';
