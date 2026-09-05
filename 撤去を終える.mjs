@@ -117,13 +117,27 @@ console.log("★束を 掃きました: " + 帳面.退避先);
 /* ★証拠は ここで 消す ── ★★束が 消えた後は、もう 誰の物かを 言う相手が 居ない。
  *   ★★★道は【帳面が 名指した 物】だけ ── ★この紙は 道の 綴りを 持ちません
  *   (持つと、正本(書き手.cjs)と 二重に なる ── 塊の 門が 正しく そう 言いました)。 */
+/* ★★★証拠の 道も【形で 縛る】(27.94、@codex 23:35)。
+ *   ★帳面は 人が 書き換え得る ── ★★現場の 中と いうだけでは 足りない。
+ *   ★★★実測できる 形に する:.guardian/ の 直下の .json だけ / .. を 含まない。
+ *   ★= 細工しても、人の 紙(src/… など)は 名指せない。 */
+const 証拠の形 = (名) => 名.indexOf(".guardian/") === 0
+  && 名.lastIndexOf("/") === ".guardian".length
+  && 名.slice(-5) === ".json";
+const 断った証拠 = [];
 for (const r of (Array.isArray(帳面.証拠) ? 帳面.証拠 : [])) {
-  const 的 = path.resolve(ROOT, String(r));
-  if (!(的.startsWith(根 + path.sep) && 的 !== 根)) continue;   /* ★現場の 外は 触らない */
+  const 名 = String(r).split(path.sep).join("/");
+  if (!証拠の形(名) || 名.indexOf("..") >= 0) { 断った証拠.push(名); continue; }
+  const 的 = path.resolve(ROOT, 名);
+  if (!(的.startsWith(根 + path.sep) && 的 !== 根)) { 断った証拠.push(名); continue; }
   try { fs.rmSync(的, { force: true }); } catch (_) {}
 }
+if (断った証拠.length) {
+  console.log("★帳面の 証拠に【道具の 形で ない 道】が 在りました ── ★★触っていません:");
+  for (const u of 断った証拠.slice(0, 5)) console.log("    ・" + u);
+}
 try {
-  const g = path.dirname(path.resolve(ROOT, String((帳面.証拠 || [])[0] || "x/y")));
+  const g = path.join(ROOT, ".guardian");   /* ★畳むのは ここだけ(27.94)*/
   if (fs.readdirSync(g).length === 0) { fs.rmdirSync(g); console.log("★.guardian/ も空になったので畳みました"); }
 } catch (_) {}
 
