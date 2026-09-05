@@ -1,5 +1,23 @@
 # 塊の版
 
+## 27.78 ── 機械の口を【構造で】渡す ── 下見の JSON を v3 に(2026-09-05、@codex 12:39 / @guardian 12:40)
+
+★@codex:「★★`"所有台帳": "invalid:<可変メッセージ>"` だと、
+  ★★★利用側が 接頭辞や 句読点を 解析する ── 切詰め・翻訳・Node の 文言変更に 巻き込まれる」
+★@guardian:「★★この塊の 掟では【欄を 足したら 名を 上げる】── ★★★v3 です」
+```
+★足した欄:所有台帳 { status, code, path, message, messageTruncated } / 現場 / 台帳の道
+★★安定は status / code / path、可変は message
+★★★schema も 上げた:guardian-撤去計画 v2 → v3
+```
+★実測(12:53、仕掛け 診断を測る ── ★★人の口と 機械の口を 両方 叩く):
+```
+✔ ① 子dir …… status missing / code ENOENT / schema v3
+✔ ② 無い …… status missing / path が 絶対
+✔ ③ 壊れている …… status invalid / code JSON_PARSE_ERROR / message 在り / 切った印は 真偽
+★★★④ EPERM …… @guardian が 建てました(27.76 で unreadable:EPERM を 実測)
+```
+
 ## 27.77 ── 訳の 字を【切ったなら 切ったと 言う】(2026-09-05、@guardian 12:39)
 
 ★27.76 の 実測で 見つかった 小さな 傷:

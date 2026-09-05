@@ -239,8 +239,14 @@ const 強い証拠 = new Set(['雛形と一致', '塊が置く道', '塊が置�
 /* ★欄を足したら 名を上げる(27.26)── v2 で足した欄: 候補[].区分 */
 const SCHEMA走査 = 'guardian-走査 v2';
 /* ★欄を足したら 名を上げる(27.22)── ★★読む側が「在るはず」で読んで落ちないため。
- *   v2 で足した欄: matchMode / 区間の跡 */
-const SCHEMA下見 = 'guardian-撤去計画 v2';
+ *   v2 で足した欄: matchMode / 区間の跡
+ *   ★v3 で足した欄(27.78、@codex 12:39 / @guardian 12:40):
+ *     所有台帳 { status, code, path, message, messageTruncated } / 現場 / 台帳の道
+ *   ★★訳:27.76 で 理由の【文字列の 中】に status と code を 埋めた ──
+ *     ★★★読む側が 接頭辞と 句読点を 割る事に なる(切詰め・文言の 変更に 巻き込まれる)。
+ *   ★安定は status / code / path、可変は message ── ★★分けて 持つ。
+ *   ★★★欄を 足したのに 名が 同じだと、読む側は【古い形の つもり】で 読み続ける(27.40 の 形)。 */
+const SCHEMA下見 = 'guardian-撤去計画 v3';
 const 走査だけ = (選ばれたmode === '走査');
 /* ★--json は【下見】と【走査】の両方で使える(2026-09-03、@codex が mode 表を訂正した) */
 const JSONで出す = process.argv.includes('--json');
@@ -932,19 +938,39 @@ if (走査だけ) {
  *   ★★観測(どこを 現場に したか・何が 無いか)を 先に、推測は 後ろに 分ける。 */
 let 台帳 = null;
 let 台帳の訳 = 'missing';
+/* ★機械の口へ 渡す 構造(27.78)── ★★status / code / path は 安定、message は 可変。 */
+const 台帳の診断 = { status: 'missing', code: 'ENOENT', path: 台帳の道, message: '', messageTruncated: false };
 {
   let 生 = null;
   try { 生 = fs.readFileSync(台帳の道, 'utf8'); }
-  catch (e) { 台帳の訳 = (e && e.code === 'ENOENT') ? 'missing' : 'unreadable:' + (e && e.code); }
+  catch (e) {
+    const c = (e && e.code) || 'UNKNOWN';
+    台帳の訳 = (c === 'ENOENT') ? 'missing' : 'unreadable:' + c;
+    台帳の診断.status = (c === 'ENOENT') ? 'missing' : 'unreadable';
+    台帳の診断.code = c;
+    台帳の診断.message = String(e && e.message).split(String.fromCharCode(10)).join(' ');
+  }
   if (生 !== null) {
-    try { 台帳 = JSON.parse(生); 台帳の訳 = (台帳 && Array.isArray(台帳.走行)) ? 'ok' : 'invalid:形が違います'; }
+    try {
+      台帳 = JSON.parse(生);
+      const 形が良い = 台帳 && Array.isArray(台帳.走行);
+      台帳の訳 = 形が良い ? 'ok' : 'invalid:形が違います';
+      台帳の診断.status = 形が良い ? 'ok' : 'invalid';
+      台帳の診断.code = 形が良い ? 'OK' : 'SHAPE_INVALID';
+      台帳の診断.message = 形が良い ? '' : '走行 が 配列では ありません';
+    }
     /* ★訳の 字は【切るなら 切ったと 言う】(27.77、@guardian 12:39)。
      *   ★★直す前は 60字で 黙って 切っており、括弧が 閉じない 文が 出ていた:
      *     invalid:Expected property name or '}' in JSON at position 2 (line 1 ── 
      *   ★★★人は 読めるが、機械で 割る時に【途中で 終わった】と 分からない。 */
     catch (e) {
       const 生訳 = String(e && e.message).split(String.fromCharCode(10)).join(' ');
-      台帳の訳 = 'invalid:' + (生訳.length > 120 ? 生訳.slice(0, 120) + '…(以下 略)' : 生訳);
+      const 切った = 生訳.length > 120;
+      台帳の訳 = 'invalid:' + (切った ? 生訳.slice(0, 120) + '…(以下 略)' : 生訳);
+      台帳の診断.status = 'invalid';
+      台帳の診断.code = 'JSON_PARSE_ERROR';
+      台帳の診断.message = 切った ? 生訳.slice(0, 120) + '…' : 生訳;
+      台帳の診断.messageTruncated = 切った;
     }
   }
 }
@@ -959,7 +985,8 @@ if (!台帳 || !Array.isArray(台帳.走行)) {
       mode: 選ばれたmode, schema: SCHEMA下見,
       判定: 'UNKNOWN',
       理由: '所有台帳: ' + 台帳の訳 + ' ── ' + rel(台帳の道),
-      現場: ROOT, 台帳の道: 台帳の道, 台帳の状態: 台帳の訳.split(':')[0],
+      現場: ROOT, 台帳の道: 台帳の道, 台帳の状態: 台帳の診断.status,
+      所有台帳: 台帳の診断,   /* ★v3 の 構造(@codex 12:39)── ★★status / code / path は 安定 */
       消した物: [], 詳しく: '★何を消してよいかの材料が在りません。何も消していません。'
         + '★★入れた版が古い(台帳を作らない版)か、台帳が消されたかのどちらかです。'
         + '★★★台帳が無い現場に当てる口が別に在ります: --走査',
