@@ -28,7 +28,30 @@ import fs from 'node:fs';
 import { createRequire as __cr } from 'node:module';
 import path from 'node:path';
 
-export const 台帳の版 = 1;
+/* ★台帳の版 2(27.79、2026-09-05):根の身元(rootIdentity)と 束の相対を 足した。
+ *   ★★読む側は 版で 分岐せず【在るか】で 見る ── 1 で 入れた現場が まだ 在るため。 */
+export const 台帳の版 = 2;
+
+/* ★★★根の【身元】を 取る(27.79、@codex 12:48 の 案 / @guardian 12:50 の 実測)。
+ *
+ *   ★道(絶対路)は 台帳に 書かない(この塊の 掟)。★★道の hash も 身元では ない ──
+ *     ★★★束ごと copy すれば その場で 作り直せるし、短い候補なら 当てられる。
+ *   ★代わりに【その dir という 物】の 識別子(dev + ino)を 使う:
+ *     ・同じ volume の rename/move …… 同じ物 → 通る
+ *     ・copy / 別 volume へ 移す / 作り直す …… 別の物 → 止まる
+ *     ・junction …… realpath した【先】を stat する
+ *   ★★必ず bigint で 読む(@guardian 12:50 の 実測):
+ *     ★★★Windows の file ID は 64bit ── Number(53bit)で 読むと 黙って 丸まり、
+ *     隣の dir と 同じ値に なり得る。例:71494644084700800(Number)/ …801(BigInt)。
+ *   ★JSON に BigInt は 入らないので、文字列で 持つ。 */
+export function 根の身元(道) {
+  try {
+    const 実 = fs.realpathSync(道);
+    const st = fs.statSync(実, { bigint: true });
+    if (!st || st.ino === 0n) return { 取れた: false, 訳: 'ino が 0(この置き場は 身元を 持ちません)' };
+    return { 取れた: true, 種: 'stat(bigint)', dev: String(st.dev), ino: String(st.ino) };
+  } catch (e) { return { 取れた: false, 訳: String((e && e.code) || e) }; }
+}
 
 /* 中身の指紋 ── selfcheck の 指紋() / neighbors の 印を取る() と同じ FNV-1a だが、
  * ★測る対象が違うので名前を分けてある(findRoot / findInstallRoot と同じ理由)。 */
@@ -87,7 +110,9 @@ export function 台帳を作る({ 塊の版, TARGET, BUNDLE }) {
       const 走行 = (前 && 前.走行) || [];
       走行.push({ 時刻: new Date().toISOString(), 塊の版, 項 });
       /* ★根そのものは書かない ── 現場の絶対路は、配る物に混ぜない(この塊の掟) */
-      const 中 = { 台帳の版, 走行 };
+      /* ★根の身元は【最後の 導入】の 物を 持つ(27.79)── ★★入れ直せば 更新される。
+       *   ★★★これが 撤去側の 身元照合の 相手。 */
+      const 中 = { 台帳の版, 根の身元: 根の身元(TARGET), 束の相対: path.relative(TARGET, BUNDLE).split(path.sep).join('/'), 走行 };
       fs.mkdirSync(path.dirname(先), { recursive: true });
       fs.writeFileSync(先, JSON.stringify(中, null, 1) + String.fromCharCode(10));
       return 先;

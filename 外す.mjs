@@ -25,6 +25,7 @@ import fs from 'node:fs';
 import { createRequire as __cr } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { 根の身元 } from './台帳.mjs';   // ★身元の 式は 1つ(27.79)── ★★写経しない
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -1011,6 +1012,54 @@ if (!台帳 || !Array.isArray(台帳.走行)) {
   process.exit(2);
 }
 
+/* ★★★根の【身元】を 照らす(27.79、@codex 12:48 / @guardian 12:50 の 実測)。
+ *
+ *   ★27.78 までは【この現場に 台帳が 在るか】までしか 見ていなかった。
+ *     ・= ★★束と 台帳を 一緒に 別の親へ copy すると、そこで 消しに 掛かれる。
+ *   ★★身元は 道でも 道の hash でもなく【その dir という 物】(dev + ino)。
+ *     ・同じ volume の rename/move → 同じ物 → 通す
+ *     ・copy / 別 volume / 作り直し → 別の物 → ★★★止める(何も 変えない)
+ *   ★取れない時(ino=0・network FS 等)も 止める ── ★★推測で 通さない。
+ *   ★★台帳の版 1(27.78 以前に 入れた現場)は 身元を 持たない ── ★★★そこは 通すが、
+ *     【照らせていない】と 人にも 機械にも 言う(黙って 通すのが いちばん 悪い)。 */
+const 台帳の身元 = 台帳 && 台帳.根の身元;
+const いまの身元 = 根の身元(ROOT);
+const 身元の判定 = !台帳の身元 ? '照らせない(古い台帳)'
+  : !台帳の身元.取れた ? '照らせない(入れた時に 取れていない)'
+  : !いまの身元.取れた ? '止める(いま 取れない)'
+  : (String(台帳の身元.dev) === String(いまの身元.dev) && String(台帳の身元.ino) === String(いまの身元.ino)) ? '一致' : '食い違い';
+if (身元の判定 === '食い違い' || 身元の判定 === '止める(いま 取れない)') {
+  const 詳しく = 身元の判定 === '食い違い'
+    ? '★この現場は【入れた時の 現場】と 別の 物です(copy された / 別の volume へ 移された / 作り直された)。'
+    : '★いま この現場の 身元が 取れません(' + (いまの身元.訳 || '不明') + ')。';
+  if (JSONで出す) {
+    本当のlog(JSON.stringify({
+      mode: 選ばれたmode, schema: SCHEMA下見, 判定: 'UNKNOWN',
+      理由: '根の身元が 照らせません: ' + 身元の判定,
+      現場: ROOT, 台帳の道: 台帳の道,
+      根の身元: { 判定: 身元の判定, 台帳: 台帳の身元 || null, いま: いまの身元 },
+      消した物: [], 詳しく: 詳しく + '何も変更していません。',
+    }, null, 1));
+    process.exit(2);
+  }
+  console.log('★UNKNOWN ── 根の身元が 照らせません(' + 身元の判定 + ')');
+  console.log('  ★選んだ現場: ' + ROOT);
+  console.log('  ★★何も変更していません。');
+  console.log('  ' + 詳しく);
+  console.log('  ★★★台帳は【入れた時の 現場】に 結び付いています ── ★道の 名前では なく、その dir という 物に。');
+  console.log('    ・同じ場所で 入れ直す(node <束>/install.mjs)と 身元が 付け直され、この口が 使えます');
+  console.log('    ・★人の物を 消したくない時は、そのまま 触らないでください');
+  process.exit(2);
+}
+
+/* ★照らせない時は【黙って 通さない】(27.79)── ★★人にも 機械にも 言う。
+ *   ★★★27.78 以前に 入れた現場は 台帳が 身元を 持たない ── 通すが、通した事を 名乗る。 */
+if (身元の判定.indexOf('照らせない') === 0 && !JSONで出す) {
+  console.log('★根の身元は 照らせていません(' + 身元の判定 + ')');
+  console.log('  ★★この台帳は 身元を 持ちません ── ★★★27.78 以前に 入れた現場です。');
+  console.log('    ・入れ直す(node <束>/install.mjs)と 身元が 付き、次からは 照らせます');
+}
+
 /* ---------- ①' 保持一覧(塊の既定 ∪ 現場の追加)── 2026-09-03、会議で @kozo と @codex が寄せた ----------
  *
  * ★何のために在るか: 塊が【名指しするが書かない】物は、書き手が無いので台帳に載らない。
@@ -1938,6 +1987,7 @@ if (静かにする) {
   console.log = 本当のlog;
   console.log(JSON.stringify({
     mode: 選ばれたmode, schema: SCHEMA下見,   /* ★見分けは mode(24.5)── 上の走査と同じ鍵 */
+    根の身元: { 判定: 身元の判定, 台帳: 台帳の身元 || null, いま: いまの身元 },   /* ★v3(27.79) */
     形: SCHEMA下見,   /* ★形 は読み手向けの互換。★★正は SCHEMA下見 の1つ */
     根: ROOT,
     版: (() => { try { return fs.readFileSync(path.join(HERE, "KIT_VERSION"), "utf8").trim(); } catch (_) { return null; } })(),
