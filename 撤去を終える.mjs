@@ -69,7 +69,15 @@ function 掃く(根, 親) {
     const 名 = 親 ? 親 + "/" + e.name : e.name;
     let st = null; try { st = fs.lstatSync(道); } catch (_) { continue; }
     if (st.isSymbolicLink()) { 未知.push(名 + "(近道 ── 先は 追いません)"); continue; }
-    if (st.isDirectory()) { 未知.push(...掃く(道, 名)); continue; }
+    if (st.isDirectory()) {
+      /* ★★★空の フォルダも【一覧に 無ければ 消さない】(27.92、@codex 22:36)。
+       *   ★中身が 無い事は 所有の 証明に ならない ── ★★一覧の どの道の 親でも 無ければ 知らない物。 */
+      let 身内 = false;
+      for (const k of 印.keys()) if (k.indexOf(名 + "/") === 0) { 身内 = true; break; }
+      if (!身内) { 未知.push(名 + "(一覧に 無い フォルダ)"); continue; }
+      未知.push(...掃く(道, 名));
+      continue;
+    }
     if (!印.has(名)) { 未知.push(名 + "(入れた時の 一覧に 在りません)"); continue; }
     let 中 = null; try { 中 = fs.readFileSync(道, "utf8"); } catch (_) {}
     if (中 == null) { 未知.push(名 + "(読めません)"); continue; }
