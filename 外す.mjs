@@ -62,6 +62,9 @@ const 口の宣言 = {
   '--外す':  { 個数: 0, mode: '外す' },
   '--走査':  { 個数: 0, mode: '走査' },
   '--root':  { 個数: 1, mode: null, 使えるmode: ['走査'] },
+  /* ★どこの 現場かを 明示する口(27.73、@codex 11:44)。
+   *   ★★無ければ cwd【そのもの】── ★★★上へは 探さない。 */
+  '--現場': { 個数: 1, mode: null },
   '--json':  { 個数: 0, mode: null, 使えるmode: ['下見', '走査'] },
   /* ★撤去側(27.0)── 台帳が無い現場で、人が名指しした物だけを消す。
    *   ★★走査の中でしか使えない ── 走査が見た集合の外は消さないため。 */
@@ -200,17 +203,20 @@ const 昔の名前 = (() => {
 })();
 
 
-/* ★根は【塊の1つ上】から探す(install と同じ作法)。塊は現場の中に在る前提。 */
+/* ★★★現場は【打った場所】── ★上へは 探さない(27.73、2026-09-05、@guardian 11:43 / @codex 11:44)。
+ *
+ *   ★27.72 までは 塊の 1つ上から .git / package.json / CLAUDE.md を【上へ】探していた。
+ *     ・★★目印 3つは【Guardian の 物】が 1つも 無い ── 世の中の どこにでも 在る物。
+ *     ・= 現場が 目印を 持たなければ、★★★人の 親 repo を 現場と 呼び、そこで 消しに 行く。
+ *     ・実測(@guardian 11:43、公開 27.71):install が 親 repo の 直下に 置き、
+ *       外す が そこから 7件 消した ── ★どちらも【上を】見ていた。
+ *
+ *   ★★決め方:--現場 が 在れば それ、無ければ cwd そのもの。★★★遡らない。
+ *   ★台帳が この現場に 無ければ 何も しない ── ★★上に 探しに 行かない事が 肝。 */
 const ROOT = (() => {
-  let d = path.resolve(HERE, '..');
-  for (;;) {
-    for (const 目印 of ['.git', 'package.json', 'CLAUDE.md']) {
-      if (fs.existsSync(path.join(d, 目印))) return d;
-    }
-    const up = path.dirname(d);
-    if (up === d) return path.resolve(HERE, '..');
-    d = up;
-  }
+  const i = process.argv.indexOf('--現場');
+  const 生 = i >= 0 ? path.resolve(process.argv[i + 1]) : process.cwd();
+  try { return fs.realpathSync(生); } catch (_) { return path.resolve(生); }
 })();
 
 /* ★mode から取る(2026-09-03)── ★★includes を各所で見ると、mode の判断と食い違う */

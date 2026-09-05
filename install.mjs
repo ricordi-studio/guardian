@@ -41,8 +41,8 @@ const 書き手 = __cr(import.meta.url)('./書き手.cjs');
  *   selfcheck の B11 が、SPEC.md の表と**この出力**を突き合わせる(44条の双子)。
  * ★穴として書く: これが証明するのは「その口を受け付ける」までで、
  *   **その口が仕事をする**ことではない。そこは各口の検査の仕事。 */
-const 知っている口 = ['--口一覧', '--dry', '--hooks', '--no-hooks', '--夜間', '--夜間なし'];
-const 値を取る口 = {};
+const 知っている口 = ['--口一覧', '--dry', '--hooks', '--no-hooks', '--夜間', '--夜間なし', '--現場'];
+const 値を取る口 = { '--現場': 1 };   // ★どこへ 入れるかを 明示する口(27.73)
 const 残りを全部取る口 = [];
 /* ★順番: **未知の口の走査が先、`--口一覧` は後**(2026-08-31、配布先の実測)。
  *   検査は `--口一覧 --zzz` の形で叩く ── 門が生きていれば **出口1**、
@@ -101,30 +101,10 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
  *   空なら "." ── その場所そのものが塊である、と正しく言う。 */
 const KIT = path.relative(process.cwd(), HERE).split(path.sep).join('/') || '.';
 
-/* 塊がどこに置かれていても、プロジェクトの根を自分で探す */
-/* ★hooks/lib-root.js の findRoot とは【別の仕事】である(2026-08-29 監査で名前を分けた)。
- *   あちらは【導入後】に走るので guardian.config.json / docs/CODEMAP.md を目印にできる。
- *   こちらは【導入する前】に走るので、それらはまだ存在しない ── .git / package.json / CLAUDE.md しか手がかりが無い。
- *   同じ名前だったので「写経(重複)」に見えていたが、目印が違う以上ひとつにはできない。
- *   ★名前を分けたのは、次に直す人が【もう一方も直すべきか】を毎回考えずに済むようにするため。 */
-function findInstallRoot(start) {
-  let d = start;
-  for (let i = 0; i < 8; i++) {
-    const has = (p) => fs.existsSync(path.join(d, p));
-    /* ★【塊のフォルダ自身を根と見なさない】(2026-08-29 実地で見つかった)。
-     *   古い pull.mjs は CLAUDE.md を【配らないもの】に持っていないので、取り直すと
-     *   **guardian/CLAUDE.md** が出来る。CLAUDE.md を根の目印にしていたこの判定は、
-     *   そこで止まって **guardian/ を根だ**と言った ── フックを guardian/.claude/ へ書き、
-     *   「足しました」と報告する。**配布先の本当の設定は一度も更新されない**(見えない失敗)。
-     * ★塊がリポジトリそのものである現場(正本)では、同じ場所に .git が在るので下の判定が勝つ。 */
-    const 塊そのもの = has('check.mjs') && has('selfcheck.mjs') && !has('.git');
-    if (!塊そのもの && (has('.git') || has('package.json') || has('CLAUDE.md'))) return d;
-    const up = path.dirname(d);
-    if (up === d) break;
-    d = up;
-  }
-  return process.cwd();
-}
+/* ★【上へ 探す】道は 27.73 で 消しました(@guardian 11:43 の 実測)。
+ *   ・消した物:findInstallRoot(.git / package.json / CLAUDE.md を 上へ 8回 探す)
+ *   ・訳:目印が 1つも 無い現場では、★人の 親 repo を 現場と 誤認して そこへ 書いた
+ *   ・★★代わりは 下の ROOT ── ★★★打った場所(または --現場)そのもの。 */
 /* ★台帳は【付属品】── 無くても導入は通す(2026-09-03、自分の検査に止められた)。
  *   ★★この塊の自己検査は、見本に install.mjs と templates/ だけを写す(無限の入れ子を避けるため)。
  *   そこへ固い import を足したら、★★★見本の中で install が死に、フックが1本も入らなくなった。
@@ -133,7 +113,46 @@ let 台帳を作る = null;
 try { ({ 台帳を作る } = await import('./台帳.mjs')); } catch (_) {}
 const 台帳が在る = !!台帳を作る;
 
-const ROOT = findInstallRoot(HERE);
+/* ★★★現場は【打った場所】── ★上へは 探さない(27.73、2026-09-05、@guardian 11:43 の 実測)。
+ *
+ *   ★★事故:目印(.git / package.json / CLAUDE.md)を 束の 1つ上から【上へ】探していた。
+ *     ・現場が「目印を 1つも 持たない ただの フォルダ」だと ── ★★★一番近い 親の repo が 現場に なる
+ *     ・実測:人のmonorepo/現場/guardian で 打つ → ★人のmonorepo の 直下に
+ *       CLAUDE.md / docs/ / guardian.config.json / .guardian/ が 出来た(★★install は 出口 0 と 名乗る)
+ *     ・= 人は【ここに 入れた】と 思い、道具は【上に 入れた】と 思う
+ *
+ *   ★目印 3つは【Guardian の 物】が 1つも 無い ── ★★世の中の どこにでも 在る物。
+ *     だから【この現場である事】を 名乗れない(@guardian 11:40 / @codex 11:44)。
+ *   ★★だから 決め方を 変える:--現場 が 在れば それ、無ければ cwd【そのもの】。
+ *     ・★★★親へ 遡らない ── 遡らなければ、人の repo に 手が 出る道が 無い。
+ *   ★束が 現場の 外に 在る時 / 束の 中で 打った時は、★★何も せずに 断る。 */
+const ROOT = (() => {
+  const 中か = (親, 子) => 子 === 親 || (子 + path.sep).startsWith(親 + path.sep);
+  const i = process.argv.indexOf('--現場');
+  const 生 = i >= 0 ? path.resolve(process.argv[i + 1]) : process.cwd();
+  let R;
+  try { R = fs.realpathSync(生); } catch (e) {
+    console.error('✗ 現場が 開けません: ' + 生 + '(' + (e && e.code) + ')');
+    console.error('  ★入れる先を 決められないので、何も していません');
+    process.exit(1);
+  }
+  let H; try { H = fs.realpathSync(HERE); } catch (_) { H = path.resolve(HERE); }
+  if (中か(H, R)) {
+    console.error('✗ 塊の【中】で 打っています: ' + R);
+    console.error('  ★現場は 塊の 外です ── ★★入れたい場所へ 移って もう一度 打つか、--現場 <道> を 付けてください');
+    console.error('  ★★★何も していません');
+    process.exit(1);
+  }
+  if (!中か(R, H)) {
+    console.error('✗ 塊が 現場の 外に 在ります');
+    console.error('  現場: ' + R);
+    console.error('  塊  : ' + H);
+    console.error('  ★塊は 現場の 中(ふつうは <現場>/guardian)に 置いてください ── ★★何も していません');
+    process.exit(1);
+  }
+  return R;
+})();
+console.log('★入れる先(現場): ' + ROOT);   // ★書く前に 見せる(@codex 11:44 の ②)
 
 /* ★所有台帳 ── 置いた物を【根の種類・相対名・指紋・書き手】で記録する(2026-09-03)。
  *   ★★外すとき、名前ではなく【どの根から書いたか】で持ち主を決めるため。
