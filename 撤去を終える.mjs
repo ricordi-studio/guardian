@@ -61,8 +61,14 @@ if (!(退避.startsWith(根 + path.sep) && 退避 !== 根)) {
 const 印 = new Map(Array.isArray(帳面.束の印) ? 帳面.束の印.filter((x) => Array.isArray(x)) : []);
 const 掃く指紋 = (中) => createHash("sha256")
   .update(String(中).split(String.fromCharCode(13)).join("")).digest("hex");
-function 掃く(根, 親) {
+/* ★★★【全部 検めてから 消す】(27.93、@codex 22:44)。
+ *   ★1件ずつ 消しながら 進むと、★★未知が 出た時には もう 何件か 消えている。
+ *   ★★★= 部分的な 破壊 ── 取引としては 認められない。
+ *   ★検めで 1件でも 未知・不一致・境界外が 出たら、★★1件も 消さない。 */
+function 掃く(根, 親, 合った) {
   const 未知 = [];
+  const 先頭 = !合った;
+  合った = 合った || [];
   let es = []; try { es = fs.readdirSync(根, { withFileTypes: true }); } catch (_) { return 未知; }
   for (const e of es) {
     const 道 = path.join(根, e.name);
@@ -75,16 +81,27 @@ function 掃く(根, 親) {
       let 身内 = false;
       for (const k of 印.keys()) if (k.indexOf(名 + "/") === 0) { 身内 = true; break; }
       if (!身内) { 未知.push(名 + "(一覧に 無い フォルダ)"); continue; }
-      未知.push(...掃く(道, 名));
+      未知.push(...掃く(道, 名, 合った));
       continue;
     }
     if (!印.has(名)) { 未知.push(名 + "(入れた時の 一覧に 在りません)"); continue; }
     let 中 = null; try { 中 = fs.readFileSync(道, "utf8"); } catch (_) {}
     if (中 == null) { 未知.push(名 + "(読めません)"); continue; }
     if (掃く指紋(中) !== 印.get(名)) { 未知.push(名 + "(中身が 入れた時と 違います)"); continue; }
-    try { fs.rmSync(道, { force: true }); } catch (_) { 未知.push(名 + "(消せませんでした)"); }
+    合った.push(道);
   }
-  try { if (!fs.readdirSync(根).length) fs.rmdirSync(根); } catch (_) {}
+  if (!先頭) return 未知;
+  if (未知.length) return 未知;   /* ★1件でも 知らない物が 在れば、★★1件も 消さない */
+  for (const 道 of 合った) {
+    try { fs.rmSync(道, { force: true }); } catch (_) { 未知.push(道 + "(消せませんでした)"); }
+  }
+  /* ★空に なった フォルダを 内側から 畳む */
+  const 畳む = (d) => {
+    let es = []; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch (_) { return; }
+    for (const e of es) if (e.isDirectory()) 畳む(path.join(d, e.name));
+    try { if (!fs.readdirSync(d).length) fs.rmdirSync(d); } catch (_) {}
+  };
+  畳む(根);
   return 未知;
 }
 const 未知 = 掃く(退避, "");

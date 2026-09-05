@@ -319,8 +319,14 @@ const 束の印の対 = (() => {
   }
   return 出;
 })();
-function 掃く(根, 印, 親) {
+/* ★★★【全部 検めてから 消す】(27.93、@codex 22:44)。
+ *   ★1件ずつ 消しながら 進むと、★★未知が 出た時には もう 何件か 消えている。
+ *   ★★★= 部分的な 破壊 ── 取引としては 認められない。
+ *   ★検めで 1件でも 未知・不一致・境界外が 出たら、★★1件も 消さない。 */
+function 掃く(根, 印, 親, 合った) {
   const 未知 = [];
+  const 先頭 = !合った;
+  合った = 合った || [];
   let es = []; try { es = fs.readdirSync(根, { withFileTypes: true }); } catch (_) { return 未知; }
   for (const e of es) {
     const 道 = path.join(根, e.name);
@@ -333,7 +339,7 @@ function 掃く(根, 印, 親) {
       let 身内 = false;
       for (const k of 印.keys()) if (k.indexOf(名 + '/') === 0) { 身内 = true; break; }
       if (!身内) { 未知.push(名 + '(一覧に 無い フォルダ)'); continue; }
-      未知.push(...掃く(道, 印, 名));
+      未知.push(...掃く(道, 印, 名, 合った));
       continue;
     }
     if (!印.has(名)) { 未知.push(名 + '(入れた時の 一覧に 在りません)'); continue; }
@@ -341,9 +347,20 @@ function 掃く(根, 印, 親) {
     let 中 = null; try { 中 = fs.readFileSync(道, 'utf8'); } catch (_) {}
     if (中 == null) { 未知.push(名 + '(読めません)'); continue; }
     if (掃く指紋(中) !== 印.get(名)) { 未知.push(名 + '(中身が 入れた時と 違います)'); continue; }
-    try { fs.rmSync(道, { force: true }); } catch (_) { 未知.push(名 + '(消せませんでした)'); }
+    合った.push(道);
   }
-  try { if (!fs.readdirSync(根).length) fs.rmdirSync(根); } catch (_) {}
+  if (!先頭) return 未知;
+  if (未知.length) return 未知;   /* ★1件でも 知らない物が 在れば、★★1件も 消さない */
+  for (const 道 of 合った) {
+    try { fs.rmSync(道, { force: true }); } catch (_) { 未知.push(道 + '(消せませんでした)'); }
+  }
+  /* ★空に なった フォルダを 内側から 畳む */
+  const 畳む = (d) => {
+    let es = []; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch (_) { return; }
+    for (const e of es) if (e.isDirectory()) 畳む(path.join(d, e.name));
+    try { if (!fs.readdirSync(d).length) fs.rmdirSync(d); } catch (_) {}
+  };
+  畳む(根);
   return 未知;
 }
 const 粘って消す = (道, 型) => {
@@ -1234,7 +1251,12 @@ if (帳面) {
     console.log('  ★何も していません ── ★★帳面を 見てください(誰かが 書き換えた かもしれません)。');
     process.exit(2);
   }
-  if (実行 && 帳面.退避先 && !(帳面.済み || []).includes('束:掃除')) {
+  /* ★★★続きの 掃除も【頼まれた時だけ】(27.93、@codex 22:44)。
+   *   ★実測(彼):正しい 名と 指紋を 帳面に 書けば、★★--束も も 承知も 無い --外す だけで
+   *   ★★★任意の 木を 消せた ── ★口の 認可を 帳面が 迂回していた。
+   *   ★= 掃除は 束も消す と 承知の 2つが 揃っている 時だけ。 */
+  if (実行 && 帳面.退避先 && !(帳面.済み || []).includes('束:掃除')
+    && 束も消す && process.argv.includes('--戻せない事は承知')) {
     const 退避 = path.join(ROOT, String(帳面.退避先));
     const 根 = path.resolve(ROOT), 的 = path.resolve(退避);
     if (的.startsWith(根 + path.sep) && 的 !== 根 && fs.existsSync(退避)) {
@@ -1972,14 +1994,20 @@ const 証拠か = (c) => 証拠の道.some((r) => String(c.rel || '').split(path
  *   ★★★= 通常物が 終わった 瞬間に、続きが【もう する事が 無い】と 読む。
  *   ★だから 段(phase)ごとに 名前を 持たせ、全部の 名前が 済むまで 終端に しない。
  *   ★★予定は【一度 決めたら 変えない】── 続きの 走行は 帳面の 予定を 使う(作り直さない)。 */
+/* ★★★退避先は【落とさない】(27.93、@kozo 22:51)。
+ *   ★実測(公開 27.91):未知物で catch に 入った 走行が、★★後の 帳面書きで
+ *   ★★★退避先を null に 上書きしていた(走り始めの 写しを 使っていた)。
+ *   ★= 「移した」と 言いながら 行き先が 空 ── 回復役は 何も できない。 */
+let 今の退避先 = (帳面 && 帳面.退避先) || null;
 const 帳面を書く = (予定, 済み, 証明済み, 退避先) => {
+  if (退避先) 今の退避先 = 退避先;
   try {
     fs.mkdirSync(path.dirname(帳面の道), { recursive: true });
     fs.writeFileSync(帳面の道, JSON.stringify({
       schema: 'guardian-撤去帳面 v2', 開始: (帳面 && 帳面.開始) || new Date().toISOString(),
       身元: 台帳の身元 || null, 束: path.relative(ROOT, path.resolve(HERE)).split(path.sep).join('/'),
       束も: 束も消す, 証明済み, 予定の印: 指紋(JSON.stringify(予定)), 予定, 済み,
-      退避先: 退避先 || (帳面 && 帳面.退避先) || null,
+      退避先: 今の退避先,
       証拠: 証拠の道,   /* ★回復役が 消す物(27.88)── ★★綴りは ここが 正本 */
       束の印: 束の印の対,   /* ★掃いてよい物(27.89)── ★★名と 指紋の 対(27.90)*/
     }, null, 1) + String.fromCharCode(10));
@@ -2607,24 +2635,22 @@ if (残る束.length) {
            *   ★★★「消せませんでした」だけだと【何も 消えていない】と 読まれる ──
            *   ★それは 今日 何度も 直した形(言葉と 動きの 食い違い)そのもの。
            *   ★★だから【いま 何が 残っているか】を 数えて 出す。 */
+          /* ★★★束は もう【退避先】に 在る(27.93、@kozo 22:51 の 4行の 嘘)。
+           *   ★前の 文は「束に N点 残っている / 手で guardian/ を 消せ / 台帳は もう 消した」と
+           *   ★★言っていたが、★★★どれも【移した 後】には 当たらない ── 3版 そのままだった。
+           *   ★いま 言うべきは 1つ:【回復役を 打てば 続く】。 */
           const 残り = (() => { let n = 0;
             const 数え = (d) => { let es = [];
               try { es = fs.readdirSync(d, { withFileTypes: true }); } catch (_) { return; }
               for (const x of es) { const p = path.join(d, x.name);
                 if (x.isDirectory()) 数え(p); else n += 1; } };
-            数え(先); return n; })();
+            数え(path.join(ROOT, 今の退避先 || '')); return n; })();
           console.log('  ★★★束を 消しきれませんでした: ' + String(e && e.message).slice(0, 90));
-          console.log('    ★★これは【何も 消えていない】という意味では ありません ── '
-            + '★rmSync は 1つずつ 消すので、★★★途中まで 消えている事が 在ります。');
-          console.log('    ★いま 束に 残っているのは ' + 残り + '点です(消す前は ' + 残る束[0].点 + '点)。'
-            + '★★手で ' + 残る束[0].名 + ' を 消してください。');
-          /* ★★★取り直しでは 戻りません(27.61、@guardian が 実測)。
-           *   ★この走行は もう 台帳を 消している ── ★★もう一度 打つと
-           *   「所有台帳が読めません」で 出口2、束は そのまま。
-           *   ★★★pull は 束を 戻すが【台帳は 戻さない】── 案内が 通らないのは 嘘と 同じ。 */
-          console.log('    ★★★もう一度 打っても 戻りません ── ★この走行は もう 台帳を 消しました。'
-            + '★★「取り直して もう一度」では 台帳が 戻らず、出口2(所有台帳が読めません)に なります。'
-            + '★★★手で 消すのが 唯一の 道です(★入れ直したい時は、消してから もう一度 導入してください)');
+          console.log('    ★束は もう 現場から 外れ、退避先に 在ります: ' + (今の退避先 || '(不明)')
+            + '(残り ' + 残り + '点)。');
+          console.log('    ★★片づけたら、もう一度:node guardian-撤去を終える.mjs');
+          console.log('    ★★★台帳も 帳面も 残してあります ── '
+            + '★終わるまで 消しません(★★続きの ための 材料です)');
         }
         }
       }
