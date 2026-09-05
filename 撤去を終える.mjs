@@ -13,6 +13,7 @@
  *   ★★出口: 0 = 終わった / 1 = 掃ききれない / 2 = 終える物が 無い(何も していない) */
 import fs from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
 
 const ROOT = process.cwd();
 const 帳面の道 = path.join(ROOT, ".guardian-撤去中.json");
@@ -38,7 +39,11 @@ if (!(退避.startsWith(根 + path.sep) && 退避 !== 根)) {
 /* ★★★掃くのは【入れた時の 一覧に 在る物】だけ(27.89、@guardian 20:43 の TOCTOU)。
  *   ★実測(彼の 見本):検めた後・消す直前に 中身を すり替えると、気づかずに 消していた。
  *   ★★だから 消す【直前】に lstat し、近道は 追わず、一覧に 無い物は 残して 名乗る。 */
-const 印 = new Set(Array.isArray(帳面.束の印) ? 帳面.束の印 : []);
+/* ★名と 指紋の 対(27.90、@codex 21:47 の 2)── ★★名が 合っても 中身が 違えば 消さない。
+ *   ★★★式は 外す.mjs の 掃く指紋 と 同じ(素の sha256 / 改行だけ 揃える)。 */
+const 印 = new Map(Array.isArray(帳面.束の印) ? 帳面.束の印.filter((x) => Array.isArray(x)) : []);
+const 掃く指紋 = (中) => createHash("sha256")
+  .update(String(中).split(String.fromCharCode(13)).join("")).digest("hex");
 function 掃く(根, 親) {
   const 未知 = [];
   let es = []; try { es = fs.readdirSync(根, { withFileTypes: true }); } catch (_) { return 未知; }
@@ -49,6 +54,9 @@ function 掃く(根, 親) {
     if (st.isSymbolicLink()) { 未知.push(名 + "(近道 ── 先は 追いません)"); continue; }
     if (st.isDirectory()) { 未知.push(...掃く(道, 名)); continue; }
     if (!印.has(名)) { 未知.push(名 + "(入れた時の 一覧に 在りません)"); continue; }
+    let 中 = null; try { 中 = fs.readFileSync(道, "utf8"); } catch (_) {}
+    if (中 == null) { 未知.push(名 + "(読めません)"); continue; }
+    if (掃く指紋(中) !== 印.get(名)) { 未知.push(名 + "(中身が 入れた時と 違います)"); continue; }
     try { fs.rmSync(道, { force: true }); } catch (_) { 未知.push(名 + "(消せませんでした)"); }
   }
   try { if (!fs.readdirSync(根).length) fs.rmdirSync(根); } catch (_) {}

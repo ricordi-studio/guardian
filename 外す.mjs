@@ -25,6 +25,7 @@ import fs from 'node:fs';
 import { createRequire as __cr } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';   /* ★回復役と 同じ 数え方(27.90)*/
 import { 根の身元 } from './台帳.mjs';   // ★身元の 式は 1つ(27.79)── ★★写経しない
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -298,6 +299,26 @@ const 少し待つ = (ms) => { try { Atomics.wait(new Int32Array(new SharedArray
 /* ★★★退避させた 束を【一覧に 在る物だけ】掃く(27.89、@guardian 20:43 の TOCTOU)。
  *   ★消す直前に lstat する ── ★★近道(symlink/junction)は 追わない。
  *   ★★★一覧に 無い物は 消さずに 返す ── 呼ぶ側が それを 人に 言う。 */
+/* ★★★掃く時の 指紋は【回復役と 同じ 式】で 数える(27.90、@codex 21:47 の 2)。
+ *   ★回復役は 束の 外に 在り、書き手.cjs を 呼べない ── ★★だから 素の sha256 に する。
+ *   ★★★改行だけ 揃える(Windows の clone は CRLF に なる)。 */
+const 掃く指紋 = (中) => createHash('sha256')
+  .update(String(中).split(String.fromCharCode(13)).join('')).digest('hex');
+/* ★掃いてよい物の【名と 指紋の 対】(27.90)── ★★退避させた 束を 掃く時と、
+ *   ★★★回復役が 掃く時の 両方が これを 使う(帳面にも 書く)。 */
+/* ★★★続きの 走行では【帳面が 記した 一覧】を 使う(27.90)。
+ *   ★束は もう 移動・欠けている ── ★★いま在る物から 数え直すと 一覧が 空に なり、
+ *   ★★★掃く物が 1つも 無くなって【永久に 残る】(実測 22:0x:224 → 217 → 218)。 */
+const 束の印の対 = (() => {
+  const 出 = [];
+  if (!束の控え) return 出;
+  const 根 = path.join(ROOT, path.relative(ROOT, path.resolve(HERE)));
+  for (const rel of 束の控え.印.keys()) {
+    let 中 = null; try { 中 = fs.readFileSync(path.join(根, rel), 'utf8'); } catch (_) { continue; }
+    出.push([rel, 掃く指紋(中)]);
+  }
+  return 出;
+})();
 function 掃く(根, 印, 親) {
   const 未知 = [];
   let es = []; try { es = fs.readdirSync(根, { withFileTypes: true }); } catch (_) { return 未知; }
@@ -308,6 +329,10 @@ function 掃く(根, 印, 親) {
     if (st.isSymbolicLink()) { 未知.push(名 + '(近道 ── 先は 追いません)'); continue; }
     if (st.isDirectory()) { 未知.push(...掃く(道, 印, 名)); continue; }
     if (!印.has(名)) { 未知.push(名 + '(入れた時の 一覧に 在りません)'); continue; }
+    /* ★名が 一覧に 在っても、★★中身が 入れた時と 違えば【人の物】かもしれない(@codex 21:47)。 */
+    let 中 = null; try { 中 = fs.readFileSync(道, 'utf8'); } catch (_) {}
+    if (中 == null) { 未知.push(名 + '(読めません)'); continue; }
+    if (掃く指紋(中) !== 印.get(名)) { 未知.push(名 + '(中身が 入れた時と 違います)'); continue; }
     try { fs.rmSync(道, { force: true }); } catch (_) { 未知.push(名 + '(消せませんでした)'); }
   }
   try { if (!fs.readdirSync(根).length) fs.rmdirSync(根); } catch (_) {}
@@ -1196,7 +1221,12 @@ if (帳面) {
     const 根 = path.resolve(ROOT), 的 = path.resolve(退避);
     if (的.startsWith(根 + path.sep) && 的 !== 根 && fs.existsSync(退避)) {
       try {
-        粘って消す(退避, { recursive: true, force: true });
+        const 未知 = 掃く(退避, new Map(Array.isArray(帳面.束の印) ? 帳面.束の印.filter((x) => Array.isArray(x)) : []));
+        if (未知.length) {
+          console.log('  ★★★掃く途中で【知らない物】が 出ました ── ★消さずに 残しました:');
+          for (const u of 未知.slice(0, 5)) console.log('    ・' + u);
+          throw new Error('知らない物');
+        }
         退避を掃いた = true;
         console.log('  ★前の 走行が 退避させた 束を 掃きました: ' + 帳面.退避先);
       } catch (e) {
@@ -1933,10 +1963,12 @@ const 帳面を書く = (予定, 済み, 証明済み, 退避先) => {
       束も: 束も消す, 証明済み, 予定の印: 指紋(JSON.stringify(予定)), 予定, 済み,
       退避先: 退避先 || (帳面 && 帳面.退避先) || null,
       証拠: 証拠の道,   /* ★回復役が 消す物(27.88)── ★★綴りは ここが 正本 */
-      束の印: 束の控え ? [...束の控え.印.keys()] : [],   /* ★掃いてよい物(27.89)*/
+      束の印: 束の印の対,   /* ★掃いてよい物(27.89)── ★★名と 指紋の 対(27.90)*/
     }, null, 1) + String.fromCharCode(10));
   } catch (_) { /* ★書けなくても 撤去は 続ける ── ★★帳面は 助けであって 門では ない */ }
 };
+const 掃く印 = new Map((再開中 && 帳面 && Array.isArray(帳面.束の印) && 帳面.束の印.length)
+  ? 帳面.束の印.filter((x) => Array.isArray(x)) : 束の印の対);
 const 済み = (帳面 && 帳面.済み) ? 帳面.済み.slice() : [];
 /* ★続きで 掃いた分を 済みに 足す(27.87)── ★★段の 名前で 数える。 */
 if (退避を掃いた) { if (!済み.includes('束:移動')) 済み.push('束:移動'); if (!済み.includes('束:掃除')) 済み.push('束:掃除'); 束を消した = true; }
@@ -2523,7 +2555,7 @@ if (残る束.length) {
            *   ★実測(彼の 見本):検めた後・消す直前に 中身を すり替えると、
            *   ★★気づかずに 消していた(出口 0 / 一行も 言わない)。
            *   ★★★だから 消す【直前】に lstat し、近道は 追わず、一覧に 無い物は 残して 名乗る。 */
-          const 未知 = 掃く(退避, new Set(束の控え ? [...束の控え.印.keys()] : []));
+          const 未知 = 掃く(退避, 掃く印);
           if (未知.length) {
             console.log('  ★★★掃く途中で【知らない物】が 出ました ── ★消さずに 残しました:');
             for (const u of 未知.slice(0, 5)) console.log('    ・' + u);
