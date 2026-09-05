@@ -124,6 +124,10 @@ console.log("★束を 掃きました: " + 帳面.退避先);
 const 証拠の形 = (名) => 名.indexOf(".guardian/") === 0
   && 名.lastIndexOf("/") === ".guardian".length
   && 名.slice(-5) === ".json";
+/* ★★★証拠が【1つも 無い】帳面で 完走を 名乗らない(27.95、@codex 23:41 の ③)。
+ *   ★正しい 走行は 必ず 証拠を 書く ── ★★空なら 古い形か 細工。
+ *   ★★★掃除は もう 済んでいるので それは 言うが、★終わったとは 言わない。 */
+const 使える証拠 = (Array.isArray(帳面.証拠) ? 帳面.証拠 : []).length;
 const 断った証拠 = [];
 for (const r of (Array.isArray(帳面.証拠) ? 帳面.証拠 : [])) {
   const 名 = String(r).split(path.sep).join("/");
@@ -141,6 +145,12 @@ try {
   if (fs.readdirSync(g).length === 0) { fs.rmdirSync(g); console.log("★.guardian/ も空になったので畳みました"); }
 } catch (_) {}
 
+if (!使える証拠 || 断った証拠.length) {
+  console.log("★掃除は 済みましたが、★★終わったとは 言いません ── "
+    + (使える証拠 ? "証拠に 道具の 形で ない 道が 在ります" : "帳面に 証拠が 1つも 在りません") + "。");
+  console.log("  ★帳面(" + path.basename(帳面の道) + ")と この紙は 残します ── ★★中を 見てください。");
+  process.exit(1);
+}
 try { fs.rmSync(帳面の道, { force: true }); } catch (_) {}
 console.log("★★終わりました ── ★★★この紙(" + path.basename(process.argv[1]) + ")も 消します。");
 try { fs.rmSync(process.argv[1], { force: true }); } catch (_) {}
