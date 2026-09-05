@@ -41,7 +41,7 @@ const 書き手 = __cr(import.meta.url)('./書き手.cjs');
  *   selfcheck の B11 が、SPEC.md の表と**この出力**を突き合わせる(44条の双子)。
  * ★穴として書く: これが証明するのは「その口を受け付ける」までで、
  *   **その口が仕事をする**ことではない。そこは各口の検査の仕事。 */
-const 知っている口 = ['--口一覧', '--dry', '--hooks', '--no-hooks', '--夜間', '--夜間なし', '--現場'];
+const 知っている口 = ['--口一覧', '--dry', '--hooks', '--no-hooks', '--夜間', '--夜間なし', '--現場', '--現場を再登録'];
 const 値を取る口 = { '--現場': 1 };   // ★どこへ 入れるかを 明示する口(27.73)
 const 残りを全部取る口 = [];
 /* ★順番: **未知の口の走査が先、`--口一覧` は後**(2026-08-31、配布先の実測)。
@@ -110,7 +110,8 @@ const KIT = path.relative(process.cwd(), HERE).split(path.sep).join('/') || '.';
  *   そこへ固い import を足したら、★★★見本の中で install が死に、フックが1本も入らなくなった。
  *   ★付属品が本体を殺してはいけない。ただし【黙って落とさない】── 残せなければ、そう言う。 */
 let 台帳を作る = null;
-try { ({ 台帳を作る } = await import('./台帳.mjs')); } catch (_) {}
+let 根の身元 = null;
+try { ({ 台帳を作る, 根の身元 } = await import('./台帳.mjs')); } catch (_) {}
 const 台帳が在る = !!台帳を作る;
 
 /* ★★★現場は【打った場所】── ★上へは 探さない(27.73、2026-09-05、@guardian 11:43 の 実測)。
@@ -942,59 +943,135 @@ if (!DRY) {
   } catch (e) { todo.push('★束の中の 物を 隔離できませんでした: ' + String(e && e.message).slice(0, 80)); }
 }
 
+/* ★★★束を【配る側の 目録】と 照らす(27.81 で 関数に 切り出した)。
+ *   ★同じ走査を 導入の 時と【再登録】の 時の 両方が 使う ── ★★2つ 持たない。 */
+function 束を照らす(束の根) {
+  const 目録 = (() => {
+    try {
+      const j = JSON.parse(fs.readFileSync(path.join(束の根, '目録.json'), 'utf8'));
+      if (!j || !Array.isArray(j.項)) return null;
+      const m = new Map();
+      for (const x of j.項) if (x && x.rel) m.set(String(x.rel), String(x.印));
+      return { 版: j.版, 印: m };
+    } catch (_) { return null; }
+  })();
+  const 項 = [], 外れ = [];
+  const 歩く = (d, 親) => {
+    let es = []; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch (_) { return; }
+    for (const x of es) {
+      if (x.name === '.git' || x.name === 'node_modules') continue;
+      const 名 = 親 ? 親 + '/' + x.name : x.name;
+      if (x.isSymbolicLink()) { 項.push({ rel: 名, 印: '近道' }); 外れ.push(名 + '(近道)'); continue; }
+      if (x.isDirectory()) { 歩く(path.join(d, x.name), 名); continue; }
+      let 中 = null; try { 中 = fs.readFileSync(path.join(d, x.name), 'utf8'); } catch (_) {}
+      const 印 = 中 == null ? '読めない' : 書き手.均した指紋(中);
+      項.push({ rel: 名, 印 });
+      if (名 === '目録.json') continue;
+      if (!目録) continue;
+      if (!目録.印.has(名)) { 外れ.push(名 + '(目録に 無い)'); continue; }
+      if (目録.印.get(名) !== 印) 外れ.push(名 + '(目録と 指紋が 違う)');
+    }
+  };
+  歩く(束の根, '');
+  return { 目録, 項, 外れ, 証明: (目録 && 外れ.length === 0) ? '目録' : null };
+}
+
+/* ★★★【現場を 再登録する】(27.81、@codex 13:18)。
+ *
+ *   ★27.79 は【台帳に 身元が 無い時】に 警告して 通していた ── ★★@codex:
+ *     「★★★身元が 無いのは 不一致では なく UNKNOWN。警告は 所有証明の 代わりに ならない。
+ *      旧形式へ 落とすだけで 全一致の 条件を 迂回できる」── その通り。
+ *   ★だから 撤去側は 止める。★★代わりに【消さない 専用の 口】を ここに 置く。
+ *   ★★★掟(@codex 13:18 の 5つ):
+ *     ① この走行では 消しも 上書きも しない(★台帳の 身元欄だけを 足す)
+ *     ② 束を【配る側の 目録】と 照らす ── 1点でも 外れたら 発行しない
+ *     ③ 台帳が 記した物が 消えている / 変わっていたら 発行しない
+ *     ④ 身元は realpath した 現場の bigint dev/ino、導入ID は 新しく 作る
+ *     ⑤ 旧台帳は byte の まま 控えを 取る(★再登録と 撤去を 同じ走行で 続けない) */
+if (process.argv.includes('--現場を再登録')) {
+  const 台帳の道 = 書き手.台帳の道(ROOT);   /* ★綴りは 書き手.cjs に 1つ(27.81)*/
+  const 止める = (訳, 出口) => { console.error('✗ 再登録しません ── ' + 訳); console.error('  ★何も 変えていません。'); process.exit(出口); };
+  let 生 = null;
+  try { 生 = fs.readFileSync(台帳の道, 'utf8'); } catch (e) { 止める('この現場に 台帳が 在りません(' + ((e && e.code) || '?') + '): ' + 台帳の道, 2); }
+  let 台 = null;
+  try { 台 = JSON.parse(生); } catch (_) { 止める('台帳が JSON として 読めません(中身は 出しません): ' + 台帳の道, 2); }
+  if (!台 || !Array.isArray(台.走行)) 止める('台帳の 形が 違います(走行 が 配列では ありません)', 2);
+  const 照 = 束を照らす(path.join(ROOT, KIT));
+  if (照.証明 !== '目録') 止める('束が【配る側の 目録】と 合いません(' + (照.目録 ? 照.外れ.slice(0, 5).join(' / ') : '目録.json が 在りません') + ')', 1);
+  const 欠け = [];
+  for (const 走 of 台.走行) for (const x of (走.項 || [])) {
+    if (!x || !x.作った || x.rootKind !== 'TARGET' || x.種類 !== 'ファイル' || !x.hash) continue;
+    const 道 = path.join(ROOT, x.rel);
+    let 中 = null; try { 中 = fs.readFileSync(道, 'utf8'); } catch (_) {}
+    if (中 == null) { 欠け.push(x.rel + '(在りません)'); continue; }
+    if (書き手.指紋(中) !== x.hash) 欠け.push(x.rel + '(変わっています)');
+  }
+  if (欠け.length) 止める('台帳が 記した物が ' + 欠け.length + '件 合いません: ' + 欠け.slice(0, 5).join(' / '), 1);
+  const いま = 根の身元 ? 根の身元(ROOT) : { 取れた: false, 訳: '台帳.mjs が 読めません' };
+  if (!いま.取れた) 止める('この現場の 身元が 取れません(' + (いま.訳 || '?') + ')── ★推測で 発行しません', 2);
+  if (DRY) {
+    console.log('★下見(--dry)── ★★書いていません。');
+    console.log('  ★現場: ' + ROOT + ' / 束: ' + KIT + '(目録と 一致)');
+    console.log('  ★★台帳が 記した物 …… 合わない物 0件');
+    console.log('  ★★★発行する 身元: dev ' + いま.dev + ' / ino ' + いま.ino);
+    process.exit(0);
+  }
+  /* ★控えは【書き手を 通す】(27.81)── ★★台帳に 載せる。
+   *   ★★★載せないと『塊が書き込む場所に 在って 台帳にも 無い物』に なり、
+   *   次の 撤去が UNKNOWN で 止まる(★実測 13:35 ── 私は 同じ形を 隔離でも 踏んだ)。
+   *   ★= これは【道具が 作った 道具の 物】なので、撤去で 消えるのが 正しい。 */
+  const 印 = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14) + '-' + randomUUID().slice(0, 8);
+  const 控えの相対 = '.guardian/導入台帳.' + 印 + '.json';
+  const 控え = path.join(ROOT, 控えの相対);
+  if (fs.existsSync(控え)) 止める('控えの 名が 既に 在ります(★上書きしません): ' + 控えの相対, 1);
+  try { 書き手.書く(ROOT, 控えの相対, fs.readFileSync(台帳の道), 'install.mjs'); }
+  catch (e) { 止める('旧台帳の 控えが 書けません(' + ((e && e.code) || '?') + ')', 1); }
+  /* ★控えを 書くと、書き手が【台帳に 1行 足す】── ★★だから 読み直してから 書く(27.81)。
+   *   ★★★読み直さずに 書くと、足された 1行を 自分で 消す ── 実測 13:43:
+   *   控えが 台帳に 載らず、次の 撤去が「誰の物か 分かりません」で UNKNOWN に なった。
+   *   ★= 今日 何度も 出た形(出す側を 変えて、読む側を 忘れる)の もう1つ。 */
+  try { 台 = JSON.parse(fs.readFileSync(台帳の道, 'utf8')); }
+  catch (_) { 止める('控えを 書いた後、台帳が 読めなくなりました', 1); }
+  台.台帳の版 = 2;
+  台.根の身元 = いま;
+  台.導入ID = randomUUID();
+  台.束の相対 = KIT;
+  fs.writeFileSync(台帳の道, JSON.stringify(台, null, 1) + String.fromCharCode(10));
+  console.log('★この現場を 再登録しました(★★消していません・上書きしていません)');
+  console.log('  ★旧台帳の 控え: ' + 控えの相対 + '(byte の まま ── ★★台帳に 載せました)');
+  console.log('  ★★身元: dev ' + いま.dev + ' / ino ' + いま.ino + ' / 導入ID ' + 台.導入ID);
+  console.log('  ★★★これで --外す が 使えます ── ★但し 同じ走行では 続けません(別に 打ってください)');
+  process.exit(0);
+}
+
 if (!DRY) {
   try {
     const 束の根 = path.join(ROOT, KIT);
-    const 目録 = (() => {
-      try {
-        const j = JSON.parse(fs.readFileSync(path.join(束の根, '目録.json'), 'utf8'));
-        if (!j || !Array.isArray(j.項)) return null;
-        const m = new Map();
-        for (const x of j.項) if (x && x.rel) m.set(String(x.rel), String(x.印));
-        return { 版: j.版, 印: m };
-      } catch (_) { return null; }
-    })();
-    const 項 = [];
-    const 外れ = [];
-    const 走行の跡 = [];   /* ★pull が 書く物の 名前で 在った物(27.64)*/
-    const 歩く = (d, 親) => {
-      let es = []; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch (_) { return; }
-      for (const x of es) {
-        if (x.name === '.git' || x.name === 'node_modules') continue;
-        const 名 = 親 ? 親 + '/' + x.name : x.name;
-        if (x.isSymbolicLink()) { 項.push({ rel: 名, 印: '近道' }); 外れ.push(名 + '(近道)'); continue; }
-        if (x.isDirectory()) { 歩く(path.join(d, x.name), 名); continue; }
-        let 中 = null; try { 中 = fs.readFileSync(path.join(d, x.name), 'utf8'); } catch (_) {}
-        const 印 = 中 == null ? '読めない' : 書き手.均した指紋(中);   /* ★正本は 書き手.cjs に 1本 */
-        項.push({ rel: 名, 印 });
-        if (名 === '目録.json') continue;   /* ★目録は 自分を 数えない */
-        /* ★★★配る側が【走行が 作る物】と 宣言した物は 照らさない(27.61、@guardian が 公開物で 再現)。
-         *   ★pull は 受領証(.guardian/pulled.json)を 束の中に 書く ── 配る時には 無い。
-         *   ★★照らすと【pull で 入れた現場は 永久に --束も が 使えない】に なる。
-         *   ★★★断り文は「取り直して 入れ直せ」と 言うが、取り直す = pull = また 受領証 ── 出口の 無い 輪。 */
-        /* ★★★【証明できないなら 通さない】(27.64、@codex 07:03)。
-         *
-         *   ★27.61: 名前が 合えば 通した → ★★人の物を 巻き込む
-         *   ★★27.63: 中身の形(sha / 正本 / at)まで 見た → ★★★@codex:
-         *     「形を 検証しても、そのファイルを pull 自身が 作った事実は 証明できません。
-         *      ★install 前から 同じ schema の 利用者ファイルが 偶然または 模倣で 在れば
-         *      『本物の形』と 判定され、束ごと 消えます」── ★★その通り。
-         *
-         *   ★★★束の【中】に 在る物だけを 見て「誰が 書いたか」は 証明できない。
-         *   ★だから 通さない ── ★★但し【輪に しない】:
-         *   ★★★「これは pull が 書く物の 名前です。あなたの物でなければ 消してから
-         *   もう一度 打てば、束を 外せます」と 出口を 名指しで 出す。
-         *   ★= 証明できない事を 認めた上で、人が 決められる 形に する。 */
-        /* ★★★【走行が作る】の 例外は 27.69 で 外した ──
-         *   ★受領証を 束の外へ 出したので、束の中に【配る時に 無い物】は 生まれない。
-         *   ★★例外が 無い = ★★★人の物と 見間違える余地も 無い。 */
-        if (!目録) return;
-        if (!目録.印.has(名)) { 外れ.push(名 + '(目録に 無い)'); continue; }
-        if (目録.印.get(名) !== 印) 外れ.push(名 + '(目録と 指紋が 違う)');
-      }
-    };
-    歩く(束の根, '');
-    const 証明 = (目録 && 外れ.length === 0) ? '目録' : null;
+/* ★pull が 書く物の 名前で 在った物(27.64)*/
+/* ★正本は 書き手.cjs に 1本 */
+/* ★目録は 自分を 数えない */
+/* ★★★配る側が【走行が 作る物】と 宣言した物は 照らさない(27.61、@guardian が 公開物で 再現)。
+       *   ★pull は 受領証(.guardian/pulled.json)を 束の中に 書く ── 配る時には 無い。
+       *   ★★照らすと【pull で 入れた現場は 永久に --束も が 使えない】に なる。
+       *   ★★★断り文は「取り直して 入れ直せ」と 言うが、取り直す = pull = また 受領証 ── 出口の 無い 輪。 */
+/* ★★★【証明できないなら 通さない】(27.64、@codex 07:03)。
+       *
+       *   ★27.61: 名前が 合えば 通した → ★★人の物を 巻き込む
+       *   ★★27.63: 中身の形(sha / 正本 / at)まで 見た → ★★★@codex:
+       *     「形を 検証しても、そのファイルを pull 自身が 作った事実は 証明できません。
+       *      ★install 前から 同じ schema の 利用者ファイルが 偶然または 模倣で 在れば
+       *      『本物の形』と 判定され、束ごと 消えます」── ★★その通り。
+       *
+       *   ★★★束の【中】に 在る物だけを 見て「誰が 書いたか」は 証明できない。
+       *   ★だから 通さない ── ★★但し【輪に しない】:
+       *   ★★★「これは pull が 書く物の 名前です。あなたの物でなければ 消してから
+       *   もう一度 打てば、束を 外せます」と 出口を 名指しで 出す。
+       *   ★= 証明できない事を 認めた上で、人が 決められる 形に する。 */
+/* ★★★【走行が作る】の 例外は 27.69 で 外した ──
+       *   ★受領証を 束の外へ 出したので、束の中に【配る時に 無い物】は 生まれない。
+       *   ★★例外が 無い = ★★★人の物と 見間違える余地も 無い。 */
+    /* ★走査は 束を照らす() に 1つ(27.81)── ★★導入の 時と 再登録の 時で 同じ物を 使う。 */
+    const { 目録, 項, 外れ, 証明 } = 束を照らす(束の根);
     書き手.書く(ROOT, '.guardian/束の控え.json',
       JSON.stringify({ 束: KIT, 時刻: new Date().toISOString(), 証明,
         目録の版: 目録 ? 目録.版 : null, 外れ: 外れ.slice(0, 20), 項 }, null, 1) + String.fromCharCode(10),
