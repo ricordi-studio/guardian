@@ -222,6 +222,7 @@ const ROOT = (() => {
 
 /* ★mode から取る(2026-09-03)── ★★includes を各所で見ると、mode の判断と食い違う */
 const 実行 = (選ばれたmode === '外す');
+const 束も消す = process.argv.includes('--束も');   /* ★下の【壊す前の 検め】が 見る(27.83)*/
 
 /* ★schema の綴りは【1箇所】(24.7、2026-09-03、会議で @kozo が見つけた)。
  *   ★★直す前は 同じ文字列が【隣の行】に2つ在った(schema と 版/形)。
@@ -283,6 +284,32 @@ const 束の控え = (() => {
     return { 束: j.束, 時刻: j.時刻, 証明: j.証明 || null, 外れ: j.外れ || [], 印: m };
   } catch (_) { return null; }
 })();
+
+/* ★★★束が【入れた時の 姿】と 違わないかを 数える(27.83 で 関数に した)。
+ *   ★同じ数え方を【消す前の 検め】と【消す時】の 両方が 使う ── ★★2つ 持たない。 */
+function 束の食い違い(束の道) {
+  const 食い違い = [];
+  if (!束の控え) return 食い違い;
+  const 見た = new Set();
+  const 歩く = (d, 親) => {
+    let es = []; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch (_) { return; }
+    for (const x of es) {
+      if (x.name === '.git' || x.name === 'node_modules') continue;
+      const 名 = 親 ? 親 + '/' + x.name : x.name;
+      if (x.isSymbolicLink()) { 食い違い.push(名 + '(近道)'); 見た.add(名); continue; }
+      if (x.isDirectory()) { 歩く(path.join(d, x.name), 名); continue; }
+      見た.add(名);
+      if (!束の控え.印.has(名)) { 食い違い.push(名 + '(入れた時に 無かった)'); continue; }
+      let 中 = null; try { 中 = fs.readFileSync(path.join(d, x.name)); } catch (_) {}
+      const 今 = 中 == null ? '読めない' : 書き手.均した指紋(中);
+      if (今 !== 束の控え.印.get(名)) 食い違い.push(名 + '(入れた時から 変わっている)');
+    }
+  };
+  歩く(束の道, '');
+  for (const rel of 束の控え.印.keys()) if (!見た.has(rel)) 食い違い.push(rel + '(もう 在りません)');
+  return 食い違い;
+}
+
 
 /* ★道は 書き手.cjs が正本(2026-09-03、会議で @kozo が「写しが5箇所」と数えた) */
 const 台帳の道 = 書き手.台帳の道(ROOT);
@@ -1075,6 +1102,39 @@ if (身元の判定 !== '一致') {
   console.log('      ★★束が 目録と 1点も 違わず、台帳が 記した物も 全部 揃っている時だけ 発行します');
   console.log('    ・★人の物を 消したくない時は、そのまま 触らないでください');
   process.exit(2);
+}
+
+/* ★★★--束も を 頼まれたら、【壊す前に】所有を 検める(27.83、@guardian 14:53 の 実測)。
+ *
+ *   ★実測(公開 27.82):束を 1 byte 変えて --外す --束も を 打つと ──
+ *     ・束は 消さない(正しい)。★★だが 現場の 7件は もう 消えた後だった。
+ *     ・= ★★★門が 落ちる前に 壊し始めている。
+ *   ★人が 頼んだのは【全部 外す】── ★★半分だけ 進んで「出来ません」は、
+ *     ★★★取り返しの つかない側だけ 実行した事に なる。
+ *   ★だから 所有の 証明は【1件も 消す前】に 見る。★★駄目なら 何も せずに 止まる。
+ *   ★★★束を 消さずに 現場側だけ 外したい人は、--束も を 外して 打てる(そう 案内する)。 */
+if (実行 && 束も消す) {
+  const 束の名 = path.relative(ROOT, path.resolve(HERE)).split(path.sep).join('/');
+  const 訳 = !束の控え ? '束の控え(.guardian/束の控え.json)が 在りません'
+    : 束の控え.証明 !== '目録' ? '束が【配る側の 目録】と 照合できていません'
+      + (束の控え.外れ.length ? '(' + 束の控え.外れ.slice(0, 5).join(' / ') + ')' : '(目録が 束に 在りません)')
+      : (() => { const c = 束の食い違い(path.join(ROOT, 束の名)); return c.length ? '束が【入れた時の 姿】と ' + c.length + '件 違います: ' + c.slice(0, 5).join(' / ') : null; })();
+  if (訳) {
+    if (JSONで出す) {
+      本当のlog(JSON.stringify({
+        mode: 選ばれたmode, schema: SCHEMA下見, 判定: 'UNKNOWN',
+        理由: '束の所有を 証明できません', 現場: ROOT, 束: 束の名,
+        消した物: [], 詳しく: 訳 + ' ── 何も変更していません。',
+      }, null, 1));
+      process.exit(1);
+    }
+    console.log('✗ --束も は 実行できません ── ' + 訳);
+    console.log('  ★★何も変更していません(★1件も 消していません)。');
+    console.log('  ★★★所有を 証明できない 束を 消すと、あなたの物を 巻き込みます。');
+    console.log('  ・束を 残したまま【現場側だけ】外すなら:--束も を 外して 打ってください');
+    console.log('  ・束の中を 見て、道具の物だと 確かめられたら:束の【外】へ 退避してから 入れ直す');
+    process.exit(1);
+  }
 }
 
 /* ---------- ①' 保持一覧(塊の既定 ∪ 現場の追加)── 2026-09-03、会議で @kozo と @codex が寄せた ----------
@@ -2161,8 +2221,8 @@ if (判定 === 'CONFLICT') {
 }
 
 /* ★束は【どの判定でも】言う ── ★★消さないのは 設計(フォルダごと消すのは 人の手)。
- *   ★★★言わないと「残滓ゼロ」が【何の ゼロか】決まらない ── @kozo:「紙が どちらの意味かを 決めていない」。 */
-const 束も消す = process.argv.includes('--束も');
+ *   ★★★言わないと「残滓ゼロ」が【何の ゼロか】決まらない ── @kozo:「紙が どちらの意味かを 決めていない」。
+ *   ★宣言は 上へ 出した(27.83)── ★★【壊す前の 検め】が この口を 見るため。 */
 let 束を消した = false;   /* ★頼まれた事を したか(27.58、@codex 04:30)*/
 if (残る束.length) {
   console.log('  ★【塊の束】が ' + 残る束.length + '件 残っています(' + 束の点 + '点)'
@@ -2201,28 +2261,7 @@ if (残る束.length) {
        *   ★名前では 照らせない(塊の宣言は 直下の名前しか 持たない)。
        *   ★★だから install が 入れた時に 控えた【相対の道 × 指紋】と 突き合わせる。
        *   ★★★控えが 無い / 1つでも 食い違う → 消さない。 */
-      const 食い違い = [];
-      if (束の控え) {
-        const 見た = new Set();
-        const 歩く = (d, 親) => {
-          let es = []; try { es = fs.readdirSync(d, { withFileTypes: true }); } catch (_) { return; }
-          for (const x of es) {
-            if (x.name === '.git' || x.name === 'node_modules') continue;
-            const 名 = 親 ? 親 + '/' + x.name : x.name;
-            if (x.isSymbolicLink()) { 食い違い.push(名 + '(近道)'); 見た.add(名); continue; }
-            if (x.isDirectory()) { 歩く(path.join(d, x.name), 名); continue; }
-            見た.add(名);
-            if (!束の控え.印.has(名)) { 食い違い.push(名 + '(入れた時に 無かった)'); continue; }
-            let 中 = null; try { 中 = fs.readFileSync(path.join(d, x.name)); } catch (_) {}
-            /* ★install と【同じ口】で 数える(27.59)── ★★別々に 数えると 必ず ずれる。
-             *   ★★★実測: ここが 書き手.指紋(生) だった時、改行だけで 19件が『変わっている』と 出た。 */
-            const 今 = 中 == null ? '読めない' : 書き手.均した指紋(中);
-            if (今 !== 束の控え.印.get(名)) 食い違い.push(名 + '(入れた時から 変わっている)');
-          }
-        };
-        歩く(path.join(ROOT, 残る束[0].名), '');
-        for (const rel of 束の控え.印.keys()) if (!見た.has(rel)) 食い違い.push(rel + '(もう 在りません)');
-      }
+      const 食い違い = 束の食い違い(path.join(ROOT, 残る束[0].名));
       /* ★★★所有は【配る側の 目録】で 証明する(27.59、依頼主「完成させて」)。
        *   ★控えの 証明が '目録' でなければ、★★install が 束を 目録と 照らせていない ──
        *   ★★★= 束の中の どれが あなたの物かを 言えない。★消さない。 */
