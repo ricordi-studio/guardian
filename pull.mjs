@@ -586,6 +586,20 @@ function 受領証を書く() {
       JSON.stringify({ sha: 取得SHA, 正本, at: new Date().toISOString() }, null, 1) + String.fromCharCode(10));
     fs.renameSync(受領証の先 + ".tmp", 受領証の先);
     try { fs.rmSync(受領証の先 + ".updating", { force: true }); } catch (_) {}
+    /* ★★★受領証を【台帳に 載せる】(27.70、2026-09-05)。
+     *
+     *   ★27.69 で 受領証を 現場の根へ 出したが、★★台帳に 載せていなかった ──
+     *   ★★★外す側が「塊が書き込む場所に 在るのに、台帳にも 保持一覧にも 無い」で
+     *   判定を UNKNOWN に し、--束も が 止まった(★実測: 公開 27.69)。
+     *
+     *   ★= 置き場を 変えたら【誰の物かを 名乗る所】も 一緒に 動かす必要が 在った。
+     *   ★★書き込みは 原子的に 済ませたいので writeFileSync のままにし、
+     *   ★★★載せるだけを 共通の口(書き手.登録)に 通す。 */
+    try {
+      const 根 = path.dirname(受領証の置き場);
+      const w = __cr2('./書き手.cjs');
+      if (path.resolve(根) !== path.resolve(HERE)) w.登録(根, '.guardian/pulled.json', 'pull.mjs', w.走行中の種類[0]);
+    } catch (_) { /* ★載せられなくても 取り直しは 止めない ── ★★外す側が UNKNOWN で 言う */ }
   } catch (e) {
     受領証が書けなかった = true;
     console.log("★受領証が書けませんでした: " + String(e && e.message).slice(0, 160));
