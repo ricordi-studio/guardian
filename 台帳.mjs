@@ -112,7 +112,15 @@ export function 台帳を作る({ 塊の版, TARGET, BUNDLE }) {
       /* ★根そのものは書かない ── 現場の絶対路は、配る物に混ぜない(この塊の掟) */
       /* ★根の身元は【最後の 導入】の 物を 持つ(27.79)── ★★入れ直せば 更新される。
        *   ★★★これが 撤去側の 身元照合の 相手。 */
-      const 中 = { 台帳の版, 根の身元: 根の身元(TARGET), 束の相対: path.relative(TARGET, BUNDLE).split(path.sep).join('/'), 走行 };
+      /* ★★★身元は【新しい台帳を 作る時だけ】発行する(27.82、@codex 14:06)。
+       *   ★ふつうの install が 毎回 発行すると ── ★★現場ごと copy した先で install を 打つだけで
+       *   ★★★所有を 後付けできる。★= 引き受けは【明示の 口】だけ:install --現場を再登録。
+       *   ★★前の台帳に 身元が 無ければ 無いまま(★足さない)── 撤去側は そこで 止まる。 */
+      const 前の身元 = 前 && 前.根の身元;
+      const 中 = { 台帳の版: 前 ? (前.台帳の版 || 台帳の版) : 台帳の版,
+        根の身元: 前 ? (前の身元 || null) : 根の身元(TARGET),
+        束の相対: path.relative(TARGET, BUNDLE).split(path.sep).join('/'), 走行 };
+      if (中.根の身元 == null) delete 中.根の身元;
       fs.mkdirSync(path.dirname(先), { recursive: true });
       fs.writeFileSync(先, JSON.stringify(中, null, 1) + String.fromCharCode(10));
       return 先;

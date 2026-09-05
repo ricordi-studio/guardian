@@ -155,6 +155,102 @@ const ROOT = (() => {
 })();
 console.log('★入れる先(現場): ' + ROOT);   // ★書く前に 見せる(@codex 11:44 の ②)
 
+/* ★★★入れる前に【身元が 食い違っていないか】を 見る(27.82、@codex 14:06)。
+ *   ★ふつうの install は 引き受け(adoption)を しない ── ★★引き受けは --現場を再登録 だけ。
+ *   ★★★台帳が 別の現場の 物なら、何も 書かずに 断る(★書いてから 気づいても 遅い)。 */
+if (!process.argv.includes('--現場を再登録') && 根の身元) {
+  try {
+    const 台 = JSON.parse(fs.readFileSync(書き手.台帳の道(ROOT), 'utf8'));
+    const 前 = 台 && 台.根の身元;
+    if (前 && 前.取れた) {
+      const いま = 根の身元(ROOT);
+      if (!いま.取れた || String(前.dev) !== String(いま.dev) || String(前.ino) !== String(いま.ino)) {
+        console.error('✗ この現場の 台帳は【別の 現場】の 物です');
+        console.error('  ★台帳が 覚えている 身元と、いま ここの 身元が 違います');
+        console.error('    (copy された / 別の volume へ 移された / 作り直された の どれかです)');
+        console.error('  ★★何も 書いていません。');
+        console.error('  ★★★引き受けるなら、消さない 専用の 口を 打ってください:');
+        console.error('      node <束>/install.mjs --現場を再登録');
+        process.exit(1);
+      }
+    }
+  } catch (_) { /* ★台帳が 無い・読めない時は ふつうの 導入(★★読めない台帳は 台帳.mjs が 断る)*/ }
+}
+
+if (process.argv.includes('--現場を再登録')) {
+  const 台帳の道 = 書き手.台帳の道(ROOT);   /* ★綴りは 書き手.cjs に 1つ(27.81)*/
+  const 止める = (訳, 出口) => { console.error('✗ 再登録しません ── ' + 訳); console.error('  ★何も 変えていません。'); process.exit(出口); };
+  let 生 = null;
+  try { 生 = fs.readFileSync(台帳の道, 'utf8'); } catch (e) { 止める('この現場に 台帳が 在りません(' + ((e && e.code) || '?') + '): ' + 台帳の道, 2); }
+  let 台 = null;
+  try { 台 = JSON.parse(生); } catch (_) { 止める('台帳が JSON として 読めません(中身は 出しません): ' + 台帳の道, 2); }
+  if (!台 || !Array.isArray(台.走行)) 止める('台帳の 形が 違います(走行 が 配列では ありません)', 2);
+  const 照 = 束を照らす(path.join(ROOT, KIT));
+  if (照.証明 !== '目録') 止める('束が【配る側の 目録】と 合いません(' + (照.目録 ? 照.外れ.slice(0, 5).join(' / ') : '目録.json が 在りません') + ')', 1);
+  const 欠け = [];
+  /* ★型も 見る(27.82、@codex 14:06:「在るだけでは 足りない ── type・bytes が 一致する事」)。 */
+  for (const 走 of 台.走行) for (const x of (走.項 || [])) {
+    if (!x || !x.作った || x.rootKind !== 'TARGET') continue;
+    const 道 = path.join(ROOT, x.rel);
+    let st = null; try { st = fs.lstatSync(道); } catch (_) {}
+    if (!st) { 欠け.push(x.rel + '(在りません)'); continue; }
+    if (st.isSymbolicLink()) { 欠け.push(x.rel + '(近道に なっています)'); continue; }
+    if (x.種類 === 'フォルダ') { if (!st.isDirectory()) 欠け.push(x.rel + '(フォルダでは ありません)'); continue; }
+    /* ★区間(人の紙の 中に 置いた 節)は【印が 揃っているか】を 見る(27.82)。
+     *   ★★節の【外】を 人が 書き換えるのは 正しい ── ★★★そこを 咎めると、
+     *   区間という 形の 意味が 無くなる(外は 触らない、が 約束)。 */
+    if (x.種類 === '区間') {
+      let 中 = null; try { 中 = fs.readFileSync(道, 'utf8'); } catch (_) {}
+      if (中 == null) { 欠け.push(x.rel + '(読めません)'); continue; }
+      if (中.indexOf('guardian:begin') < 0 || 中.indexOf('guardian:end') < 0) 欠け.push(x.rel + '(区間の 印が 在りません)');
+      continue;
+    }
+    if (x.種類 !== 'ファイル') continue;
+    if (!st.isFile()) { 欠け.push(x.rel + '(ファイルでは ありません)'); continue; }
+    if (!x.hash) continue;
+    let 中 = null; try { 中 = fs.readFileSync(道, 'utf8'); } catch (_) {}
+    if (中 == null) { 欠け.push(x.rel + '(読めません)'); continue; }
+    if (書き手.指紋(中) !== x.hash) 欠け.push(x.rel + '(変わっています)');
+  }
+  if (欠け.length) 止める('台帳が 記した物が ' + 欠け.length + '件 合いません: ' + 欠け.slice(0, 5).join(' / '), 1);
+  const いま = 根の身元 ? 根の身元(ROOT) : { 取れた: false, 訳: '台帳.mjs が 読めません' };
+  if (!いま.取れた) 止める('この現場の 身元が 取れません(' + (いま.訳 || '?') + ')── ★推測で 発行しません', 2);
+  if (DRY) {
+    console.log('★下見(--dry)── ★★書いていません。');
+    console.log('  ★現場: ' + ROOT + ' / 束: ' + KIT + '(目録と 一致)');
+    console.log('  ★★台帳が 記した物 …… 合わない物 0件');
+    console.log('  ★★★発行する 身元: dev ' + いま.dev + ' / ino ' + いま.ino);
+    process.exit(0);
+  }
+  /* ★控えは【書き手を 通す】(27.81)── ★★台帳に 載せる。
+   *   ★★★載せないと『塊が書き込む場所に 在って 台帳にも 無い物』に なり、
+   *   次の 撤去が UNKNOWN で 止まる(★実測 13:35 ── 私は 同じ形を 隔離でも 踏んだ)。
+   *   ★= これは【道具が 作った 道具の 物】なので、撤去で 消えるのが 正しい。 */
+  const 印 = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14) + '-' + randomUUID().slice(0, 8);
+  const 控えの相対 = '.guardian/導入台帳.' + 印 + '.json';
+  const 控え = path.join(ROOT, 控えの相対);
+  if (fs.existsSync(控え)) 止める('控えの 名が 既に 在ります(★上書きしません): ' + 控えの相対, 1);
+  try { 書き手.書く(ROOT, 控えの相対, fs.readFileSync(台帳の道), 'install.mjs'); }
+  catch (e) { 止める('旧台帳の 控えが 書けません(' + ((e && e.code) || '?') + ')', 1); }
+  /* ★控えを 書くと、書き手が【台帳に 1行 足す】── ★★だから 読み直してから 書く(27.81)。
+   *   ★★★読み直さずに 書くと、足された 1行を 自分で 消す ── 実測 13:43:
+   *   控えが 台帳に 載らず、次の 撤去が「誰の物か 分かりません」で UNKNOWN に なった。
+   *   ★= 今日 何度も 出た形(出す側を 変えて、読む側を 忘れる)の もう1つ。 */
+  try { 台 = JSON.parse(fs.readFileSync(台帳の道, 'utf8')); }
+  catch (_) { 止める('控えを 書いた後、台帳が 読めなくなりました', 1); }
+  台.台帳の版 = 2;
+  台.根の身元 = いま;
+  台.導入ID = randomUUID();
+  台.束の相対 = KIT;
+  fs.writeFileSync(台帳の道, JSON.stringify(台, null, 1) + String.fromCharCode(10));
+  console.log('★この現場を 再登録しました(★★消していません・上書きしていません)');
+  console.log('  ★旧台帳の 控え: ' + 控えの相対 + '(byte の まま ── ★★台帳に 載せました)');
+  console.log('  ★★身元: dev ' + いま.dev + ' / ino ' + いま.ino + ' / 導入ID ' + 台.導入ID);
+  console.log('  ★★★これで --外す が 使えます ── ★但し 同じ走行では 続けません(別に 打ってください)');
+  process.exit(0);
+}
+
+
 /* ★所有台帳 ── 置いた物を【根の種類・相対名・指紋・書き手】で記録する(2026-09-03)。
  *   ★★外すとき、名前ではなく【どの根から書いたか】で持ち主を決めるため。
  *   ★★★台帳に載っていない物は【残す】(allowlist)── 人が手で書いた物は、ここを通らないので。 */
@@ -988,61 +1084,6 @@ function 束を照らす(束の根) {
  *     ③ 台帳が 記した物が 消えている / 変わっていたら 発行しない
  *     ④ 身元は realpath した 現場の bigint dev/ino、導入ID は 新しく 作る
  *     ⑤ 旧台帳は byte の まま 控えを 取る(★再登録と 撤去を 同じ走行で 続けない) */
-if (process.argv.includes('--現場を再登録')) {
-  const 台帳の道 = 書き手.台帳の道(ROOT);   /* ★綴りは 書き手.cjs に 1つ(27.81)*/
-  const 止める = (訳, 出口) => { console.error('✗ 再登録しません ── ' + 訳); console.error('  ★何も 変えていません。'); process.exit(出口); };
-  let 生 = null;
-  try { 生 = fs.readFileSync(台帳の道, 'utf8'); } catch (e) { 止める('この現場に 台帳が 在りません(' + ((e && e.code) || '?') + '): ' + 台帳の道, 2); }
-  let 台 = null;
-  try { 台 = JSON.parse(生); } catch (_) { 止める('台帳が JSON として 読めません(中身は 出しません): ' + 台帳の道, 2); }
-  if (!台 || !Array.isArray(台.走行)) 止める('台帳の 形が 違います(走行 が 配列では ありません)', 2);
-  const 照 = 束を照らす(path.join(ROOT, KIT));
-  if (照.証明 !== '目録') 止める('束が【配る側の 目録】と 合いません(' + (照.目録 ? 照.外れ.slice(0, 5).join(' / ') : '目録.json が 在りません') + ')', 1);
-  const 欠け = [];
-  for (const 走 of 台.走行) for (const x of (走.項 || [])) {
-    if (!x || !x.作った || x.rootKind !== 'TARGET' || x.種類 !== 'ファイル' || !x.hash) continue;
-    const 道 = path.join(ROOT, x.rel);
-    let 中 = null; try { 中 = fs.readFileSync(道, 'utf8'); } catch (_) {}
-    if (中 == null) { 欠け.push(x.rel + '(在りません)'); continue; }
-    if (書き手.指紋(中) !== x.hash) 欠け.push(x.rel + '(変わっています)');
-  }
-  if (欠け.length) 止める('台帳が 記した物が ' + 欠け.length + '件 合いません: ' + 欠け.slice(0, 5).join(' / '), 1);
-  const いま = 根の身元 ? 根の身元(ROOT) : { 取れた: false, 訳: '台帳.mjs が 読めません' };
-  if (!いま.取れた) 止める('この現場の 身元が 取れません(' + (いま.訳 || '?') + ')── ★推測で 発行しません', 2);
-  if (DRY) {
-    console.log('★下見(--dry)── ★★書いていません。');
-    console.log('  ★現場: ' + ROOT + ' / 束: ' + KIT + '(目録と 一致)');
-    console.log('  ★★台帳が 記した物 …… 合わない物 0件');
-    console.log('  ★★★発行する 身元: dev ' + いま.dev + ' / ino ' + いま.ino);
-    process.exit(0);
-  }
-  /* ★控えは【書き手を 通す】(27.81)── ★★台帳に 載せる。
-   *   ★★★載せないと『塊が書き込む場所に 在って 台帳にも 無い物』に なり、
-   *   次の 撤去が UNKNOWN で 止まる(★実測 13:35 ── 私は 同じ形を 隔離でも 踏んだ)。
-   *   ★= これは【道具が 作った 道具の 物】なので、撤去で 消えるのが 正しい。 */
-  const 印 = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14) + '-' + randomUUID().slice(0, 8);
-  const 控えの相対 = '.guardian/導入台帳.' + 印 + '.json';
-  const 控え = path.join(ROOT, 控えの相対);
-  if (fs.existsSync(控え)) 止める('控えの 名が 既に 在ります(★上書きしません): ' + 控えの相対, 1);
-  try { 書き手.書く(ROOT, 控えの相対, fs.readFileSync(台帳の道), 'install.mjs'); }
-  catch (e) { 止める('旧台帳の 控えが 書けません(' + ((e && e.code) || '?') + ')', 1); }
-  /* ★控えを 書くと、書き手が【台帳に 1行 足す】── ★★だから 読み直してから 書く(27.81)。
-   *   ★★★読み直さずに 書くと、足された 1行を 自分で 消す ── 実測 13:43:
-   *   控えが 台帳に 載らず、次の 撤去が「誰の物か 分かりません」で UNKNOWN に なった。
-   *   ★= 今日 何度も 出た形(出す側を 変えて、読む側を 忘れる)の もう1つ。 */
-  try { 台 = JSON.parse(fs.readFileSync(台帳の道, 'utf8')); }
-  catch (_) { 止める('控えを 書いた後、台帳が 読めなくなりました', 1); }
-  台.台帳の版 = 2;
-  台.根の身元 = いま;
-  台.導入ID = randomUUID();
-  台.束の相対 = KIT;
-  fs.writeFileSync(台帳の道, JSON.stringify(台, null, 1) + String.fromCharCode(10));
-  console.log('★この現場を 再登録しました(★★消していません・上書きしていません)');
-  console.log('  ★旧台帳の 控え: ' + 控えの相対 + '(byte の まま ── ★★台帳に 載せました)');
-  console.log('  ★★身元: dev ' + いま.dev + ' / ino ' + いま.ino + ' / 導入ID ' + 台.導入ID);
-  console.log('  ★★★これで --外す が 使えます ── ★但し 同じ走行では 続けません(別に 打ってください)');
-  process.exit(0);
-}
 
 if (!DRY) {
   try {

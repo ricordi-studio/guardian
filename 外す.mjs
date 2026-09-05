@@ -975,16 +975,16 @@ const 台帳の診断 = { status: 'missing', code: 'ENOENT', path: 台帳の道,
        *     ・120字で 切っても 意味が 無い ── ★引用は 12字ほどで、切る前に 済んでいる。
        *   ★★だから【道具が 作った 決まり文】だけを 出し、位置は 数で 出す。
        *     ・★★★入力の 断片は 1文字も 通さない(数字だけを 取り出す)。 */
-      const 生訳 = String(e && e.message);
-      const 数を取る = (名) => { const m = new RegExp(名 + ' ([0-9]+)').exec(生訳); return m ? Number(m[1]) : null; };
+      /* ★位置(position / line / column)は【出しません】(27.82、@codex 14:06)。
+       *   ★★取れるのは V8 の 可変文からの 抜き出しだけ ── ★★★版や 言語で 誤った数に なる。
+       *   ★正しくない位置を 出すより、位置不明の 方が 安全(@codex)。
+       *   ★★構造で 位置を 返す parser が 来たら、その時に 足す。 */
       台帳の訳 = 'invalid:JSON として 読めません';
       台帳の診断.status = 'invalid';
       台帳の診断.code = 'JSON_PARSE_ERROR';
       台帳の診断.message = '台帳が JSON として 読めません(中身は 出しません)';
       台帳の診断.messageTruncated = false;
-      台帳の診断.位置 = 数を取る('position');
-      台帳の診断.行 = 数を取る('line');
-      台帳の診断.列 = 数を取る('column');
+      /* ★位置の 欄は 置きません(上の 注釈)*/
     }
   }
 }
@@ -1017,10 +1017,7 @@ if (!台帳 || !Array.isArray(台帳.走行)) {
   /* ★ここも 固定文だけ(27.80)── ★★台帳の 中身は 1文字も 出さない。 */
   if (台帳の診断.status === 'invalid') {
     console.log('    (' + 台帳の診断.message + ')');
-    const 場所 = [台帳の診断.行 != null ? '行 ' + 台帳の診断.行 : null,
-      台帳の診断.列 != null ? '列 ' + 台帳の診断.列 : null,
-      台帳の診断.位置 != null ? '位置 ' + 台帳の診断.位置 : null].filter(Boolean).join(' / ');
-    if (場所) console.log('    (壊れている所: ' + 場所 + ')');
+
   }
   console.log('  ★★いま 居る場所【そのもの】を 現場として 調べました ── ★★★上へは 探しません。');
   console.log('    ・別の現場を 外すなら:--現場 <道> を 付けるか、その現場の 根で 打ってください');
