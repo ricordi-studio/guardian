@@ -949,7 +949,8 @@ const 台帳の診断 = { status: 'missing', code: 'ENOENT', path: 台帳の道,
     台帳の訳 = (c === 'ENOENT') ? 'missing' : 'unreadable:' + c;
     台帳の診断.status = (c === 'ENOENT') ? 'missing' : 'unreadable';
     台帳の診断.code = c;
-    台帳の診断.message = String(e && e.message).split(String.fromCharCode(10)).join(' ');
+    /* ★ここも 生の 例外文は 出さない(27.80)── ★★code は 出す(EPERM 等は 対処に 要る)。 */
+    台帳の診断.message = '台帳を 開けませんでした(' + c + ')';
   }
   if (生 !== null) {
     try {
@@ -965,13 +966,25 @@ const 台帳の診断 = { status: 'missing', code: 'ENOENT', path: 台帳の道,
      *     invalid:Expected property name or '}' in JSON at position 2 (line 1 ── 
      *   ★★★人は 読めるが、機械で 割る時に【途中で 終わった】と 分からない。 */
     catch (e) {
-      const 生訳 = String(e && e.message).split(String.fromCharCode(10)).join(' ');
-      const 切った = 生訳.length > 120;
-      台帳の訳 = 'invalid:' + (切った ? 生訳.slice(0, 120) + '…(以下 略)' : 生訳);
+      /* ★★★生の 例外文を【出さない】(27.80、2026-09-05、@codex 12:58 / @guardian 13:00 の 実測)。
+       *
+       *   ★27.79 までは err.message を そのまま 出していた。
+       *     ・★★Node は 壊れた入力の 頭を【自分で 引用する】:
+       *       Unexpected token 'S', "SEKRET-ヒミツ"... is not valid JSON
+       *     ・= ★★★台帳の 中身が stdout に 出る ── 人の口にも 機械の口にも。
+       *     ・120字で 切っても 意味が 無い ── ★引用は 12字ほどで、切る前に 済んでいる。
+       *   ★★だから【道具が 作った 決まり文】だけを 出し、位置は 数で 出す。
+       *     ・★★★入力の 断片は 1文字も 通さない(数字だけを 取り出す)。 */
+      const 生訳 = String(e && e.message);
+      const 数を取る = (名) => { const m = new RegExp(名 + ' ([0-9]+)').exec(生訳); return m ? Number(m[1]) : null; };
+      台帳の訳 = 'invalid:JSON として 読めません';
       台帳の診断.status = 'invalid';
       台帳の診断.code = 'JSON_PARSE_ERROR';
-      台帳の診断.message = 切った ? 生訳.slice(0, 120) + '…' : 生訳;
-      台帳の診断.messageTruncated = 切った;
+      台帳の診断.message = '台帳が JSON として 読めません(中身は 出しません)';
+      台帳の診断.messageTruncated = false;
+      台帳の診断.位置 = 数を取る('position');
+      台帳の診断.行 = 数を取る('line');
+      台帳の診断.列 = 数を取る('column');
     }
   }
 }
@@ -1001,7 +1014,14 @@ if (!台帳 || !Array.isArray(台帳.走行)) {
   console.log('  ★選んだ現場: ' + ROOT);
   console.log('  ★探した台帳: ' + 台帳の道);
   console.log('  ★★何も変更していません。');
-  if (台帳の訳.indexOf('invalid') === 0) console.log('    (' + 台帳の訳.slice(8) + ')');
+  /* ★ここも 固定文だけ(27.80)── ★★台帳の 中身は 1文字も 出さない。 */
+  if (台帳の診断.status === 'invalid') {
+    console.log('    (' + 台帳の診断.message + ')');
+    const 場所 = [台帳の診断.行 != null ? '行 ' + 台帳の診断.行 : null,
+      台帳の診断.列 != null ? '列 ' + 台帳の診断.列 : null,
+      台帳の診断.位置 != null ? '位置 ' + 台帳の診断.位置 : null].filter(Boolean).join(' / ');
+    if (場所) console.log('    (壊れている所: ' + 場所 + ')');
+  }
   console.log('  ★★いま 居る場所【そのもの】を 現場として 調べました ── ★★★上へは 探しません。');
   console.log('    ・別の現場を 外すなら:--現場 <道> を 付けるか、その現場の 根で 打ってください');
   if (台帳の訳 === 'missing') {
