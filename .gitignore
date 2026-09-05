@@ -14,6 +14,9 @@ talk/turn
 .guardian/audit_at
 .guardian/coverage
 .guardian/neighbors.answer.json
+# ★落とす前の 控え(27.71)── ★★この機械の 走った跡
+#   ★★★行末の # は【注釈に ならない】── 道の一部として 読まれる(2026-09-05、踏んだ)
+.guardian/neighbors.answer.*.json
 .guardian/neighbors.escaped.json
 .guardian/neighbors.need.json
 .guardian/予想.json

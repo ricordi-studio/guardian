@@ -1177,19 +1177,34 @@ if (!GATE) {
     else if (前.印 === いま) draft[x.key] = 前;
     else draft[x.key] = { 判定: '', 理由: 前.理由 || '', 印: いま };
   }
-  /* ★近傍から外れた回答は【名前を出してから】落とす(黙って消さない)。
-   *   差分が縮むと近傍も縮むので、前に書いた理由が音も無く消える経路がここに在った。 */
+  /* ★落ちる回答は【控えを 書いてから】名前を 出す(27.71 ── @guardian 10:56 の 実測)。
+   *   ★★前の文は「git から戻してください」と 案内していた。
+   *   だが .guardian/ は .gitignore が 弾く ── ★★★この紙は 一度も git に 入っていない。
+   *   = 出来ない事を 出来ると 言っていた。案内は【自分が 作った控え】だけを 指す。
+   * ★控えを 書けなかったら 落とさない(止める)── 消えた物は 戻せない。 */
   const 外れた = Object.keys(prev).filter((k) => !(k in draft) && (prev[k].判定 || prev[k].理由));
+  const 戻した = 一覧.filter((x) => prev[x.key] && prev[x.key].判定 && !draft[x.key].判定);
+  let 控えの道 = '';
+  if (外れた.length || 戻した.length) {
+    控えの道 = ANSWER_PATH.replace(/.json$/, '') + '.' + new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14) + '.json';
+    try { 書き出す(控えの道, 生); }
+    catch (e) {
+      console.log('✗ 控えが 書けません: ' + 控えの道);
+      console.log('    ' + String(e.message).slice(0, 160));
+      console.log('  ★下書きを 作らずに 止めます ── 控え無しで 落とすと、書いた理由が 戻せません。');
+      process.exit(2);
+    }
+  }
   if (外れた.length) {
     console.log('この回の近傍から外れた回答 ' + 外れた.length + '件(下書きからは落とします): ' + 外れた.join(', '));
-    console.log('  ※まだ必要なら、この --list を回す前の版を git から戻してください');
+    console.log('  ★落とす前の 全文は ここに 在ります: ' + 控えの道);
   }
   /* ★どれを空に戻したかを言う(黙って戻すと、埋めたはずの判定が消えたように見える) */
-  const 戻した = 一覧.filter((x) => prev[x.key] && prev[x.key].判定 && !draft[x.key].判定);
   if (戻した.length) {
     console.log('★別の変更に対する回答だったので、判定を ' + 戻した.length + '件 空に戻しました'
       + '(**理由は残してあります** ── 読み直して、判定を入れ直してください):');
     for (const x of 戻した) console.log('  ・' + x.記号 + ' @' + x.場所 + '(根「' + x.根 + '」が、答えたときと違う中身になっています)');
+    console.log('  ★空に戻す前の 全文は ここに 在ります: ' + 控えの道);
   }
   書き出す(NEED_PATH, JSON.stringify({ range, need: 一覧 }, null, 1));
   書き出す(ANSWER_PATH, JSON.stringify({ range, answers: draft }, null, 1));

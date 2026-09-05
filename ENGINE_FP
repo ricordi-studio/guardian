@@ -1,13 +1,13 @@
-27.70
+27.71
 AUTHORS ayh30t-294
 CONTRIBUTING.md h64xvo-1202
 LICENSE hd5n6m-34523
 METHOD.md 1kv4bye-22912
 NOTICE 1ciw0fb-702
 PROTOCOL.json 1tyeirq-344
-README.md 19j6uks-10494
+README.md gu9fy2-10564
 RULES.md t55p66-12134
-SPEC.md ut78xi-21232
+SPEC.md 1lt928s-21507
 audit.md s1728l-2740
 check.mjs s7d2e7-59904
 githooks/pre-commit 1y3b1ae-2062
@@ -20,17 +20,17 @@ hooks/stop.js 13ad4ih-13089
 hunch.md ukokyc-2956
 index.mjs 1lil88u-6731
 install.md a9q5zm-4942
-install.mjs ehguds-45837
-neighbors.mjs 16b7g8p-53886
+install.mjs 7sl9qn-46591
+neighbors.mjs 104ctz1-54524
 package.json s5qqdo-524
-pull.mjs 132474a-37236
-selfcheck.mjs nawmj5-201538
+pull.mjs hal7kd-37372
+selfcheck.mjs 1goc0fl-203520
 templates/CLAUDE-snippet.md 1y7ghqv-1478
 templates/CODEMAP.md 1iwybyg-827
 templates/guardian-audit-command.md hyfuh-175
 templates/guardian.config.json 128yym3-2262
 templates/nightly-check.yml 1ybpxvw-2843
-verdict.mjs ruleuo-16689
+verdict.mjs p0gg64-16689
 保持一覧.json tfn9m3-1146
 台帳.mjs 15m74zk-3728
 外す.mjs 9uiqxp-94708

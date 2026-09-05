@@ -18,6 +18,7 @@
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';   // ★隔離の 名を 一意に する(27.71、@codex 10:50)
 
 const DRY = process.argv.includes('--dry');
 /* ★ファイルURL→パスの変換は node の口を使う(2026-08-28 配布先で見つかった)。
@@ -882,32 +883,44 @@ if (!DRY && 台帳が在る) {
  *   ★証明できない時も 控えは 書く ── ★★但し 証明: null。★★★外す側が それを 見て 断る。
  *
  *   ★改行: 目録は CR を 落として 数えている ── ★★ここも 同じに する。 */
-/* ★★★束の中の 受領証を【外へ 移す】(27.69、依頼主「人の手を 1つも 煩わすな」)。
+/* ★★★束の中の 古い物を【隔離する】(27.71、2026-09-05、@codex 10:42)。
  *
- *   ★27.68 までの pull は 受領証を 束の中に 書いた ── ★★その現場は --束も が 使えない。
- *   ★★★人に「退避してから もう一度」と 頼む形だった ── ★それを 道具が やる。
- *   ★★移す(消さない)── ★★★人の物だった場合でも 失われない。
- *   ★形が 受領証で ない物は 触らない(★★誰の物か 言えないので)。 */
+ *   ★27.69 の 私の やり方:「形が 受領証なら 現場の .guardian/ へ 移し、★★台帳に 載せる」
+ *   ★★@codex:「★★★形が 合うだけでは 所有を 証明できない。台帳に 載せ、後で 外すが 消すなら
+ *     【利用者物を 遅延削除】する」── ★その通り。
+ *   ★★私は【後で 消える所】へ 人の物を 運ぶ道を 作っていた。
+ *
+ *   ★★★だから:中身を 見ない(★形で 判じない ── 判じられないので)/
+ *     ★一意な【隔離】へ bytes の まま 移す(消さない・書き換えない)/
+ *     ★★台帳に 載せない ── ★★★外す は 触らない。人の物なら そこに 残り続ける /
+ *     ★正しい受領証が 要るなら、次の pull が 自分で 作る。
+ *   ★★狙いは 束を 目録と 一致させる事【だけ】── ★★★所有の 判定は しない。 */
 if (!DRY) {
   try {
     const 束の受領証 = path.join(ROOT, KIT, '.guardian', 'pulled.json');
     if (fs.existsSync(束の受領証)) {
-      let 形 = false;
-      try {
-        const j = JSON.parse(fs.readFileSync(束の受領証, 'utf8'));
-        形 = !!j && typeof j.sha === 'string' && typeof j.正本 === 'string' && typeof j.at === 'string';
-      } catch (_) {}
-      if (形) {
-        書き手.書く(ROOT, '.guardian/pulled.json', fs.readFileSync(束の受領証, 'utf8'), 'install.mjs');
-        fs.rmSync(束の受領証, { force: true });
-        did.push('束の中に 在った 受領証を .guardian/pulled.json へ 移しました'
-          + '(★束を【配る側の 目録】と 一致させる為 ── ★★これで --外す --束も が そのまま 使えます)');
-      } else {
-        todo.push('★' + KIT + '/.guardian/pulled.json が 受領証の 形では ありません ── '
-          + '★★誰の物か 言えないので 触っていません。★★★中を 見てください');
-      }
+      /* ★★★名は 時刻【だけ】に しない(27.71、@codex 10:50:「同時実行・再試行で 衝突する」)。
+       *   ★時刻は 人が 読む為、★★後ろの 8字は 衝突を 防ぐ為。
+       *   ★★★作る時は recursive を 使わない ── 既に 在れば 例外に なり、
+       *   下の catch が 拾って【元を 消さないまま】止まる(★上書きしない)。 */
+      const 印 = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14)
+        + '-' + randomUUID().slice(0, 8);
+      /* ★★★隔離は【塊が 書き込む場所の 外】に 置く(27.71、実測で 分かった)。
+       *   ★.guardian/ の 下に 置くと ── ★★塊が 見張る場所に【台帳に 無い物】が 出来る。
+       *   ★★★外す側が「誰の物か 分かりません」で 判定を UNKNOWN に し、束が 残った。
+       *   ★= 台帳に 載せない と 決めたなら、★★見張る場所の 外に 置くしか ない。
+       *   ★★★根の直下に 置く ── 人の目にも 付く(★消せない物を 隠さない)。 */
+      const 隔離 = path.join(ROOT, 'guardian-隔離-' + 印);
+      fs.mkdirSync(隔離);   // ★既に 在れば 例外(★★上書きしない)
+      const 先 = path.join(隔離, 'pulled.json');
+      fs.copyFileSync(束の受領証, 先);
+      fs.rmSync(束の受領証, { force: true });
+      did.push('束の中に 在った ' + KIT + '/.guardian/pulled.json を ' + rel(先) + ' へ 隔離しました'
+        + '(★中身は 見ていません ── ★★誰の物か 言えないので。★★★台帳には 載せていません)');
+      todo.push('★' + rel(先) + ' を 見てください ── ★★あなたの物なら そのまま。'
+        + '★★★塊の 受領証なら 要りません(次の pull が 作り直します)');
     }
-  } catch (e) { todo.push('★束の中の 受領証を 移せませんでした: ' + String(e && e.message).slice(0, 80)); }
+  } catch (e) { todo.push('★束の中の 物を 隔離できませんでした: ' + String(e && e.message).slice(0, 80)); }
 }
 
 if (!DRY) {
