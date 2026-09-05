@@ -1,4 +1,4 @@
-27.73
+27.74
 AUTHORS ayh30t-294
 CONTRIBUTING.md h64xvo-1202
 LICENSE hd5n6m-34523
@@ -7,9 +7,9 @@ NOTICE 1ciw0fb-702
 PROTOCOL.json 1tyeirq-344
 README.md gu9fy2-10564
 RULES.md t55p66-12134
-SPEC.md lvkn50-22155
+SPEC.md 25m049-22459
 audit.md s1728l-2740
-check.mjs s7d2e7-59904
+check.mjs f6tj74-61110
 githooks/pre-commit 1y3b1ae-2062
 hooks/clock.js 11jtcma-3947
 hooks/codemap.js otaclp-11261

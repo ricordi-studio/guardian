@@ -175,20 +175,42 @@ if (!map) {
     /* ★囲みコード(```…```)の中は【例示】なので拾わない。
      * 地図の雛形に載せた書き方の見本まで「実装に無い記号」として落ちると、
      * 入れた初日に嘘の指摘が出る ── 最初の1件の誤検出で、この道具は信用を失う。 */
+    /* ★★★【墓標】── 消した記号を、記録を 残したまま 名指しできる形(27.74、2026-09-05)。
+     *
+     *   ★事故:27.73 で findInstallRoot を 消し、地図に「27.73 で 消しました」と 書いた。
+     *     ・★★この検査が「実装に 無い」と 赤を 出し、★★★案内は「地図からも 消す」と 言った。
+     *     ・= 道具が【事故の 記録を 消せ】と 案内していた(@guardian 12:06 の 実測)。
+     *   ★★逃げ道として【柵の中へ 移す】案も 在ったが、@codex 12:07:
+     *     「★★★Markdown の 見た目に 検査の 意味を 偶然 背負わせる」── 取り下げた。
+     *   ★だから【言葉で 宣言する】: codemap-retired: <紙>#<記号> since=<版>
+     *     ・★★宣言された名は【実装に 無いのが 正常】── 赤に しない
+     *     ・★★★戻ってきたら 赤に する(廃止と 書いたのに 在るのは、紙が 嘘を つく形) */
+    const 墓標 = new Map();
+    const 墓標の型 = new RegExp("codemap-retired:[ ]*([^ #]+)#([A-Za-z0-9_$]+)[ ]+since=([^ ]+)", "g");
+    for (const m of map.matchAll(墓標の型))
+      墓標.set(m[2], { 紙: m[1], 版: m[3] });
     const mapBody = 柵を落とす(map);
     for (const m of mapBody.matchAll(/`([^`\n]+)`/g)) {
       const raw = m[1].trim();
       // `foo` / `foo()` / `foo:'bar'` のような書き方から名前だけを取り出す   guardian:ok 説明のための例え(実在する記号ではない)
       const name = raw.replace(/\(\)$/, '').split(/[\s:(\[]/)[0];
-      if (!name || seen.has(name)) continue;
+      if (!name || seen.has(name) || 墓標.has(name)) continue;   // ★墓標は【無いのが 正常】
       const ok = (IDENT.test(name) && !SKIP.has(name)) || ROUTE.test(name);
       if (!ok) continue;
       seen.add(name);
       if (!SRC.includes(name)) missing.push(name);
     }
+    /* ★墓標に 書いた名が【実装に 戻ってきた】ら 赤(@guardian 12:07 の ④)。
+     *   ★★= 廃止と 書いた紙が 嘘を つく ── 消し忘れと 同じ質の 食い違い。 */
+    const 蘇り = [...墓標.keys()].filter((n) => SRC.includes(n));
+    if (蘇り.length) {
+      problems.push(`廃止と書いた記号が実装に在ります(${蘇り.length}件): ${蘇り.join(', ')}`);
+      problems.push(`  → 戻したなら ${MAP_PATH} の codemap-retired 行を消す。廃止のままなら実装から消す。`);
+    }
     if (missing.length) {
       problems.push(`地図が名指しする記号が実装に見つかりません(${missing.length}件): ${missing.join(', ')}`);
-      problems.push(`  → 消したなら ${MAP_PATH} からも消す。名前を変えたなら地図も追従する。`);
+      problems.push(`  → 名前を変えたなら地図も追従する。意図して消したなら ${MAP_PATH} に`);
+      problems.push(`     codemap-retired: <紙>#<記号> since=<版> を残す(★記録は消さない ── 27.74)。`);
     } else {
       notes.push(`地図の記号 ${seen.size} 件は全て実装に存在(注釈は数えない)`);
     }
