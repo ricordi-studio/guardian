@@ -938,7 +938,14 @@ let 台帳の訳 = 'missing';
   catch (e) { 台帳の訳 = (e && e.code === 'ENOENT') ? 'missing' : 'unreadable:' + (e && e.code); }
   if (生 !== null) {
     try { 台帳 = JSON.parse(生); 台帳の訳 = (台帳 && Array.isArray(台帳.走行)) ? 'ok' : 'invalid:形が違います'; }
-    catch (e) { 台帳の訳 = 'invalid:' + String(e && e.message).slice(0, 60); }
+    /* ★訳の 字は【切るなら 切ったと 言う】(27.77、@guardian 12:39)。
+     *   ★★直す前は 60字で 黙って 切っており、括弧が 閉じない 文が 出ていた:
+     *     invalid:Expected property name or '}' in JSON at position 2 (line 1 ── 
+     *   ★★★人は 読めるが、機械で 割る時に【途中で 終わった】と 分からない。 */
+    catch (e) {
+      const 生訳 = String(e && e.message).split(String.fromCharCode(10)).join(' ');
+      台帳の訳 = 'invalid:' + (生訳.length > 120 ? 生訳.slice(0, 120) + '…(以下 略)' : 生訳);
+    }
   }
 }
 if (!台帳 || !Array.isArray(台帳.走行)) {
