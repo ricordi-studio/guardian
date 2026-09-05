@@ -35,12 +35,31 @@ if (!(退避.startsWith(根 + path.sep) && 退避 !== 根)) {
   process.exit(2);
 }
 
-try {
-  fs.rmSync(退避, { recursive: true, force: true });
-} catch (e) {
-  console.log("★掃ききれませんでした: " + String(e && e.message).slice(0, 90));
-  console.log("  ★★これは【何も 消えていない】という意味では ありません ── 途中まで 消えている事が 在ります。");
-  console.log("  ★★★もう一度 打つと 続きます。");
+/* ★★★掃くのは【入れた時の 一覧に 在る物】だけ(27.89、@guardian 20:43 の TOCTOU)。
+ *   ★実測(彼の 見本):検めた後・消す直前に 中身を すり替えると、気づかずに 消していた。
+ *   ★★だから 消す【直前】に lstat し、近道は 追わず、一覧に 無い物は 残して 名乗る。 */
+const 印 = new Set(Array.isArray(帳面.束の印) ? 帳面.束の印 : []);
+function 掃く(根, 親) {
+  const 未知 = [];
+  let es = []; try { es = fs.readdirSync(根, { withFileTypes: true }); } catch (_) { return 未知; }
+  for (const e of es) {
+    const 道 = path.join(根, e.name);
+    const 名 = 親 ? 親 + "/" + e.name : e.name;
+    let st = null; try { st = fs.lstatSync(道); } catch (_) { continue; }
+    if (st.isSymbolicLink()) { 未知.push(名 + "(近道 ── 先は 追いません)"); continue; }
+    if (st.isDirectory()) { 未知.push(...掃く(道, 名)); continue; }
+    if (!印.has(名)) { 未知.push(名 + "(入れた時の 一覧に 在りません)"); continue; }
+    try { fs.rmSync(道, { force: true }); } catch (_) { 未知.push(名 + "(消せませんでした)"); }
+  }
+  try { if (!fs.readdirSync(根).length) fs.rmdirSync(根); } catch (_) {}
+  return 未知;
+}
+const 未知 = 掃く(退避, "");
+if (未知.length) {
+  console.log("★掃く途中で【知らない物】が 出ました ── ★★消さずに 残しました:");
+  for (const u of 未知.slice(0, 8)) console.log("    ・" + u);
+  console.log("  ★★★中を 見てください ── ★あなたの物なら 別の場所へ 移し、要らなければ 手で 消してください。");
+  console.log("  ★証拠も 帳面も 残しました ── ★★片づけたら もう一度 打つと 続きます。");
   process.exit(1);
 }
 console.log("★束を 掃きました: " + 帳面.退避先);

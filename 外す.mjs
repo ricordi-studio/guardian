@@ -295,6 +295,24 @@ const 束の控え = (() => {
  *   ★= 人には「もう一度 打て」と 言えるが、★★それを 道具が 先に やる。
  *   ★★★但し 粘るのは【消せない】時だけ ── 判断は 変えない。 */
 const 少し待つ = (ms) => { try { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); } catch (_) {} };
+/* ★★★退避させた 束を【一覧に 在る物だけ】掃く(27.89、@guardian 20:43 の TOCTOU)。
+ *   ★消す直前に lstat する ── ★★近道(symlink/junction)は 追わない。
+ *   ★★★一覧に 無い物は 消さずに 返す ── 呼ぶ側が それを 人に 言う。 */
+function 掃く(根, 印, 親) {
+  const 未知 = [];
+  let es = []; try { es = fs.readdirSync(根, { withFileTypes: true }); } catch (_) { return 未知; }
+  for (const e of es) {
+    const 道 = path.join(根, e.name);
+    const 名 = 親 ? 親 + '/' + e.name : e.name;
+    let st = null; try { st = fs.lstatSync(道); } catch (_) { continue; }   /* ★消す直前に 見る */
+    if (st.isSymbolicLink()) { 未知.push(名 + '(近道 ── 先は 追いません)'); continue; }
+    if (st.isDirectory()) { 未知.push(...掃く(道, 印, 名)); continue; }
+    if (!印.has(名)) { 未知.push(名 + '(入れた時の 一覧に 在りません)'); continue; }
+    try { fs.rmSync(道, { force: true }); } catch (_) { 未知.push(名 + '(消せませんでした)'); }
+  }
+  try { if (!fs.readdirSync(根).length) fs.rmdirSync(根); } catch (_) {}
+  return 未知;
+}
 const 粘って消す = (道, 型) => {
   for (let i = 0; ; i++) {
     try { fs.rmSync(道, 型); return; }
@@ -1915,6 +1933,7 @@ const 帳面を書く = (予定, 済み, 証明済み, 退避先) => {
       束も: 束も消す, 証明済み, 予定の印: 指紋(JSON.stringify(予定)), 予定, 済み,
       退避先: 退避先 || (帳面 && 帳面.退避先) || null,
       証拠: 証拠の道,   /* ★回復役が 消す物(27.88)── ★★綴りは ここが 正本 */
+      束の印: 束の控え ? [...束の控え.印.keys()] : [],   /* ★掃いてよい物(27.89)*/
     }, null, 1) + String.fromCharCode(10));
   } catch (_) { /* ★書けなくても 撤去は 続ける ── ★★帳面は 助けであって 門では ない */ }
 };
@@ -2500,7 +2519,16 @@ if (残る束.length) {
           fs.renameSync(先, 退避);
           済み.push('束:移動');
           帳面を書く(撤去の予定, 済み, true, path.basename(退避));
-          粘って消す(退避, { recursive: true, force: true });
+          /* ★★★掃くのは【入れた時の 一覧に 在る物】だけ(27.89、@guardian 20:43)。
+           *   ★実測(彼の 見本):検めた後・消す直前に 中身を すり替えると、
+           *   ★★気づかずに 消していた(出口 0 / 一行も 言わない)。
+           *   ★★★だから 消す【直前】に lstat し、近道は 追わず、一覧に 無い物は 残して 名乗る。 */
+          const 未知 = 掃く(退避, new Set(束の控え ? [...束の控え.印.keys()] : []));
+          if (未知.length) {
+            console.log('  ★★★掃く途中で【知らない物】が 出ました ── ★消さずに 残しました:');
+            for (const u of 未知.slice(0, 5)) console.log('    ・' + u);
+            throw new Error('知らない物が 束の中に 在ります(' + 未知.length + '件)');
+          }
           済み.push('束:掃除');
           帳面を書く(撤去の予定, 済み, true, path.basename(退避));
           try { fs.rmSync(回復役の道, { force: true }); } catch (_) {}
@@ -2575,7 +2603,13 @@ if (実行 && 判定 === 'PASS') {
     /* ★★★終端は【予定の 全部が 済んだか】で 決める(27.87、@codex 17:01)。
      *   ★通常物が 済んだだけでは 終わりでは ない ── ★★束の 段が 残っている。 */
     済み.push('締め:guardian');
-    const 全部済んだ = 撤去の予定.every((id) => 済み.includes(id));
+    /* ★★★済みの 印だけを 信じない(27.89、@codex 14:21 の 3)。
+     *   ★消した【後】・帳面に 書く【前】で 落ちると、済みに 載らないまま 物は 消えている。
+     *   ★★だから【まだ する事が 残っているか】でも 見る ── ★★★消す物の 一覧に
+     *   もう 無いなら、その項は 終わっている。 */
+    const 未了 = 撤去の予定.filter((id) => !済み.includes(id)
+      && (id.indexOf('物:') !== 0 || 消す.some((c) => '物:' + c.rel === id)));
+    const 全部済んだ = 未了.length === 0;
     if (!全部済んだ) 帳面を書く(撤去の予定, 済み, true);
     if (全部済んだ) {
       fs.rmSync(台帳の道, { force: true });
